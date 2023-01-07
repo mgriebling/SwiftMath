@@ -1637,7 +1637,7 @@ class MTTypesetter {
         for i in 0..<cols.count {
             let col = cols[i]
             let colWidth = columnWidths[i]
-            let alignment = table?.getAlignmentOf(col: i)
+            let alignment = table?.get(alignmentForColumn: i)
             var cellPos = columnStart;
             switch alignment {
                 case .right:

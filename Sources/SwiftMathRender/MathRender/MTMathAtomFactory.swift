@@ -273,56 +273,56 @@ public class MTMathAtomFactory {
         "amalg" : MTMathAtom(type: .binaryOperator, value: "\u{2A3F}"),
 
         // No limit operators
-        "log" : MTMathAtomFactory.getOperator(withName: "log", limits: false),
-        "lg" : MTMathAtomFactory.getOperator(withName: "lg", limits: false),
-        "ln" : MTMathAtomFactory.getOperator(withName: "ln", limits: false),
-        "sin" : MTMathAtomFactory.getOperator(withName: "sin", limits: false),
-        "arcsin" : MTMathAtomFactory.getOperator(withName: "arcsin", limits: false),
-        "sinh" : MTMathAtomFactory.getOperator(withName: "sinh", limits: false),
-        "cos" : MTMathAtomFactory.getOperator(withName: "cos", limits: false),
-        "arccos" : MTMathAtomFactory.getOperator(withName: "arccos", limits: false),
-        "cosh" : MTMathAtomFactory.getOperator(withName: "cosh", limits: false),
-        "tan" : MTMathAtomFactory.getOperator(withName: "tan", limits: false),
-        "arctan" : MTMathAtomFactory.getOperator(withName: "arctan", limits: false),
-        "tanh" : MTMathAtomFactory.getOperator(withName: "tanh", limits: false),
-        "cot" : MTMathAtomFactory.getOperator(withName: "cot", limits: false),
-        "coth" : MTMathAtomFactory.getOperator(withName: "coth", limits: false),
-        "sec" : MTMathAtomFactory.getOperator(withName: "sec", limits: false),
-        "csc" : MTMathAtomFactory.getOperator(withName: "csc", limits: false),
-        "arg" : MTMathAtomFactory.getOperator(withName: "arg", limits: false),
-        "ker" : MTMathAtomFactory.getOperator(withName: "ker", limits: false),
-        "dim" : MTMathAtomFactory.getOperator(withName: "dim", limits: false),
-        "hom" : MTMathAtomFactory.getOperator(withName: "hom", limits: false),
-        "exp" : MTMathAtomFactory.getOperator(withName: "exp", limits: false),
-        "deg" : MTMathAtomFactory.getOperator(withName: "deg", limits: false),
+        "log" : MTMathAtomFactory.operatorWithName( "log", limits: false),
+        "lg" : MTMathAtomFactory.operatorWithName( "lg", limits: false),
+        "ln" : MTMathAtomFactory.operatorWithName( "ln", limits: false),
+        "sin" : MTMathAtomFactory.operatorWithName( "sin", limits: false),
+        "arcsin" : MTMathAtomFactory.operatorWithName( "arcsin", limits: false),
+        "sinh" : MTMathAtomFactory.operatorWithName( "sinh", limits: false),
+        "cos" : MTMathAtomFactory.operatorWithName( "cos", limits: false),
+        "arccos" : MTMathAtomFactory.operatorWithName( "arccos", limits: false),
+        "cosh" : MTMathAtomFactory.operatorWithName( "cosh", limits: false),
+        "tan" : MTMathAtomFactory.operatorWithName( "tan", limits: false),
+        "arctan" : MTMathAtomFactory.operatorWithName( "arctan", limits: false),
+        "tanh" : MTMathAtomFactory.operatorWithName( "tanh", limits: false),
+        "cot" : MTMathAtomFactory.operatorWithName( "cot", limits: false),
+        "coth" : MTMathAtomFactory.operatorWithName( "coth", limits: false),
+        "sec" : MTMathAtomFactory.operatorWithName( "sec", limits: false),
+        "csc" : MTMathAtomFactory.operatorWithName( "csc", limits: false),
+        "arg" : MTMathAtomFactory.operatorWithName( "arg", limits: false),
+        "ker" : MTMathAtomFactory.operatorWithName( "ker", limits: false),
+        "dim" : MTMathAtomFactory.operatorWithName( "dim", limits: false),
+        "hom" : MTMathAtomFactory.operatorWithName( "hom", limits: false),
+        "exp" : MTMathAtomFactory.operatorWithName( "exp", limits: false),
+        "deg" : MTMathAtomFactory.operatorWithName( "deg", limits: false),
 
         // Limit operators
-        "lim" : MTMathAtomFactory.getOperator(withName: "lim", limits: true),
-        "limsup" : MTMathAtomFactory.getOperator(withName: "lim sup", limits: true),
-        "liminf" : MTMathAtomFactory.getOperator(withName: "lim inf", limits: true),
-        "max" : MTMathAtomFactory.getOperator(withName: "max", limits: true),
-        "min" : MTMathAtomFactory.getOperator(withName: "min", limits: true),
-        "sup" : MTMathAtomFactory.getOperator(withName: "sup", limits: true),
-        "inf" : MTMathAtomFactory.getOperator(withName: "inf", limits: true),
-        "det" : MTMathAtomFactory.getOperator(withName: "det", limits: true),
-        "Pr" : MTMathAtomFactory.getOperator(withName: "Pr", limits: true),
-        "gcd" : MTMathAtomFactory.getOperator(withName: "gcd", limits: true),
+        "lim" : MTMathAtomFactory.operatorWithName( "lim", limits: true),
+        "limsup" : MTMathAtomFactory.operatorWithName( "lim sup", limits: true),
+        "liminf" : MTMathAtomFactory.operatorWithName( "lim inf", limits: true),
+        "max" : MTMathAtomFactory.operatorWithName( "max", limits: true),
+        "min" : MTMathAtomFactory.operatorWithName( "min", limits: true),
+        "sup" : MTMathAtomFactory.operatorWithName( "sup", limits: true),
+        "inf" : MTMathAtomFactory.operatorWithName( "inf", limits: true),
+        "det" : MTMathAtomFactory.operatorWithName( "det", limits: true),
+        "Pr" : MTMathAtomFactory.operatorWithName( "Pr", limits: true),
+        "gcd" : MTMathAtomFactory.operatorWithName( "gcd", limits: true),
 
         // Large operators
-        "prod" : MTMathAtomFactory.getOperator(withName: "\u{220F}", limits: true),
-        "coprod" : MTMathAtomFactory.getOperator(withName: "\u{2210}", limits: true),
-        "sum" : MTMathAtomFactory.getOperator(withName: "\u{2211}", limits: true),
-        "int" : MTMathAtomFactory.getOperator(withName: "\u{222B}", limits: false),
-        "oint" : MTMathAtomFactory.getOperator(withName: "\u{222E}", limits: false),
-        "bigwedge" : MTMathAtomFactory.getOperator(withName: "\u{22C0}", limits: true),
-        "bigvee" : MTMathAtomFactory.getOperator(withName: "\u{22C1}", limits: true),
-        "bigcap" : MTMathAtomFactory.getOperator(withName: "\u{22C2}", limits: true),
-        "bigcup" : MTMathAtomFactory.getOperator(withName: "\u{22C3}", limits: true),
-        "bigodot" : MTMathAtomFactory.getOperator(withName: "\u{2A00}", limits: true),
-        "bigoplus" : MTMathAtomFactory.getOperator(withName: "\u{2A01}", limits: true),
-        "bigotimes" : MTMathAtomFactory.getOperator(withName: "\u{2A02}", limits: true),
-        "biguplus" : MTMathAtomFactory.getOperator(withName: "\u{2A04}", limits: true),
-        "bigsqcup" : MTMathAtomFactory.getOperator(withName: "\u{2A06}", limits: true),
+        "prod" : MTMathAtomFactory.operatorWithName( "\u{220F}", limits: true),
+        "coprod" : MTMathAtomFactory.operatorWithName( "\u{2210}", limits: true),
+        "sum" : MTMathAtomFactory.operatorWithName( "\u{2211}", limits: true),
+        "int" : MTMathAtomFactory.operatorWithName( "\u{222B}", limits: false),
+        "oint" : MTMathAtomFactory.operatorWithName( "\u{222E}", limits: false),
+        "bigwedge" : MTMathAtomFactory.operatorWithName( "\u{22C0}", limits: true),
+        "bigvee" : MTMathAtomFactory.operatorWithName( "\u{22C1}", limits: true),
+        "bigcap" : MTMathAtomFactory.operatorWithName( "\u{22C2}", limits: true),
+        "bigcup" : MTMathAtomFactory.operatorWithName( "\u{22C3}", limits: true),
+        "bigodot" : MTMathAtomFactory.operatorWithName( "\u{2A00}", limits: true),
+        "bigoplus" : MTMathAtomFactory.operatorWithName( "\u{2A01}", limits: true),
+        "bigotimes" : MTMathAtomFactory.operatorWithName( "\u{2A02}", limits: true),
+        "biguplus" : MTMathAtomFactory.operatorWithName( "\u{2A04}", limits: true),
+        "bigsqcup" : MTMathAtomFactory.operatorWithName( "\u{2A06}", limits: true),
 
         // Latex command characters
         "{" : MTMathAtom(type: .open, value: "{"),
@@ -454,6 +454,40 @@ public class MTMathAtomFactory {
         return nil
     }
     
+    public static func fontNameForStyle(_ fontStyle:MTFontStyle) -> String {
+        switch fontStyle {
+            case .defaultStyle:
+                return "mathnormal";
+
+            case .roman:
+                return "mathrm";
+
+            case .bold:
+                return "mathbf";
+
+            case .fraktur:
+                return "mathfrak";
+
+            case .caligraphic:
+                return "mathcal";
+
+            case .italic:
+                return "mathit";
+
+            case .sansSerif:
+                return "mathsf";
+
+            case .blackboard:
+                return "mathbb";
+
+            case .typewriter:
+                return "mathtt";
+
+            case .boldItalic:
+                return "bm";
+        }
+    }
+    
     // Return an atom for times sign \times or *
     public static func times() -> MTMathAtom {
         return MTMathAtom(type: .binaryOperator, value: UnicodeSymbol.multiplication)
@@ -511,42 +545,40 @@ public class MTMathAtomFactory {
      - Chars with special meaning in latex: ^ _ { } \
      All other characters will have a non-nil atom returned.
      */
-    public static func atom(for char: String) -> MTMathAtom? {
-        let atomCharacterSet = CharacterSet(charactersIn: UnicodeScalar(0x21)!...UnicodeScalar(0x7E)!)
-        if char.rangeOfCharacter(from: atomCharacterSet) != nil {
-            switch char {
+    public static func atom(forCharacter ch: Character) -> MTMathAtom? {
+        let chStr = String(ch)
+        switch chStr {
+            case "\\u{0410}"..."\\u{044F}":
+                return MTMathAtom(type: .ordinary, value: chStr)
+            case _ where ch.utf32Char < 0x0021 || ch.utf32Char > 0x007E:
+                return nil
             case "$", "%", "#", "&", "~", "\'", "^", "_", "{", "}", "\\":
                 return nil
             case "(", "[":
-                return MTMathAtom(type: .open, value: char)
+                return MTMathAtom(type: .open, value: chStr)
             case ")", "]", "!", "?":
-                return MTMathAtom(type: .close, value: char)
+                return MTMathAtom(type: .close, value: chStr)
             case ",", ";":
-                return MTMathAtom(type: .punctuation, value: char)
+                return MTMathAtom(type: .punctuation, value: chStr)
             case "=", ">", "<":
-                return MTMathAtom(type: .relation, value: char)
+                return MTMathAtom(type: .relation, value: chStr)
             case ":":
                 // Math colon is ratio. Regular colon is \colon
                 return MTMathAtom(type: .relation, value: "\u{2236}")
             case "-":
                 return MTMathAtom(type: .binaryOperator, value: "\u{2212}")
             case "+", "*":
-                return MTMathAtom(type: .binaryOperator, value: char)
-            case ".", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9":
-                return MTMathAtom(type: .number, value: char)
-            case _ where
-                    (char.rangeOfCharacter(from: CharacterSet.lowercaseLetters) != nil) ||
-                    (char.rangeOfCharacter(from: CharacterSet.lowercaseLetters) != nil) :
-                return MTMathAtom(type: .variable, value: char)
+                return MTMathAtom(type: .binaryOperator, value: chStr)
+            case ".", "0"..."9":
+                return MTMathAtom(type: .number, value: chStr)
+            case "a"..."z", "A"..."Z":
+                return MTMathAtom(type: .variable, value: chStr)
             case "\"", "/", "@", "`", "|":
-                return MTMathAtom(type: .ordinary, value: char)
+                return MTMathAtom(type: .ordinary, value: chStr)
             default:
-                assert(false, "Unknown Character: \(char)")
-                print("Unknown characters: \(char)")
+                assertionFailure("Unknown ASCII character '\(ch)'. Should have been handled earlier.")
                 return nil
-            }
         }
-        return nil
     }
     
     /** Returns a `MTMathList` with one atom per character in the given string. This function
@@ -556,7 +588,7 @@ public class MTMathAtomFactory {
         let list = MTMathList()
         
         for character in string {
-            if let newAtom = atom(for: "\(character)") {
+            if let newAtom = atom(forCharacter: character) {
                 list.add(newAtom)
             }
         }
@@ -602,14 +634,14 @@ public class MTMathAtomFactory {
      e.g. to define a symbol for "lcm" one can call:
      `[MTMathAtomFactory addLatexSymbol:@"lcm" value:[MTMathAtomFactory operatorWithName:@"lcm" limits: false)]` */
     
-    public static func define(latexSymbol name: String, value: MTMathAtom) {
+    public static func add(latexSymbol name: String, value: MTMathAtom) {
         Self.sharedInstance.supportedLatexSymbols[name] = value
         Self.sharedInstance.textToLatexSymbolName[value.nucleus] = name
     }
     
     /** Returns a large opertor for the given name. If limits is true, limits are set up on
      the operator and displyed differently. */
-    public static func getOperator(withName name: String, limits: Bool) -> MTLargeOperator {
+    public static func operatorWithName(_ name: String, limits: Bool) -> MTLargeOperator {
         return MTLargeOperator(value: name, limits: limits)
     }
     
@@ -617,7 +649,7 @@ public class MTMathAtomFactory {
      such as `grave`, `hat` etc. If the name is not a recognized accent name, this
      returns nil. The `innerList` of the returned `MTAccent` is nil.
      */
-    public static func getAccent(withName name: String) -> MTAccent? {
+    public static func accent(withName name: String) -> MTAccent? {
         if let accentValue = Self.accents[name] {
             return MTAccent(value: accentValue)
         }
@@ -626,7 +658,7 @@ public class MTMathAtomFactory {
     
     /** Returns the accent name for the given accent. This is the reverse of the above
      function. */
-    public static func getName(of accent: MTAccent) -> String? {
+    public static func accentName(_ accent: MTAccent) -> String? {
         return Self.sharedInstance.accentValueToName[accent.nucleus]
     }
     
@@ -681,7 +713,7 @@ public class MTMathAtomFactory {
      @note The reason this function returns a `MTMathAtom` and not a `MTMathTable` is because some
      matrix environments are have builtin delimiters added to the table and hence are returned as inner atoms.
      */
-    public static func table(withEnvironment env: String?, rows: [[MTMathList]]) -> MTMathAtom? {
+    public static func table(withEnvironment env: String?, rows: [[MTMathList]], error:inout NSError?) -> MTMathAtom? {
         let table = MTMathTable(environment: env)
         
         for i in 0..<rows.count {
@@ -703,12 +735,12 @@ public class MTMathAtomFactory {
         if env == nil {
             table.interColumnSpacing = 0
             table.interRowAdditionalSpacing = 1
-            for i in 0..<table.numberOfCols() {
-                table.set(alignment: .left, forCol: i)
+            for i in 0..<table.numColumns {
+                table.set(alignment: .left, forColumn: i)
             }
             return table
-        } else {
-            if let delims = matrixEnvs[env!] {
+        } else if let env = env {
+            if let delims = matrixEnvs[env] {
                 table.environment = "matrix"
                 table.interRowAdditionalSpacing = 0
                 table.interColumnSpacing = 18
@@ -731,8 +763,11 @@ public class MTMathAtomFactory {
                     return table
                 }
             } else if env == "eqalign" || env == "split" || env == "aligned" {
-                if table.numberOfCols() != 2 {
-                    print("\(env!) environment can only have 2 columns")
+                if table.numColumns != 2 {
+                    let message = "\(env) environment can only have 2 columns"
+                    if error != nil {
+                        error = NSError(domain: MTParseError, code: MTParseErrors.invalidNumColumns.rawValue, userInfo: [NSLocalizedDescriptionKey:message])
+                    }
                     return nil
                 }
                 
@@ -747,47 +782,56 @@ public class MTMathAtomFactory {
                 table.interRowAdditionalSpacing = 1
                 table.interColumnSpacing = 0
                 
-                table.set(alignment: .right, forCol: 0)
-                table.set(alignment: .left, forCol: 1)
+                table.set(alignment: .right, forColumn: 0)
+                table.set(alignment: .left, forColumn: 1)
                 
                 return table
             } else if env == "displaylines" || env == "gather" {
-                if table.numberOfCols() != 1 {
-                    print("\(env!) environment can only have 1 columns")
+                if table.numColumns != 1 {
+                    let message = "\(env) environment can only have 1 column"
+                    if error != nil {
+                        error = NSError(domain: MTParseError, code: MTParseErrors.invalidNumColumns.rawValue, userInfo: [NSLocalizedDescriptionKey:message])
+                    }
                     return nil
                 }
                 
                 table.interRowAdditionalSpacing = 1
                 table.interColumnSpacing = 0
                 
-                table.set(alignment: .center, forCol: 0)
+                table.set(alignment: .center, forColumn: 0)
                 
                 return table
             } else if env == "eqnarray" {
-                if table.numberOfCols() != 3 {
-                    print("\(env!) environment can only have 3 columns")
+                if table.numColumns != 3 {
+                    let message = "\(env) environment can only have 3 columns"
+                    if error != nil {
+                        error = NSError(domain: MTParseError, code: MTParseErrors.invalidNumColumns.rawValue, userInfo: [NSLocalizedDescriptionKey:message])
+                    }
                     return nil
                 }
                 
                 table.interRowAdditionalSpacing = 1
                 table.interColumnSpacing = 18
                 
-                table.set(alignment: .right, forCol: 0)
-                table.set(alignment: .center, forCol: 1)
-                table.set(alignment: .left, forCol: 2)
+                table.set(alignment: .right, forColumn: 0)
+                table.set(alignment: .center, forColumn: 1)
+                table.set(alignment: .left, forColumn: 2)
                 
                 return table
             } else if env == "cases" {
-                if table.numberOfCols() != 2 {
-                    print("\(env!) environment can only have 2 columns")
+                if table.numColumns != 2 {
+                    let message = "cases environment can only have 2 columns"
+                    if error != nil {
+                        error = NSError(domain: MTParseError, code: MTParseErrors.invalidNumColumns.rawValue, userInfo: [NSLocalizedDescriptionKey:message])
+                    }
                     return nil
                 }
                 
                 table.interRowAdditionalSpacing = 0
                 table.interColumnSpacing = 18
                 
-                table.set(alignment: .left, forCol: 0)
-                table.set(alignment: .left, forCol: 1)
+                table.set(alignment: .left, forColumn: 0)
+                table.set(alignment: .left, forColumn: 1)
                 
                 let style = MTMathStyle(style: .text)
                 
@@ -807,9 +851,13 @@ public class MTMathAtomFactory {
                 
                 return inner
             } else {
-                print("Unknown table environment")
+                let message = "Unknown environment \(env)"
+                if error != nil {
+                    error = NSError(domain: MTParseError, code: MTParseErrors.invalidNumColumns.rawValue, userInfo: [NSLocalizedDescriptionKey:message])
+                }
                 return nil
             }
         }
+        return nil
     }
 }

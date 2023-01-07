@@ -78,7 +78,7 @@ public enum MTFontStyle:Int {
     boldItalic
 }
 
-public class MTMathAtom: Any, CustomStringConvertible {
+public class MTMathAtom: CustomStringConvertible {
     public var type: MTMathAtomType
     public var subScript: MTMathList?
     public var superScript: MTMathList?
@@ -271,10 +271,10 @@ public class MTFraction: MTMathAtom {
 
 public class MTRadical: MTMathAtom {
     // Under the roof
-    var radicand:  MTMathList? =  MTMathList()
+    public var radicand:  MTMathList? =  MTMathList()
     
     // Value on radical sign
-    var degree:  MTMathList?
+    public var degree:  MTMathList?
     
     convenience init() {
         self.init(type: .radical, value: "")
@@ -312,7 +312,7 @@ public class MTRadical: MTMathAtom {
 }
 
 public class MTLargeOperator: MTMathAtom {
-    var limits: Bool = false
+    public var limits: Bool = false
     
     convenience init(value: String, limits: Bool = false) {
         self.init(type: .largeOperator, value: value)
@@ -323,15 +323,15 @@ public class MTLargeOperator: MTMathAtom {
 // MARK: - MTInner
 
 public class MTInner: MTMathAtom {
-    var innerList: MTMathList?
-    var leftBoundary: MTMathAtom? {
+    public var innerList: MTMathList?
+    public var leftBoundary: MTMathAtom? {
         didSet {
             if leftBoundary != nil && leftBoundary!.type != .boundary {
                 assertionFailure("Left boundary must be of type .boundary")
             }
         }
     }
-    var rightBoundary: MTMathAtom? {
+    public var rightBoundary: MTMathAtom? {
         didSet {
             if rightBoundary != nil && rightBoundary!.type != .boundary {
                 assertionFailure("Right boundary must be of type .boundary")
@@ -383,7 +383,7 @@ public class MTInner: MTMathAtom {
 }
 
 public class MTOverLine: MTMathAtom {
-    var innerList:  MTMathList?
+    public var innerList:  MTMathList?
     
     override public var finalized: MTMathAtom {
         let finalized: MTOverLine = super.finalized as! MTOverLine
@@ -399,7 +399,7 @@ public class MTOverLine: MTMathAtom {
 }
 
 public class MTUnderLine: MTMathAtom {
-    var innerList:  MTMathList?
+    public var innerList:  MTMathList?
     
     override public var finalized: MTMathAtom {
         let finalized: MTUnderLine = super.finalized as! MTUnderLine
@@ -415,7 +415,7 @@ public class MTUnderLine: MTMathAtom {
 }
 
 public class MTAccent: MTMathAtom {
-    var innerList:  MTMathList?
+    public var innerList:  MTMathList?
     
     override public var finalized: MTMathAtom {
         let finalized: MTAccent = super.finalized as! MTAccent
@@ -431,7 +431,7 @@ public class MTAccent: MTMathAtom {
 }
 
 public class MTMathSpace: MTMathAtom {
-    var space: CGFloat = 0
+    public var space: CGFloat = 0
     
     convenience init(space: CGFloat) {
         self.init(type: .space, value: "")
@@ -460,10 +460,10 @@ public enum MTLineStyle {
 }
 
 public class MTMathStyle: MTMathAtom {
-    var style: MTLineStyle = .display
+    public var style: MTLineStyle = .display
     
     convenience init(style: MTLineStyle = .display) {
-        self.init(type: .space, value: "")
+        self.init(type: .style, value: "")
         self.style = style
     }
 }
@@ -517,14 +517,14 @@ public enum MTColumnAlignment {
 }
 
 public class MTMathTable: MTMathAtom {
-    var alignments = [MTColumnAlignment]()
-    var cells = [[MTMathList]]()
+    public var alignments = [MTColumnAlignment]()
+    public var cells = [[MTMathList]]()
     
-    var environment: String?
-    var interColumnSpacing: CGFloat = 0
-    var interRowAdditionalSpacing: CGFloat = 0
-    var numColumns = 0
-    var numRows = 0
+    public var environment: String?
+    public var interColumnSpacing: CGFloat = 0
+    public var interRowAdditionalSpacing: CGFloat = 0
+//    public var numColumns = 0
+//    public var numRows = 0
     
     override public var finalized: MTMathAtom {
         let finalized: MTMathTable = super.finalized as! MTMathTable
@@ -543,22 +543,22 @@ public class MTMathTable: MTMathAtom {
         self.environment = environment
     }
     
-    func set(cell list: MTMathList, forRow row:Int, column:Int) {
+    public func set(cell list: MTMathList, forRow row:Int, column:Int) {
         if self.cells.count <= row {
             for _ in self.cells.count...row {
                 self.cells.append([])
             }
         }
-        var rowArray = self.cells[row]
-        if rowArray.count <= column {
-            for _ in rowArray.count...column {
-                rowArray.append(MTMathList())
+        let rows = self.cells[row].count
+        if rows <= column {
+            for _ in rows...column {
+                self.cells[row].append(MTMathList())
             }
         }
-        rowArray[column] = list
+        self.cells[row][column] = list
     }
     
-    func set(alignment: MTColumnAlignment, forCol col: Int) {
+    public func set(alignment: MTColumnAlignment, forColumn col: Int) {
         if self.alignments.count <= col {
             for _ in self.alignments.count...col {
                 self.alignments.append(MTColumnAlignment.center)
@@ -568,7 +568,7 @@ public class MTMathTable: MTMathAtom {
         self.alignments[col] = alignment
     }
     
-    func getAlignmentOf(col: Int) -> MTColumnAlignment {
+    public func get(alignmentForColumn col: Int) -> MTColumnAlignment {
         if self.alignments.count <= col {
             return MTColumnAlignment.center
         } else {
@@ -576,7 +576,7 @@ public class MTMathTable: MTMathAtom {
         }
     }
     
-    func numberOfCols() -> Int {
+    public var numColumns: Int {
         var numberOfCols = 0
         
         for row in self.cells {
@@ -586,7 +586,7 @@ public class MTMathTable: MTMathAtom {
         return numberOfCols
     }
     
-    func numberOfRows() -> Int {
+    public var numRows: Int {
         return self.cells.count
     }
 }
