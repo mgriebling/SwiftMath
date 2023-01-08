@@ -78,12 +78,28 @@ public enum MTFontStyle:Int {
     boldItalic
 }
 
-public class MTMathAtom: CustomStringConvertible {
+public class MTMathAtom: NSObject, NSCopying {
+        
     public var type: MTMathAtomType
     public var subScript: MTMathList?
     public var superScript: MTMathList?
+    public var nucleus: String = ""
+    public var childAtoms = [MTMathAtom]()   // atoms that fused to create this one
+    public var indexRange = NSRange(location: 0, length: 0) // indexRange in list that this atom tracks:
+    
     var fontStyle: MTFontStyle = .defaultStyle
     var fusedAtoms: MTMathList?
+    
+    public func copy(with zone: NSZone? = nil) -> Any {
+        let atom = MTMathAtom.atom(withType: type, value: nucleus)
+        atom.type = self.type
+        atom.nucleus = self.nucleus
+        atom.subScript = self.subScript?.copy() as? MTMathList
+        atom.superScript = self.subScript?.copy() as? MTMathList
+        atom.indexRange = self.indexRange
+        atom.fontStyle = self.fontStyle
+        return atom
+    }
     
     public static func atom(withType type:MTMathAtomType, value:String) -> MTMathAtom {
         switch type {
@@ -118,8 +134,7 @@ public class MTMathAtom: CustomStringConvertible {
         if self.isScriptAllowed() {
             self.superScript = list
         } else {
-            print("superscripts not allowed for atom \(self.type.rawValue)")
-            self.superScript = nil
+            NSException(name: NSExceptionName(rawValue: "Error"), reason: "Superscripts not allowed for atom \(self.type.rawValue)").raise()
         }
     }
     
@@ -127,12 +142,11 @@ public class MTMathAtom: CustomStringConvertible {
         if self.isScriptAllowed() {
             self.subScript = list
         } else {
-            print("subscripts not allowed for atom \(self.type.rawValue)")
-            self.subScript = nil
+            NSException(name: NSExceptionName(rawValue: "Error"), reason: "Subscripts not allowed for atom \(self.type.rawValue)").raise()
         }
     }
     
-    public var description: String {
+    public override var description: String {
         var string = ""
         
         string += self.nucleus
@@ -146,7 +160,6 @@ public class MTMathAtom: CustomStringConvertible {
         return string
     }
     
-    public var nucleus: String = ""
     public var finalized: MTMathAtom {
         let finalized = self
         if finalized.superScript != nil {
@@ -157,12 +170,6 @@ public class MTMathAtom: CustomStringConvertible {
         }
         return finalized
     }
-    
-    // atoms that fused to create this one
-    public var childAtoms = [MTMathAtom]()
-    
-    // indexRange in list that this atom tracks:
-    public var indexRange = NSRange(location: 0, length: 0)
     
     public var string:String {
         var str = self.nucleus
@@ -183,7 +190,7 @@ public class MTMathAtom: CustomStringConvertible {
             self.superScript == nil,
             self.type == atom.type
         else {
-            print("Can't fuse these 2 atom")
+            print("Can't fuse these 2 atoms")
             return
         }
         
@@ -227,6 +234,16 @@ public class MTFraction: MTMathAtom {
     public var rightDelimiter: String?
     public var numerator:  MTMathList? =  MTMathList()
     public var denominator:  MTMathList? =  MTMathList()
+    
+    public override func copy(with zone: NSZone? = nil) -> Any {
+        let frac = super.copy(with: zone) as! MTFraction
+        frac.numerator = self.numerator?.copy() as? MTMathList
+        frac.denominator = self.denominator?.copy() as? MTMathList
+        frac.hasRule = self.hasRule
+        frac.leftDelimiter = self.leftDelimiter
+        frac.rightDelimiter = self.rightDelimiter
+        return frac
+    }
     
     override public var description: String {
         var string = ""
@@ -280,6 +297,13 @@ public class MTRadical: MTMathAtom {
         self.init(type: .radical, value: "")
     }
     
+    public override func copy(with zone: NSZone? = nil) -> Any {
+        let rad = super.copy(with: zone) as! MTRadical
+        rad.radicand = self.radicand?.copy() as? MTMathList
+        rad.degree = self.degree?.copy() as? MTMathList
+        return rad
+    }
+    
     override public var description: String {
         var string = "\\sqrt"
         
@@ -314,9 +338,16 @@ public class MTRadical: MTMathAtom {
 public class MTLargeOperator: MTMathAtom {
     public var limits: Bool = false
     
-    convenience init(value: String, limits: Bool = false) {
-        self.init(type: .largeOperator, value: value)
+    init(value: String, limits: Bool) {
+        super.init(type: .largeOperator, value: value)
         self.limits = limits
+        //print("Operator \(value) limits:\(limits)")
+    }
+    
+    public override func copy(with zone: NSZone? = nil) -> Any {
+        let op = super.copy(with: zone) as! MTLargeOperator
+        op.limits = self.limits
+        return op
     }
 }
 
@@ -337,6 +368,14 @@ public class MTInner: MTMathAtom {
                 assertionFailure("Right boundary must be of type .boundary")
             }
         }
+    }
+    
+    public override func copy(with zone: NSZone? = nil) -> Any {
+        let inner = super.copy(with: zone) as! MTInner
+        inner.innerList = self.innerList?.copy() as? MTMathList
+        inner.leftBoundary = self.leftBoundary?.copy() as? MTMathAtom
+        inner.rightBoundary = self.rightBoundary?.copy() as? MTMathAtom
+        return inner
     }
     
     init() {
@@ -375,9 +414,7 @@ public class MTInner: MTMathAtom {
     
     override public var finalized: MTMathAtom {
         let finalized: MTInner = super.finalized as! MTInner
-        
         finalized.innerList = finalized.innerList?.finalized
-        
         return finalized
     }
 }
@@ -387,10 +424,14 @@ public class MTOverLine: MTMathAtom {
     
     override public var finalized: MTMathAtom {
         let finalized: MTOverLine = super.finalized as! MTOverLine
-        
         finalized.innerList = finalized.innerList?.finalized
-        
         return finalized
+    }
+    
+    public override func copy(with zone: NSZone? = nil) -> Any {
+        let op = super.copy(with: zone) as! MTOverLine
+        op.innerList = self.innerList?.copy() as? MTMathList
+        return op
     }
     
     convenience init() {
@@ -403,10 +444,14 @@ public class MTUnderLine: MTMathAtom {
     
     override public var finalized: MTMathAtom {
         let finalized: MTUnderLine = super.finalized as! MTUnderLine
-        
         finalized.innerList = finalized.innerList?.finalized
-        
         return finalized
+    }
+    
+    public override func copy(with zone: NSZone? = nil) -> Any {
+        let op = super.copy(with: zone) as! MTUnderLine
+        op.innerList = self.innerList?.copy() as? MTMathList
+        return op
     }
     
     convenience init() {
@@ -419,10 +464,14 @@ public class MTAccent: MTMathAtom {
     
     override public var finalized: MTMathAtom {
         let finalized: MTAccent = super.finalized as! MTAccent
-        
         finalized.innerList = finalized.innerList?.finalized
-        
         return finalized
+    }
+    
+    public override func copy(with zone: NSZone? = nil) -> Any {
+        let op = super.copy(with: zone) as! MTAccent
+        op.innerList = self.innerList?.copy() as? MTMathList
+        return op
     }
     
     convenience init(value: String) {
@@ -437,6 +486,13 @@ public class MTMathSpace: MTMathAtom {
         self.init(type: .space, value: "")
         self.space = space
     }
+    
+    public override func copy(with zone: NSZone? = nil) -> Any {
+        let op = super.copy(with: zone) as! MTMathSpace
+        op.space = self.space
+        return op
+    }
+    
 }
 
 public enum MTLineStyle {
@@ -466,6 +522,12 @@ public class MTMathStyle: MTMathAtom {
         self.init(type: .style, value: "")
         self.style = style
     }
+    
+    public override func copy(with zone: NSZone? = nil) -> Any {
+        let op = super.copy(with: zone) as! MTMathStyle
+        op.style = self.style
+        return op
+    }
 }
 
 public class MTMathColor: MTMathAtom {
@@ -482,6 +544,13 @@ public class MTMathColor: MTMathAtom {
         }
         NSException(name: NSExceptionName("InvalidMethod"), reason: "MTMathColor(type:value) cannot be called. Use MTMathColor() instead.").raise()
         self.init()
+    }
+    
+    public override func copy(with zone: NSZone? = nil) -> Any {
+        let op = super.copy(with: zone) as! MTMathColor
+        op.colorString = self.colorString
+        op.innerList = self.innerList?.copy() as? MTMathList
+        return op
     }
     
     public override var string: String {
@@ -505,6 +574,13 @@ public class MTMathColorbox: MTMathAtom {
         self.init()
     }
     
+    public override func copy(with zone: NSZone? = nil) -> Any {
+        let op = super.copy(with: zone) as! MTMathColorbox
+        op.colorString = self.colorString
+        op.innerList = self.innerList?.copy() as? MTMathList
+        return op
+    }
+    
     public override var string: String {
         "\\colorbox{\(self.colorString)}{\(self.innerList!.string)}"
     }
@@ -523,8 +599,6 @@ public class MTMathTable: MTMathAtom {
     public var environment: String?
     public var interColumnSpacing: CGFloat = 0
     public var interRowAdditionalSpacing: CGFloat = 0
-//    public var numColumns = 0
-//    public var numRows = 0
     
     override public var finalized: MTMathAtom {
         let finalized: MTMathTable = super.finalized as! MTMathTable
@@ -541,6 +615,21 @@ public class MTMathTable: MTMathAtom {
     convenience init(environment: String? = nil) {
         self.init(type: .table, value: "")
         self.environment = environment
+    }
+    
+    public override func copy(with zone: NSZone? = nil) -> Any {
+        let op = super.copy(with: zone) as! MTMathTable
+        op.interRowAdditionalSpacing = self.interRowAdditionalSpacing
+        op.interColumnSpacing = self.interColumnSpacing
+        op.environment = self.environment
+        var cellCopy = [[MTMathList]]()
+        cellCopy.reserveCapacity(self.cells.count)
+        for row in self.cells {
+            let newRow = [MTMathList](row)
+            cellCopy.append(newRow)
+        }
+        op.cells = cellCopy
+        return op
     }
     
     public func set(cell list: MTMathList, forRow row:Int, column:Int) {
@@ -592,12 +681,19 @@ public class MTMathTable: MTMathAtom {
 }
 
 // represent list of math objects
-extension MTMathList: CustomStringConvertible {
-    public var description: String { self.atoms.description }
+extension MTMathList {
+    public override var description: String { self.atoms.description }
     public var string: String { self.description }
 }
 
-public class MTMathList {
+public class MTMathList: NSObject, NSCopying {
+    
+    public func copy(with zone: NSZone? = nil) -> Any {
+        let list = MTMathList()
+        list.atoms = [MTMathAtom](self.atoms)
+        return list
+    }
+
     public var atoms = [MTMathAtom]()
     
     public var finalized: MTMathList {
@@ -658,7 +754,7 @@ public class MTMathList {
         self.atoms.append(atom)
     }
     
-    public init() {
+    public override init() {
         self.atoms = []
     }
     
@@ -666,7 +762,7 @@ public class MTMathList {
         if self.isAtomAllowed(atom) {
             self.atoms.append(atom)
         } else {
-            print("error, cannot add atom of type \(atom.type.rawValue) into atomlist")
+            NSException(name: NSExceptionName(rawValue: "Error"), reason: "Cannot add atom of type \(atom.type.rawValue) into mathlist").raise()
         }
     }
     
@@ -674,7 +770,7 @@ public class MTMathList {
         if self.isAtomAllowed(atom) {
             self.atoms.insert(atom, at: index)
         } else {
-            print("error, cannot add atom of type \(atom.type.rawValue) into atomlist")
+            NSException(name: NSExceptionName(rawValue: "Error"), reason: "Cannot add atom of type \(atom.type.rawValue) into mathlist").raise()
         }
     }
     

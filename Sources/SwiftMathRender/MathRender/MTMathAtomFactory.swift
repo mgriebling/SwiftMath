@@ -98,11 +98,11 @@ public class MTMathAtomFactory {
         "widetilde" :  "\u{0303}"
     ]
     
-    var _accentValueToName: [String: String]? = nil
-    public var accentValueToName: [String: String] {
+    static var _accentValueToName: [String: String]? = nil
+    public static var accentValueToName: [String: String] {
         if _accentValueToName == nil {
             var output = [String: String]()
-            
+
             for (key, value) in Self.accents {
                 if let existingValue = output[value] {
                     if key.count > existingValue.count {
@@ -113,17 +113,14 @@ public class MTMathAtomFactory {
                         }
                     }
                 }
-                
                 output[value] = key
             }
-            
             _accentValueToName = output
         }
-        
         return _accentValueToName!
     }
     
-    public var supportedLatexSymbols: [String: MTMathAtom] = [
+    public static var supportedLatexSymbols: [String: MTMathAtom] = [
         "square" : MTMathAtomFactory.placeholder(),
         
          // Greek characters
@@ -386,14 +383,12 @@ public class MTMathAtomFactory {
         "scriptscriptstyle" : MTMathStyle(style: .scriptOfScript),
     ]
     
-    var latexSymbolNames = [String]()
-    
     var _textToLatexSymbolName: [String: String]? = nil
     public var textToLatexSymbolName: [String: String] {
         get {
             if self._textToLatexSymbolName == nil {
                 var output = [String: String]()
-                for (key, atom) in self.supportedLatexSymbols {
+                for (key, atom) in Self.supportedLatexSymbols {
                     if atom.nucleus.count == 0 {
                         continue
                     }
@@ -423,35 +418,32 @@ public class MTMathAtomFactory {
     public static let sharedInstance = MTMathAtomFactory()
     
     static let fontStyles : [String: MTFontStyle] = [
-        "mathnormal" : (.defaultStyle),
-        "mathrm": (.roman),
-        "textrm": (.roman),
-        "rm": (.roman),
-        "mathbf": (.bold),
-        "bf": (.bold),
-        "textbf": (.bold),
-        "mathcal": (.caligraphic),
-        "cal": (.caligraphic),
-        "mathtt": (.typewriter),
-        "texttt": (.typewriter),
-        "mathit": (.italic),
-        "textit": (.italic),
-        "mit": (.italic),
-        "mathsf": (.sansSerif),
-        "textsf": (.sansSerif),
-        "mathfrak": (.fraktur),
-        "frak": (.fraktur),
-        "mathbb": (.blackboard),
-        "mathbfit": (.boldItalic),
-        "bm": (.boldItalic),
-        "text": (.roman),
+        "mathnormal" : .defaultStyle,
+        "mathrm": .roman,
+        "textrm": .roman,
+        "rm": .roman,
+        "mathbf": .bold,
+        "bf": .bold,
+        "textbf": .bold,
+        "mathcal": .caligraphic,
+        "cal": .caligraphic,
+        "mathtt": .typewriter,
+        "texttt": .typewriter,
+        "mathit": .italic,
+        "textit": .italic,
+        "mit": .italic,
+        "mathsf": .sansSerif,
+        "textsf": .sansSerif,
+        "mathfrak": .fraktur,
+        "frak": .fraktur,
+        "mathbb": .blackboard,
+        "mathbfit": .boldItalic,
+        "bm": .boldItalic,
+        "text": .roman,
     ]
     
     public static func fontStyleWithName(_ fontName:String) -> MTFontStyle? {
-        if let style = fontStyles[fontName] {
-            return style
-        }
-        return nil
+        return fontStyles[fontName]
     }
     
     public static func fontNameForStyle(_ fontStyle:MTFontStyle) -> String {
@@ -600,13 +592,15 @@ public class MTMathAtomFactory {
      If the latex symbol is unknown this will return nil. This supports LaTeX aliases as well.
      */
     public static func atom(forLatexSymbol name: String) -> MTMathAtom? {
-        var _name = name
+        var name = name
         
         if let canonicalName = aliases[name] {
-            _name = canonicalName
+            name = canonicalName
         }
         
-        if let atom = sharedInstance.supportedLatexSymbols[_name] {
+        if let atom = supportedLatexSymbols[name] {
+            if name == "int" { return MTMathAtomFactory.operatorWithName( "\u{222B}", limits: false) }
+            if name == "sum" { return MTMathAtomFactory.operatorWithName( "\u{2211}", limits: true) }
             return atom
         }
         
@@ -626,7 +620,7 @@ public class MTMathAtomFactory {
             return nil
         }
         
-        return Self.sharedInstance.textToLatexSymbolName[atom.nucleus]
+        return sharedInstance.textToLatexSymbolName[atom.nucleus]
     }
     
     /** Define a latex symbol for rendering. This function allows defining custom symbols that are
@@ -635,12 +629,12 @@ public class MTMathAtomFactory {
      `[MTMathAtomFactory addLatexSymbol:@"lcm" value:[MTMathAtomFactory operatorWithName:@"lcm" limits: false)]` */
     
     public static func add(latexSymbol name: String, value: MTMathAtom) {
-        Self.sharedInstance.supportedLatexSymbols[name] = value
-        Self.sharedInstance.textToLatexSymbolName[value.nucleus] = name
+        supportedLatexSymbols[name] = value
+        sharedInstance.textToLatexSymbolName[value.nucleus] = name
     }
     
     /** Returns a large opertor for the given name. If limits is true, limits are set up on
-     the operator and displyed differently. */
+     the operator and displayed differently. */
     public static func operatorWithName(_ name: String, limits: Bool) -> MTLargeOperator {
         return MTLargeOperator(value: name, limits: limits)
     }
@@ -650,7 +644,7 @@ public class MTMathAtomFactory {
      returns nil. The `innerList` of the returned `MTAccent` is nil.
      */
     public static func accent(withName name: String) -> MTAccent? {
-        if let accentValue = Self.accents[name] {
+        if let accentValue = accents[name] {
             return MTAccent(value: accentValue)
         }
         return nil
@@ -659,7 +653,7 @@ public class MTMathAtomFactory {
     /** Returns the accent name for the given accent. This is the reverse of the above
      function. */
     public static func accentName(_ accent: MTAccent) -> String? {
-        return Self.sharedInstance.accentValueToName[accent.nucleus]
+        return accentValueToName[accent.nucleus]
     }
     
     /** Creates a new boundary atom for the given delimiter name. If the delimiter name
@@ -765,7 +759,7 @@ public class MTMathAtomFactory {
             } else if env == "eqalign" || env == "split" || env == "aligned" {
                 if table.numColumns != 2 {
                     let message = "\(env) environment can only have 2 columns"
-                    if error != nil {
+                    if error == nil {
                         error = NSError(domain: MTParseError, code: MTParseErrors.invalidNumColumns.rawValue, userInfo: [NSLocalizedDescriptionKey:message])
                     }
                     return nil
@@ -789,7 +783,7 @@ public class MTMathAtomFactory {
             } else if env == "displaylines" || env == "gather" {
                 if table.numColumns != 1 {
                     let message = "\(env) environment can only have 1 column"
-                    if error != nil {
+                    if error == nil {
                         error = NSError(domain: MTParseError, code: MTParseErrors.invalidNumColumns.rawValue, userInfo: [NSLocalizedDescriptionKey:message])
                     }
                     return nil
@@ -804,7 +798,7 @@ public class MTMathAtomFactory {
             } else if env == "eqnarray" {
                 if table.numColumns != 3 {
                     let message = "\(env) environment can only have 3 columns"
-                    if error != nil {
+                    if error == nil {
                         error = NSError(domain: MTParseError, code: MTParseErrors.invalidNumColumns.rawValue, userInfo: [NSLocalizedDescriptionKey:message])
                     }
                     return nil
@@ -821,7 +815,7 @@ public class MTMathAtomFactory {
             } else if env == "cases" {
                 if table.numColumns != 2 {
                     let message = "cases environment can only have 2 columns"
-                    if error != nil {
+                    if error == nil {
                         error = NSError(domain: MTParseError, code: MTParseErrors.invalidNumColumns.rawValue, userInfo: [NSLocalizedDescriptionKey:message])
                     }
                     return nil
@@ -852,9 +846,7 @@ public class MTMathAtomFactory {
                 return inner
             } else {
                 let message = "Unknown environment \(env)"
-                if error != nil {
-                    error = NSError(domain: MTParseError, code: MTParseErrors.invalidNumColumns.rawValue, userInfo: [NSLocalizedDescriptionKey:message])
-                }
+                error = NSError(domain: MTParseError, code: MTParseErrors.invalidEnv.rawValue, userInfo: [NSLocalizedDescriptionKey:message])
                 return nil
             }
         }

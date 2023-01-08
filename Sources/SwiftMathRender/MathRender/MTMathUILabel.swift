@@ -71,12 +71,12 @@ class MTMathUILabel : MTView {
     var latex = "" {
         didSet {
             self.error = nil
-            var error = NSError()
+            var error : NSError? = nil
             self.mathList = MTMathListBuilder.build(fromString: latex, error: &error)
-            if error != NSError() {
+            if error != nil {
                 self.mathList = nil
                 self.error = error
-                self.errorLabel?.text = error.localizedDescription
+                self.errorLabel?.text = error!.localizedDescription
                 self.errorLabel?.frame = self.bounds
                 self.errorLabel?.isHidden = !self.displayErrorInline
             } else {

@@ -99,16 +99,16 @@ public class MTMathListBuilder {
         self.spacesAllowed = false
     }
     
-    func build() -> MTMathList? {
-        if let list = self.buildInternal(false) {
-            if self.hasCharacters {
-                print("Mismatched braces: \(self.string)")
-                return nil
-            }
-            return list
-        } else {
+    public func build() -> MTMathList? {
+        let list = self.buildInternal(false)
+        if self.hasCharacters && error == nil {
+            self.setError(.mismatchBraces, message: "Mismatched braces: \(self.string)")
             return nil
         }
+        if error != nil {
+            return nil
+        }
+        return list
     }
     
     public static func build(fromString string: String) -> MTMathList? {
@@ -116,14 +116,12 @@ public class MTMathListBuilder {
         return builder.build()
     }
     
-    public static func build(fromString string: String, error:inout NSError) -> MTMathList? {
+    public static func build(fromString string: String, error:inout NSError?) -> MTMathList? {
         let builder = MTMathListBuilder(string: string)
         let output = builder.build()
         if builder.error != nil {
-            error = builder.error!
+            error = builder.error
             return nil
-        } else {
-            error = NSError()
         }
         return output
     }
@@ -213,9 +211,7 @@ public class MTMathListBuilder {
                                         cell.atoms.removeFirst()
                                     }
                                 }
-                                
                                 str += mathListToString(cell)
-                                
                                 if j < row.count - 1 {
                                     str += "&"
                                 }
@@ -224,7 +220,6 @@ public class MTMathListBuilder {
                                 str += "\\\\ "
                             }
                         }
-                        
                         if table.environment != nil {
                             str += "\\end{\(table.environment!)}"
                         }
@@ -331,11 +326,11 @@ public class MTMathListBuilder {
         }
     }
     
-    func buildInternal(_ oneCharOnly: Bool) -> MTMathList? {
+    public func buildInternal(_ oneCharOnly: Bool) -> MTMathList? {
         return self.buildInternal(oneCharOnly, stopChar: nil)
     }
     
-    func buildInternal(_ oneCharOnly: Bool, stopChar stop: Character?) -> MTMathList? {
+    public func buildInternal(_ oneCharOnly: Bool, stopChar stop: Character?) -> MTMathList? {
         let list = MTMathList()
         assert(!(oneCharOnly && stop != nil), "Cannot set both oneCharOnly and stopChar.")
         var prevAtom: MTMathAtom? = nil
@@ -391,8 +386,7 @@ public class MTMathListBuilder {
                 assert(stop == nil, "This should have been handled before")
                 // We encountered a closing brace when there is no stop set, that means there was no
                 // corresponding opening brace.
-                let errorMessage = "Mismatched braces."
-                self.setError(.mismatchBraces, message:errorMessage)
+                self.setError(.mismatchBraces, message:"Mismatched braces.")
                 return nil
             } else if char == "\\" {
                 let command = readCommand()
@@ -607,16 +601,17 @@ public class MTMathListBuilder {
         }
     }
     
+    static var fractionCommands: [String:[Character]] {
+        [
+            "over": [],
+            "atop" : [],
+            "choose" : [ "(", ")"],
+            "brack" : [ "[", "]"],
+            "brace" : [ "{", "}"]
+        ]
+    }
+    
     func stopCommand(_ command: String, list:MTMathList, stopChar:Character?) -> MTMathList? {
-        var fractionCommands: [String:[Character]] {
-            [
-                "over": [],
-                "atop" : [],
-                "choose" : [ "(", ")"],
-                "brack" : [ "[", "]"],
-                "brace" : [ "{", "}"]
-            ]
-        }
         if command == "right" {
             if currentInnerAtom == nil {
                 let errorMessage = "Missing \\left";
@@ -629,7 +624,7 @@ public class MTMathListBuilder {
             }
             // return the list read so far.
             return list
-        } else if let delims = fractionCommands[command] {
+        } else if let delims = Self.fractionCommands[command] {
             var frac:MTFraction! = nil;
             if command == "over" {
                 frac = MTFraction()
@@ -662,11 +657,11 @@ public class MTMathListBuilder {
             if currentEnv == nil {
                 let errorMessage = "Missing \\begin";
                 self.setError(.missingBegin, message:errorMessage)
-                return nil;
+                return nil
             }
             let env = self.readEnvironment()
             if env == nil {
-                return nil;
+                return nil
             }
             if env! != currentEnv!.envName {
                 let errorMessage = "Begin environment name \(currentEnv!.envName!) does not match end name: \(env!)"
@@ -683,7 +678,7 @@ public class MTMathListBuilder {
     // Applies the modifier to the atom. Returns true if modifier applied.
     func applyModifier(_ modifier:String, atom:MTMathAtom?) -> Bool {
         if modifier == "limits" {
-            if atom!.type != .largeOperator {
+            if atom?.type != .largeOperator {
                 let errorMessage = "Limits can only be applied to an operator."
                 self.setError(.invalidLimits, message:errorMessage)
             } else {
@@ -695,14 +690,13 @@ public class MTMathListBuilder {
             if atom?.type != .largeOperator {
                 let errorMessage = "No limits can only be applied to an operator."
                 self.setError(.invalidLimits, message:errorMessage)
-                return true
             } else {
                 let op = atom as! MTLargeOperator
                 op.limits = false
             }
-            return true;
+            return true
         }
-        return false;
+        return false
     }
 
     func setError(_ code:MTParseErrors, message:String) {
@@ -795,7 +789,7 @@ public class MTMathListBuilder {
     func readEnvironment() -> String? {
         if !self.expectCharacter("{") {
             // We didn't find an opening brace, so no env found.
-            print("Missing {")
+            self.setError(.characterNotFound, message: "Missing {")
             return nil
         }
         
@@ -804,7 +798,7 @@ public class MTMathListBuilder {
         
         if !self.expectCharacter("}") {
             // We didn"t find an closing brace, so invalid format.
-            print("Missing {")
+            self.setError(.characterNotFound, message: "Missing }")
             return nil;
         }
         return env
@@ -872,7 +866,7 @@ public class MTMathListBuilder {
             return nil
         }
         
-        var error:NSError?
+        var error:NSError? = self.error
         let table = MTMathAtomFactory.table(withEnvironment: currentEnv?.envName, rows: rows, error: &error)
         if table == nil && self.error == nil {
             self.error = error
@@ -892,7 +886,7 @@ public class MTMathListBuilder {
         let boundary = MTMathAtomFactory.boundary(forDelimiter: delim!)
         if boundary == nil {
             let errorMessage = "Invalid delimiter for \(delimiterType): \(delim!)"
-            self.setError(.missingDelimiter, message:errorMessage)
+            self.setError(.invalidDelimiter, message:errorMessage)
             return nil
         }
         return boundary
