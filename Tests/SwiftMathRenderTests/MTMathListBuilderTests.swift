@@ -8,7 +8,7 @@ import XCTest
 //  Created by Mike Griebling on 2023-01-02.
 //
 
-final class SwiftMathRenderTests: XCTestCase {
+final class MTMathListBuilderTests: XCTestCase {
 
     func checkAtomTypes(_ list:MTMathList?, types:[MTMathAtomType], desc:String) {
         if let list = list {
@@ -23,13 +23,13 @@ final class SwiftMathRenderTests: XCTestCase {
         }
     }
     
-    override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
-    }
-
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
-    }
+//    override func setUpWithError() throws {
+//        // Put setup code here. This method is called before the invocation of each test method in the class.
+//    }
+//
+//    override func tearDownWithError() throws {
+//        // Put teardown code here. This method is called after the invocation of each test method in the class.
+//    }
     
     struct TestRecord {
         let build : String
@@ -1150,15 +1150,11 @@ final class SwiftMathRenderTests: XCTestCase {
         for testCase in data {
             let str = testCase.0
             var error : NSError? = nil
-            if str == "\\begin{displaylines} x & y \\end{displaylines}" {
-                let x = 0
-            }
             let list = MTMathListBuilder.build(fromString: str, error:&error)
             let desc = "Error for string:\(str)"
             XCTAssertNil(list, desc)
             XCTAssertNotNil(error, desc)
             XCTAssertEqual(error!.domain, MTParseError, desc)
-            let code = error!.code
             let num = testCase.1
             XCTAssertEqual(error!.code, num.rawValue, desc)
         }
@@ -1170,13 +1166,13 @@ final class SwiftMathRenderTests: XCTestCase {
         var list = MTMathListBuilder.build(fromString: str, error:&error)
         XCTAssertNil(list)
         XCTAssertNotNil(error)
-        
+
         MTMathAtomFactory.add(latexSymbol: "lcm", value: MTMathAtomFactory.operatorWithName("lcm", limits:false))
         error = nil
         list = MTMathListBuilder.build(fromString: str, error:&error)
         let atomTypes = [MTMathAtomType.largeOperator, .open, .variable, .punctuation, .variable, .close]
         self.checkAtomTypes(list, types:atomTypes, desc:"Error for lcm")
-        
+
         // convert it back to latex
         let latex = MTMathListBuilder.mathListToString(list)
         XCTAssertEqual(latex, "\\lcm (a,b)");

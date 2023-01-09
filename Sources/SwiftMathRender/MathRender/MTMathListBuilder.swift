@@ -10,7 +10,7 @@ import Foundation
 /** `MTMathListBuilder` is a class for parsing LaTeX into an `MTMathList` that
  can be rendered and processed mathematically.
  */
-class MTEnvProperties {
+struct MTEnvProperties {
     var envName: String?
     var ended: Bool
     var numRows: Int
@@ -376,7 +376,7 @@ public class MTMathListBuilder {
                 // this puts us in a recursive routine, and sets oneCharOnly to false and no stop character
                 let subList = self.buildInternal(false, stopChar: "}")
                 prevAtom = subList!.atoms.last
-                list.append(subList!)
+                list.append(subList)
                 if oneCharOnly {
                     return list
                 }
@@ -425,7 +425,7 @@ public class MTMathListBuilder {
                     // (note setError will not set the error if there is already one, so we flag internal error
                     // in the odd case that an _error is not set.
                     self.setError(.internalError, message:"Internal error")
-                    return nil;
+                    return nil
                 }
             } else if char == "&" {
                 assert(!oneCharOnly, "This should have been handled before")
@@ -446,7 +446,7 @@ public class MTMathListBuilder {
             
             assert(atom != nil, "Atom shouldn't be nil")
             atom?.fontStyle = currentFontStyle
-            list.add(atom!)
+            list.add(atom)
             prevAtom = atom
             
             if oneCharOnly {

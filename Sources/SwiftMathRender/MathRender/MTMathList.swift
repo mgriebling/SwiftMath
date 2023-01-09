@@ -341,7 +341,6 @@ public class MTLargeOperator: MTMathAtom {
     init(value: String, limits: Bool) {
         super.init(type: .largeOperator, value: value)
         self.limits = limits
-        //print("Operator \(value) limits:\(limits)")
     }
     
     public override func copy(with zone: NSZone? = nil) -> Any {
@@ -740,7 +739,7 @@ public class MTMathList: NSObject, NSCopying {
         if prevNode != nil && prevNode!.type == .binaryOperator {
             prevNode!.type = .unaryOperator
             finalizedList.removeLastAtom()
-            finalizedList.add(prevNode!)
+            finalizedList.add(prevNode)
         }
         
         return finalizedList
@@ -758,7 +757,19 @@ public class MTMathList: NSObject, NSCopying {
         self.atoms = []
     }
     
-    func add(_ atom: MTMathAtom) {
+    func NSParamException(_ param:Any?) {
+        if param == nil {
+            NSException(name: NSExceptionName(rawValue: "Error"), reason: "Parameter cannot be nil").raise()
+        }
+    }
+    
+    func NSIndexException(_ array:[Any], index: Int) {
+        guard !array.indices.contains(index) else { return }
+        NSException(name: NSExceptionName(rawValue: "Error"), reason: "Index \(index) out of bounds").raise()
+    }
+    
+    func add(_ atom: MTMathAtom?) {
+        guard let atom = atom else { return }
         if self.isAtomAllowed(atom) {
             self.atoms.append(atom)
         } else {
@@ -766,15 +777,21 @@ public class MTMathList: NSObject, NSCopying {
         }
     }
     
-    func insert(_ atom: MTMathAtom, at index: Int) {
+    func insert(_ atom: MTMathAtom?, at index: Int) {
+        // NSParamException(atom)
+        guard let atom = atom else { return }
+        guard self.atoms.indices.contains(index) || index == self.atoms.endIndex else { return }
+        // guard self.atoms.endIndex >= index else { NSIndexException(); return }
         if self.isAtomAllowed(atom) {
+            // NSIndexException(self.atoms, index: index)
             self.atoms.insert(atom, at: index)
         } else {
             NSException(name: NSExceptionName(rawValue: "Error"), reason: "Cannot add atom of type \(atom.type.rawValue) into mathlist").raise()
         }
     }
     
-    func append(_ list: MTMathList) {
+    func append(_ list: MTMathList?) {
+        guard let list = list else { return }
         self.atoms += list.atoms
     }
     
@@ -785,14 +802,17 @@ public class MTMathList: NSObject, NSCopying {
     }
     
     func removeAtom(at index: Int) {
+        NSIndexException(self.atoms, index:index)
         self.atoms.remove(at: index)
     }
     
     func removeAtoms(in range: ClosedRange<Int>) {
+        NSIndexException(self.atoms, index: range.lowerBound)
+        NSIndexException(self.atoms, index: range.upperBound)
         self.atoms.removeSubrange(range)
     }
     
-    func isAtomAllowed(_ atom: MTMathAtom) -> Bool {
-        return atom.type != .boundary
+    func isAtomAllowed(_ atom: MTMathAtom?) -> Bool {
+        return atom?.type != .boundary
     }
 }

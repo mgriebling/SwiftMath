@@ -120,7 +120,7 @@ public class MTMathAtomFactory {
         return _accentValueToName!
     }
     
-    public static var supportedLatexSymbols: [String: MTMathAtom] = [
+    static var supportedLatexSymbols: [String: MTMathAtom] = [
         "square" : MTMathAtomFactory.placeholder(),
         
          // Greek characters
@@ -448,35 +448,16 @@ public class MTMathAtomFactory {
     
     public static func fontNameForStyle(_ fontStyle:MTFontStyle) -> String {
         switch fontStyle {
-            case .defaultStyle:
-                return "mathnormal";
-
-            case .roman:
-                return "mathrm";
-
-            case .bold:
-                return "mathbf";
-
-            case .fraktur:
-                return "mathfrak";
-
-            case .caligraphic:
-                return "mathcal";
-
-            case .italic:
-                return "mathit";
-
-            case .sansSerif:
-                return "mathsf";
-
-            case .blackboard:
-                return "mathbb";
-
-            case .typewriter:
-                return "mathtt";
-
-            case .boldItalic:
-                return "bm";
+            case .defaultStyle: return "mathnormal"
+            case .roman:        return "mathrm"
+            case .bold:         return "mathbf"
+            case .fraktur:      return "mathfrak"
+            case .caligraphic:  return "mathcal"
+            case .italic:       return "mathit"
+            case .sansSerif:    return "mathsf"
+            case .blackboard:   return "mathbb"
+            case .typewriter:   return "mathtt"
+            case .boldItalic:   return "bm"
         }
     }
     
@@ -599,6 +580,7 @@ public class MTMathAtomFactory {
         }
         
         if let atom = supportedLatexSymbols[name] {
+            // FIXME: A kludge - objects should be copied here
             if name == "int" { return MTMathAtomFactory.operatorWithName( "\u{222B}", limits: false) }
             if name == "sum" { return MTMathAtomFactory.operatorWithName( "\u{2211}", limits: true) }
             return atom
@@ -707,6 +689,15 @@ public class MTMathAtomFactory {
      @note The reason this function returns a `MTMathAtom` and not a `MTMathTable` is because some
      matrix environments are have builtin delimiters added to the table and hence are returned as inner atoms.
      */
+    static let matrixEnvs = [
+        "matrix": [],
+        "pmatrix": ["(", ")"],
+        "bmatrix": ["[", "]"],
+        "Bmatrix": ["{", "}"],
+        "vmatrix": ["vert", "vert"],
+        "Vmatrix": ["Vert", "Vert"]
+    ]
+    
     public static func table(withEnvironment env: String?, rows: [[MTMathList]], error:inout NSError?) -> MTMathAtom? {
         let table = MTMathTable(environment: env)
         
@@ -716,15 +707,6 @@ public class MTMathAtomFactory {
                 table.set(cell: row[j], forRow: i, column: j)
             }
         }
-        
-        let matrixEnvs = [
-            "matrix": [],
-            "pmatrix": ["(", ")"],
-            "bmatrix": ["[", "]"],
-            "Bmatrix": ["{", "}"],
-            "vmatrix": ["vert", "vert"],
-            "Vmatrix": ["Vert", "Vert"]
-        ]
         
         if env == nil {
             table.interColumnSpacing = 0
