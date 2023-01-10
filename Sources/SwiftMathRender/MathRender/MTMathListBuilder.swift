@@ -546,7 +546,7 @@ public class MTMathListBuilder {
             return mathColor
         } else if command == "colorbox" {
             // A color command has 2 arguments
-            let mathColorbox = MTMathColorbox();
+            let mathColorbox = MTMathColorbox()
             mathColorbox.colorString = self.readColor()!
             mathColorbox.innerList = self.buildInternal(true)
             return mathColorbox

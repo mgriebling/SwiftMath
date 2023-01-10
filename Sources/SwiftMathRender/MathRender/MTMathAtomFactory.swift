@@ -580,10 +580,7 @@ public class MTMathAtomFactory {
         }
         
         if let atom = supportedLatexSymbols[name] {
-            // FIXME: A kludge - objects should be copied here
-            if name == "int" { return MTMathAtomFactory.operatorWithName( "\u{222B}", limits: false) }
-            if name == "sum" { return MTMathAtomFactory.operatorWithName( "\u{2211}", limits: true) }
-            return atom
+            return atom.copy()
         }
         
         return nil

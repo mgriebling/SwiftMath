@@ -78,11 +78,25 @@ public enum MTFontStyle:Int {
     boldItalic
 }
 
-public class MTMathAtom: NSObject, NSCopying {
-        
-    public var type: MTMathAtomType
-    public var subScript: MTMathList?
-    public var superScript: MTMathList?
+public class MTMathAtom: NSObject {
+    
+    public var type = MTMathAtomType.ordinary
+    public var subScript: MTMathList? {
+        didSet {
+            if subScript != nil && !self.isScriptAllowed() {
+                subScript = nil
+                NSException(name: NSExceptionName(rawValue: "Error"), reason: "Subscripts not allowed for atom of type \(self.type)").raise()
+            }
+        }
+    }
+    public var superScript: MTMathList? {
+        didSet {
+            if superScript != nil && !self.isScriptAllowed() {
+                superScript = nil
+                NSException(name: NSExceptionName(rawValue: "Error"), reason: "Superscripts not allowed for atom of type \(self.type)").raise()
+            }
+        }
+    }
     public var nucleus: String = ""
     public var childAtoms = [MTMathAtom]()   // atoms that fused to create this one
     public var indexRange = NSRange(location: 0, length: 0) // indexRange in list that this atom tracks:
@@ -90,43 +104,53 @@ public class MTMathAtom: NSObject, NSCopying {
     var fontStyle: MTFontStyle = .defaultStyle
     var fusedAtoms: MTMathList?
     
-    public func copy(with zone: NSZone? = nil) -> Any {
-        let atom = MTMathAtom.atom(withType: type, value: nucleus)
-        atom.type = self.type
-        atom.nucleus = self.nucleus
-        atom.subScript = self.subScript?.copy() as? MTMathList
-        atom.superScript = self.subScript?.copy() as? MTMathList
-        atom.indexRange = self.indexRange
-        atom.fontStyle = self.fontStyle
-        return atom
+    init(_ atom:MTMathAtom?) {
+        guard let atom = atom else { return }
+        self.type = atom.type
+        self.nucleus = atom.nucleus
+        self.subScript = MTMathList(atom.subScript)
+        self.superScript = MTMathList(atom.superScript)
+        self.indexRange = atom.indexRange
+        self.fontStyle = atom.fontStyle
+        self.childAtoms = [MTMathAtom](atom.childAtoms)
+        self.fusedAtoms = MTMathList(atom.fusedAtoms)
     }
     
-    public static func atom(withType type:MTMathAtomType, value:String) -> MTMathAtom {
-        switch type {
+    override init() { }
+    
+    init(type:MTMathAtomType, value:String) {
+        self.type = type
+        self.nucleus = type == .radical ? "" : value
+    }
+    
+    public func copy() -> MTMathAtom {
+        switch self.type {
             case .largeOperator:
-                return MTLargeOperator(value: value, limits: true)
+                return MTLargeOperator(self as? MTLargeOperator)
             case .fraction:
-                return MTFraction()
+                return MTFraction(self as? MTFraction)
             case .radical:
-                return MTRadical()
-            case .placeholder:
-                return MTMathAtom(type: type, value: UnicodeSymbol.whiteSquare)
+                return MTRadical(self as? MTRadical)
+            case .style:
+                return MTMathStyle(self as? MTMathStyle)
             case .inner:
-                return MTInner()
+                return MTInner(self as? MTInner)
             case .underline:
-                return MTUnderLine()
+                return MTUnderLine(self as? MTUnderLine)
             case .overline:
-                return MTOverLine()
+                return MTOverLine(self as? MTOverLine)
             case .accent:
-                return MTAccent(value: value)
+                return MTAccent(self as? MTAccent)
             case .space:
-                return MTMathSpace(space: 0)
+                return MTMathSpace(self as? MTMathSpace)
             case .color:
-                return MTMathColor()
+                return MTMathColor(self as? MTMathColor)
             case .colorBox:
-                return MTMathColorbox()
+                return MTMathColorbox(self as? MTMathColorbox)
+            case .table:
+                return MTMathTable(self as! MTMathTable)
             default:
-                return MTMathAtom(type: type, value: value)
+                return MTMathAtom(self)
         }
     }
     
@@ -148,7 +172,6 @@ public class MTMathAtom: NSObject, NSCopying {
     
     public override var description: String {
         var string = ""
-        
         string += self.nucleus
         if self.superScript != nil {
             string += "^{\(self.superScript!.description)}"
@@ -156,7 +179,6 @@ public class MTMathAtom: NSObject, NSCopying {
         if self.subScript != nil {
             string += "_{\(self.subScript!.description)}"
         }
-        
         return string
     }
     
@@ -213,12 +235,6 @@ public class MTMathAtom: NSObject, NSCopying {
     }
     
     func isScriptAllowed() -> Bool { self.type.isScriptAllowed() }
-    
-    public init(type: MTMathAtomType, value: String) {
-        self.type = type
-        self.nucleus = value
-    }
-    
     func isNotBinaryOperator() -> Bool { self.type.isNotBinaryOperator() }
     
 }
@@ -232,17 +248,23 @@ public class MTFraction: MTMathAtom {
     public var hasRule: Bool = true
     public var leftDelimiter: String?
     public var rightDelimiter: String?
-    public var numerator:  MTMathList? =  MTMathList()
-    public var denominator:  MTMathList? =  MTMathList()
+    public var numerator:  MTMathList?
+    public var denominator:  MTMathList?
     
-    public override func copy(with zone: NSZone? = nil) -> Any {
-        let frac = super.copy(with: zone) as! MTFraction
-        frac.numerator = self.numerator?.copy() as? MTMathList
-        frac.denominator = self.denominator?.copy() as? MTMathList
-        frac.hasRule = self.hasRule
-        frac.leftDelimiter = self.leftDelimiter
-        frac.rightDelimiter = self.rightDelimiter
-        return frac
+    init(_ frac: MTFraction?) {
+        super.init(frac)
+        self.type = .fraction
+        self.numerator = MTMathList(frac?.numerator)
+        self.denominator = MTMathList(frac?.denominator)
+        self.hasRule = frac?.hasRule ?? true
+        self.leftDelimiter = frac?.leftDelimiter
+        self.rightDelimiter = frac?.rightDelimiter
+    }
+    
+    init(hasRule rule:Bool = true) {
+        super.init()
+        self.type = .fraction
+        self.hasRule = rule
     }
     
     override public var description: String {
@@ -280,28 +302,27 @@ public class MTFraction: MTMathAtom {
         return finalized
     }
     
-    convenience init(hasRule: Bool = true) {
-        self.init(type: .fraction, value: "")
-        self.hasRule = hasRule
-    }
 }
 
 public class MTRadical: MTMathAtom {
     // Under the roof
-    public var radicand:  MTMathList? =  MTMathList()
+    public var radicand:  MTMathList?
     
     // Value on radical sign
     public var degree:  MTMathList?
     
-    convenience init() {
-        self.init(type: .radical, value: "")
+    init(_ rad:MTRadical?) {
+        super.init(rad)
+        self.type = .radical
+        self.radicand = MTMathList(rad?.radicand)
+        self.degree = MTMathList(rad?.degree)
+        self.nucleus = ""
     }
     
-    public override func copy(with zone: NSZone? = nil) -> Any {
-        let rad = super.copy(with: zone) as! MTRadical
-        rad.radicand = self.radicand?.copy() as? MTMathList
-        rad.degree = self.degree?.copy() as? MTMathList
-        return rad
+    override init() {
+        super.init()
+        self.type = .radical
+        self.nucleus = ""
     }
     
     override public var description: String {
@@ -338,15 +359,17 @@ public class MTRadical: MTMathAtom {
 public class MTLargeOperator: MTMathAtom {
     public var limits: Bool = false
     
-    init(value: String, limits: Bool) {
-        super.init(type: .largeOperator, value: value)
-        self.limits = limits
+    init(_ op:MTLargeOperator?) {
+        super.init(op)
+        self.type = .largeOperator
+        self.limits = op?.limits ?? false
     }
     
-    public override func copy(with zone: NSZone? = nil) -> Any {
-        let op = super.copy(with: zone) as! MTLargeOperator
-        op.limits = self.limits
-        return op
+    init(value: String, limits: Bool) {
+        super.init()
+        self.type = .largeOperator
+        self.nucleus = value
+        self.limits = limits
     }
 }
 
@@ -357,36 +380,31 @@ public class MTInner: MTMathAtom {
     public var leftBoundary: MTMathAtom? {
         didSet {
             if leftBoundary != nil && leftBoundary!.type != .boundary {
-                assertionFailure("Left boundary must be of type .boundary")
+                leftBoundary = nil
+                NSException(name: NSExceptionName(rawValue: "Error"), reason: "Left boundary must be of type .boundary").raise()
             }
         }
     }
     public var rightBoundary: MTMathAtom? {
         didSet {
             if rightBoundary != nil && rightBoundary!.type != .boundary {
-                assertionFailure("Right boundary must be of type .boundary")
+                rightBoundary = nil
+                NSException(name: NSExceptionName(rawValue: "Error"), reason: "Right boundary must be of type .boundary").raise()
             }
         }
     }
     
-    public override func copy(with zone: NSZone? = nil) -> Any {
-        let inner = super.copy(with: zone) as! MTInner
-        inner.innerList = self.innerList?.copy() as? MTMathList
-        inner.leftBoundary = self.leftBoundary?.copy() as? MTMathAtom
-        inner.rightBoundary = self.rightBoundary?.copy() as? MTMathAtom
-        return inner
+    init(_ inner:MTInner?) {
+        super.init(inner)
+        self.type = .inner
+        self.innerList = MTMathList(inner?.innerList)
+        self.leftBoundary = MTMathAtom(inner?.leftBoundary)
+        self.rightBoundary = MTMathAtom(inner?.rightBoundary)
     }
     
-    init() {
-        super.init(type: .inner, value: "")
-    }
-    
-    public override convenience init(type: MTMathAtomType, value: String) {
-        if type == .inner {
-            self.init(); return
-        }
-        assertionFailure("MTInner(type:value:) cannot be called. Use MTInner() instead.")
-        self.init()
+    override init() {
+        super.init()
+        self.type = .inner
     }
     
     override public var description: String {
@@ -427,14 +445,15 @@ public class MTOverLine: MTMathAtom {
         return finalized
     }
     
-    public override func copy(with zone: NSZone? = nil) -> Any {
-        let op = super.copy(with: zone) as! MTOverLine
-        op.innerList = self.innerList?.copy() as? MTMathList
-        return op
+    init(_ over: MTOverLine?) {
+        super.init(over)
+        self.type = .overline
+        self.innerList = MTMathList(self.innerList)
     }
     
-    convenience init() {
-        self.init(type: .overline, value: "")
+    override init() {
+        super.init()
+        self.type = .overline
     }
 }
 
@@ -447,14 +466,15 @@ public class MTUnderLine: MTMathAtom {
         return finalized
     }
     
-    public override func copy(with zone: NSZone? = nil) -> Any {
-        let op = super.copy(with: zone) as! MTUnderLine
-        op.innerList = self.innerList?.copy() as? MTMathList
-        return op
+    init(_ under: MTUnderLine?) {
+        super.init(under)
+        self.type = .underline
+        self.innerList = MTMathList(under?.innerList)
     }
     
-    convenience init() {
-        self.init(type: .underline, value: "")
+    override init() {
+        super.init()
+        self.type = .underline
     }
 }
 
@@ -467,31 +487,33 @@ public class MTAccent: MTMathAtom {
         return finalized
     }
     
-    public override func copy(with zone: NSZone? = nil) -> Any {
-        let op = super.copy(with: zone) as! MTAccent
-        op.innerList = self.innerList?.copy() as? MTMathList
-        return op
+    init(_ accent: MTAccent?) {
+        super.init(accent)
+        self.type = .accent
+        self.innerList = MTMathList(accent?.innerList)
     }
     
-    convenience init(value: String) {
-        self.init(type: .accent, value: value)
+    init(value: String) {
+        super.init()
+        self.type = .accent
+        self.nucleus = value
     }
 }
 
 public class MTMathSpace: MTMathAtom {
     public var space: CGFloat = 0
     
-    convenience init(space: CGFloat) {
-        self.init(type: .space, value: "")
+    init(_ space: MTMathSpace?) {
+        super.init(space)
+        self.type = .space
+        self.space = space?.space ?? 0
+    }
+    
+    init(space:CGFloat) {
+        super.init()
+        self.type = .space
         self.space = space
     }
-    
-    public override func copy(with zone: NSZone? = nil) -> Any {
-        let op = super.copy(with: zone) as! MTMathSpace
-        op.space = self.space
-        return op
-    }
-    
 }
 
 public enum MTLineStyle {
@@ -517,15 +539,16 @@ public enum MTLineStyle {
 public class MTMathStyle: MTMathAtom {
     public var style: MTLineStyle = .display
     
-    convenience init(style: MTLineStyle = .display) {
-        self.init(type: .style, value: "")
-        self.style = style
+    init(_ style:MTMathStyle?) {
+        super.init(style)
+        self.type = .style
+        self.style = style?.style ?? .display
     }
     
-    public override func copy(with zone: NSZone? = nil) -> Any {
-        let op = super.copy(with: zone) as! MTMathStyle
-        op.style = self.style
-        return op
+    init(style:MTLineStyle) {
+        super.init()
+        self.type = .style
+        self.style = style
     }
 }
 
@@ -533,23 +556,16 @@ public class MTMathColor: MTMathAtom {
     public var colorString:String=""
     public var innerList:MTMathList?
     
-    init() {
-        super.init(type: .color, value: "")
+    init(_ color: MTMathColor?) {
+        super.init(color)
+        self.type = .color
+        self.colorString = color?.colorString ?? ""
+        self.innerList = MTMathList(color?.innerList)
     }
     
-    public override convenience init(type: MTMathAtomType, value: String) {
-        if type == .color {
-            self.init(); return
-        }
-        NSException(name: NSExceptionName("InvalidMethod"), reason: "MTMathColor(type:value) cannot be called. Use MTMathColor() instead.").raise()
-        self.init()
-    }
-    
-    public override func copy(with zone: NSZone? = nil) -> Any {
-        let op = super.copy(with: zone) as! MTMathColor
-        op.colorString = self.colorString
-        op.innerList = self.innerList?.copy() as? MTMathList
-        return op
+    override init() {
+        super.init()
+        self.type = .color
     }
     
     public override var string: String {
@@ -561,23 +577,16 @@ public class MTMathColorbox: MTMathAtom {
     public var colorString:String=""
     public var innerList:MTMathList?
     
-    init() {
-        super.init(type: .color, value: "")
+    init(_ cbox: MTMathColorbox?) {
+        super.init(cbox)
+        self.type = .colorBox
+        self.colorString = cbox?.colorString ?? ""
+        self.innerList = MTMathList(cbox?.innerList)
     }
     
-    public override convenience init(type: MTMathAtomType, value: String) {
-        if type == .color {
-            self.init(); return
-        }
-        NSException(name: NSExceptionName("InvalidMethod"), reason: "MTMathColorbox(type:value) cannot be called. Use MTMathColorbox() instead.").raise()
-        self.init()
-    }
-    
-    public override func copy(with zone: NSZone? = nil) -> Any {
-        let op = super.copy(with: zone) as! MTMathColorbox
-        op.colorString = self.colorString
-        op.innerList = self.innerList?.copy() as? MTMathList
-        return op
+    override init() {
+        super.init()
+        self.type = .colorBox
     }
     
     public override var string: String {
@@ -611,24 +620,33 @@ public class MTMathTable: MTMathAtom {
         return finalized
     }
     
-    convenience init(environment: String? = nil) {
-        self.init(type: .table, value: "")
+    init(environment: String?) {
+        super.init()
+        self.type = .table
         self.environment = environment
     }
     
-    public override func copy(with zone: NSZone? = nil) -> Any {
-        let op = super.copy(with: zone) as! MTMathTable
-        op.interRowAdditionalSpacing = self.interRowAdditionalSpacing
-        op.interColumnSpacing = self.interColumnSpacing
-        op.environment = self.environment
+    init(_ table:MTMathTable) {
+        super.init(table)
+        self.type = .table
+        self.alignments = table.alignments
+        self.interRowAdditionalSpacing = table.interRowAdditionalSpacing
+        self.interColumnSpacing = table.interColumnSpacing
+        self.environment = table.environment
         var cellCopy = [[MTMathList]]()
-        cellCopy.reserveCapacity(self.cells.count)
-        for row in self.cells {
-            let newRow = [MTMathList](row)
+        for row in table.cells {
+            var newRow = [MTMathList]()
+            for col in row {
+                newRow.append(MTMathList(col)!)
+            }
             cellCopy.append(newRow)
         }
-        op.cells = cellCopy
-        return op
+        self.cells = cellCopy
+    }
+    
+    override init() {
+        super.init()
+        self.type = .table
     }
     
     public func set(cell list: MTMathList, forRow row:Int, column:Int) {
@@ -685,12 +703,13 @@ extension MTMathList {
     public var string: String { self.description }
 }
 
-public class MTMathList: NSObject, NSCopying {
+public class MTMathList : NSObject {
     
-    public func copy(with zone: NSZone? = nil) -> Any {
-        let list = MTMathList()
-        list.atoms = [MTMathAtom](self.atoms)
-        return list
+    init?(_ list:MTMathList?) {
+        guard let list = list else { return nil }
+        for atom in list.atoms {
+            self.atoms.append(atom.copy())
+        }
     }
 
     public var atoms = [MTMathAtom]()
@@ -753,9 +772,7 @@ public class MTMathList: NSObject, NSCopying {
         self.atoms.append(atom)
     }
     
-    public override init() {
-        self.atoms = []
-    }
+    public override init() { super.init() }
     
     func NSParamException(_ param:Any?) {
         if param == nil {
