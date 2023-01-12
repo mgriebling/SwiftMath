@@ -33,12 +33,12 @@ public class MTFont {
         // In particular it does not have the math italic characters which breaks our variable rendering.
         // So we first load a CGFont from the file and then convert it to a CTFont.
         self.init()
-        print("Loading font %@", name);
+        print("Loading font \(name)")
         let bundle = MTFont.fontBundle
         let fontPath = bundle.path(forResource: name, ofType: "otf")
         let fontDataProvider = CGDataProvider(filename: fontPath!)
         self.defaultCGFont = CGFont(fontDataProvider!)!
-        print("Num glyphs: %zd", self.defaultCGFont.numberOfGlyphs)
+        print("Num glyphs: \(self.defaultCGFont.numberOfGlyphs)")
         
         self.ctFont = CTFontCreateWithGraphicsFont(self.defaultCGFont, size, nil, nil);
         
@@ -50,7 +50,8 @@ public class MTFont {
     
     static var fontBundle:Bundle {
         // Uses bundle for class so that this can be access by the unit tests.
-        return Bundle(url: Bundle(for: self).url(forResource: "iosMathFonts", withExtension: "bundle")!)!
+        let url = Bundle.module.url(forResource: "mathFonts", withExtension: "bundle")!
+        return Bundle(url: url)!
     }
     
     func copy(withSize size: CGFloat) -> MTFont {

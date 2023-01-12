@@ -120,6 +120,11 @@ public class MTMathAtomFactory {
         return _accentValueToName!
     }
     
+    static var supportedLatexSymbolNames:[String] {
+        let commands = MTMathAtomFactory.supportedLatexSymbols
+        return commands.keys.map { String($0) }
+    }
+    
     static var supportedLatexSymbols: [String: MTMathAtom] = [
         "square" : MTMathAtomFactory.placeholder(),
         
@@ -663,11 +668,19 @@ public class MTMathAtomFactory {
     /** Returns a fraction with the given numerator and denominator. */
     public static func fraction(withNumerator num: MTMathList, denominator denom: MTMathList) -> MTFraction {
         let frac = MTFraction()
-        
         frac.numerator = num
         frac.denominator = denom
-        
         return frac
+    }
+    
+    public static func mathListForCharacters(_ chars:String) -> MTMathList? {
+        let list = MTMathList()
+        for ch in chars {
+            if let atom = self.atom(forCharacter: ch) {
+                list.add(atom)
+            }
+        }
+        return list
     }
     
     /** Simplification of above function when numerator and denominator are simple strings.

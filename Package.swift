@@ -2,6 +2,7 @@
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
+import CoreGraphics
 
 let package = Package(
     name: "SwiftMathRender",
@@ -20,7 +21,10 @@ let package = Package(
         // Targets can depend on other targets in this package, and on products in packages this package depends on.
         .target(
             name: "SwiftMathRender",
-            dependencies: []),
+            dependencies: [],
+            resources: [
+                .copy("mathFonts.bundle")
+            ]),
         .testTarget(
             name: "SwiftMathRenderTests",
             dependencies: ["SwiftMathRender"]),

@@ -8,8 +8,9 @@
 import Foundation
 
 // type defines spacing and how it is rendered
-public enum MTMathAtomType: String, CustomStringConvertible {
-    case ordinary // number or text
+public enum MTMathAtomType: Int, CustomStringConvertible, Comparable {
+ 
+    case ordinary = 1 // number or text
     case number     // number
     case variable // text in italic
     case largeOperator // sin/cos, integral
@@ -28,15 +29,15 @@ public enum MTMathAtomType: String, CustomStringConvertible {
     case accent // accented atom
     
     // these atoms do not support subscripts/superscripts:
-    case boundary
-    case space
+    case boundary = 101
+    case space = 201
     
     // Denotes style changes during randering
     case style
     case color
     case colorBox
     
-    case table
+    case table = 1001
     
     func isNotBinaryOperator() -> Bool {
         switch self {
@@ -51,8 +52,38 @@ public enum MTMathAtomType: String, CustomStringConvertible {
     
     // we want string representations to be capitalized
     public var description: String {
-        self.rawValue.capitalized
+        switch self {
+            case .ordinary:       return "Ordinary"
+            case .number:         return "Number"
+            case .variable:       return "Variable"
+            case .largeOperator:  return "Large Operator"
+            case .binaryOperator: return "Binary Operator"
+            case .unaryOperator:  return "Unary Operator"
+            case .relation:       return "Relation"
+            case .open:           return "Open"
+            case .close:          return "Close"
+            case .fraction:       return "Fraction"
+            case .radical:        return "Radical"
+            case .punctuation:    return "Punctuation"
+            case .placeholder:    return "Placeholder"
+            case .inner:          return "Inner"
+            case .underline:      return "Underline"
+            case .overline:       return "Overline"
+            case .accent:         return "Accent"
+            case .boundary:       return "Boundary"
+            case .space:          return "Space"
+            case .style:          return "Style"
+            case .color:          return "Color"
+            case .colorBox:       return "Colorbox"
+            case .table:          return "Table"
+        }
     }
+    
+    // comparable support
+    public static func < (lhs: MTMathAtomType, rhs: MTMathAtomType) -> Bool {
+        lhs.rawValue < rhs.rawValue
+    }
+    
 }
 
 public enum MTFontStyle:Int {

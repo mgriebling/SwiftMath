@@ -378,7 +378,11 @@ class MTTypesetter {
     var currentLine:NSMutableAttributedString!
     var currentAtoms = [MTMathAtom]()   // List of atoms that make the line
     var currentLineIndexRange = NSMakeRange(0, 0)
-    var style:MTLineStyle = .display
+    var style:MTLineStyle {
+        didSet {
+            self.styleFont = self.font.copy(withSize: Self.getStyleSize(self.style, font: self.font))
+        }
+    }
     var styleFont:MTFont!
     var cramped = false
     var spaced = false
@@ -470,11 +474,6 @@ class MTTypesetter {
             case .scriptOfScript:
                 return original * font!.mathTable!.scriptScriptScaleDown;
         }
-    }
-    
-    func setStyle(_ style:MTLineStyle) {
-        self.style = style
-        self.styleFont = self.font.copy(withSize: Self.getStyleSize(self.style, font: self.font))   //copyFontWithSize:[self.class] getStyleSize:style font:font])
     }
     
     func addInterElementSpace(_ prevNode:MTMathAtom?, currentType type:MTMathAtomType) {
@@ -754,7 +753,7 @@ class MTTypesetter {
         if (currentLine.length > 0) {
             self.addDisplayLine()
         }
-        if spaced && !lastType.rawValue.isEmpty {
+        if spaced {
             // If spaced then add an interelement space between the last type and close
             let display = displayAtoms.last
             let interElementSpace = self.getInterElementSpace(lastType, right:.close)
