@@ -44,7 +44,7 @@ class GlyphPart {
 class MTFontMathTable {
     
     // The font for this math table.
-    weak var font:MTFont? // @property (nonatomic, readonly, weak) MTFont* font;
+    var font:MTFont? // @property (nonatomic, readonly, weak) MTFont* font;
     
     var _unitsPerEm: UInt
     var _fontSize: CGFloat
@@ -62,7 +62,7 @@ class MTFontMathTable {
     init(withFont font: MTFont?, mathTable:NSDictionary) {
         assert(font != nil, "font has nil value")
         assert(font!.ctFont != nil, "font.ctFont has nil value")
-        self.font = font;
+        self.font = font
         // do domething with font
         _unitsPerEm = UInt(CTFontGetUnitsPerEm(font!.ctFont))
         _fontSize = font!.fontSize;
@@ -202,12 +202,12 @@ class MTFontMathTable {
     }
     
     func getVariantsForGlyph(_ glyph: CGGlyph, inDictionary variants:NSDictionary?) -> [NSNumber?] {
-        let glyphName = self.font?.get(nameForGlyph: glyph)
-        let variantGlyphs = variants![glyphName!] as! NSArray?
+        let glyphName = self.font!.get(nameForGlyph: glyph)
+        let variantGlyphs = variants![glyphName] as! NSArray?
         let glyphArray = NSMutableArray(capacity: variantGlyphs!.count)
         if variantGlyphs == nil {
             // There are no extra variants, so just add the current glyph to it.
-            let glyph = self.font?.get(glyphWithName: glyphName!)
+            let glyph = self.font!.get(glyphWithName: glyphName)
             glyphArray.add(glyph as Any)
             return glyphArray as! [NSNumber?]
         }

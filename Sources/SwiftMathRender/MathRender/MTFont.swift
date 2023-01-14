@@ -64,12 +64,12 @@ public class MTFont {
     }
     
     func get(nameForGlyph glyph:CGGlyph) -> String {
-        let name = self.defaultCGFont.name(for: glyph)
-        return name! as String
+        let name = defaultCGFont.name(for: glyph) as? String
+        return name!
     }
     
     func get(glyphWithName name:String) -> CGGlyph {
-        return self.defaultCGFont.getGlyphWithGlyphName(name: name as CFString)
+        return defaultCGFont.getGlyphWithGlyphName(name: name as CFString)
     }
     
     var fontSize:CGFloat {

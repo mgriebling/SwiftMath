@@ -51,7 +51,7 @@ final class MTTypesetterTests: XCTestCase {
         XCTAssertEqual(display.width, line.width);
         
         XCTAssertEqual(display.ascent, 8.834, accuracy: 0.01)
-        XCTAssertEqual(display.descent, 0.24, accuracy: 0.01)
+        XCTAssertEqual(display.descent, 0.22, accuracy: 0.01)
         XCTAssertEqual(display.width, 11.44, accuracy: 0.01)
     }
 
@@ -81,7 +81,7 @@ final class MTTypesetterTests: XCTestCase {
         XCTAssertEqual(display.width, line.width);
         
         XCTAssertEqual(display.ascent, 8.834, accuracy: 0.01)
-        XCTAssertEqual(display.descent, 4.12, accuracy: 0.01)
+        XCTAssertEqual(display.descent, 4.10, accuracy: 0.01)
         XCTAssertEqual(display.width, 44.86, accuracy: 0.01)
     }
 
@@ -111,7 +111,7 @@ final class MTTypesetterTests: XCTestCase {
         XCTAssertEqual(display.width, line.width);
         
         XCTAssertEqual(display.ascent, 13.32, accuracy: 0.01)
-        XCTAssertEqual(display.descent, 4.12, accuracy: 0.01)
+        XCTAssertEqual(display.descent, 4.10, accuracy: 0.01)
         XCTAssertEqual(display.width, 45.56, accuracy: 0.01)
     }
 
@@ -141,11 +141,11 @@ final class MTTypesetterTests: XCTestCase {
         XCTAssertEqual(display.width, line.width);
         
         XCTAssertEqual(display.ascent, 13.32, accuracy: 0.01)
-        XCTAssertEqual(display.descent, 4.12, accuracy: 0.01)
+        XCTAssertEqual(display.descent, 4.10, accuracy: 0.01)
         XCTAssertEqual(display.width, 92.36, accuracy: 0.01)
     }
 
-//    #define XCTAssertTrue(NSEqualPoints(p1, p2, accuracy, ...) \
+//    #define XCTAssertTrue(CGPointEqualToPoint(p1, p2, accuracy, ...) \
 //        XCTAssertEqual(p1.x, p2.x, accuracy, __VA_ARGS__); \
 //        XCTAssertEqual(p1.y, p2.y, accuracy, __VA_ARGS__)
 //
@@ -184,7 +184,7 @@ final class MTTypesetterTests: XCTestCase {
         XCTAssertTrue(sub1 is MTMathListDisplay)
         let display2 = sub1 as! MTMathListDisplay
         XCTAssertEqual(display2.type, .superscript)
-        XCTAssertTrue(NSEqualPoints(display2.position, CGPointMake(11.44, 7.26)))
+        XCTAssertTrue(CGPointEqualToPoint(display2.position, CGPointMake(11.44, 7.26)))
         XCTAssertTrue(NSEqualRanges(display2.range, NSMakeRange(0, 1)));
         XCTAssertFalse(display2.hasScript);
         XCTAssertEqual(display2.index, 0);
@@ -200,7 +200,7 @@ final class MTTypesetterTests: XCTestCase {
         
         // dimensions
         XCTAssertEqual(display.ascent, 16.584, accuracy: 0.01)
-        XCTAssertEqual(display.descent, 0.24, accuracy: 0.01)
+        XCTAssertEqual(display.descent, 0.22, accuracy: 0.01)
         XCTAssertEqual(display.width, 18.44, accuracy: 0.01)
     }
 
@@ -234,7 +234,7 @@ final class MTTypesetterTests: XCTestCase {
         XCTAssertTrue(sub1 is MTMathListDisplay);
         let display2 = sub1 as! MTMathListDisplay
         XCTAssertEqual(display2.type, .ssubscript);
-        XCTAssertTrue(NSEqualPoints(display2.position, CGPointMake(11.44, -4.94)))
+        XCTAssertTrue(CGPointEqualToPoint(display2.position, CGPointMake(11.44, -4.94)))
         XCTAssertTrue(NSEqualRanges(display2.range, NSMakeRange(0, 1)))
         XCTAssertFalse(display2.hasScript);
         XCTAssertEqual(display2.index, 0);
@@ -250,7 +250,7 @@ final class MTTypesetterTests: XCTestCase {
         
         // dimensions
         XCTAssertEqual(display.ascent, 8.834, accuracy: 0.01)
-        XCTAssertEqual(display.descent, 4.954, accuracy: 0.01)
+        XCTAssertEqual(display.descent, 4.940, accuracy: 0.01)
         XCTAssertEqual(display.width, 18.44, accuracy: 0.01)
     }
 
@@ -287,7 +287,7 @@ final class MTTypesetterTests: XCTestCase {
         XCTAssertTrue(sub1 is MTMathListDisplay);
         let display2 = sub1 as! MTMathListDisplay
         XCTAssertEqual(display2.type, .superscript);
-        XCTAssertTrue(NSEqualPoints(display2.position, CGPointMake(11.44, 7.26)))
+        XCTAssertTrue(CGPointEqualToPoint(display2.position, CGPointMake(11.44, 7.26)))
         XCTAssertTrue(NSEqualRanges(display2.range, NSMakeRange(0, 1)));
         XCTAssertFalse(display2.hasScript);
         XCTAssertEqual(display2.index, 0);
@@ -306,7 +306,7 @@ final class MTTypesetterTests: XCTestCase {
         let display3 = sub2 as! MTMathListDisplay
         XCTAssertEqual(display3.type, .ssubscript);
         // Positioned differently when both subscript and superscript present.
-        XCTAssertTrue(NSEqualPoints(display3.position, CGPointMake(11.44, -5.278)))
+        XCTAssertTrue(CGPointEqualToPoint(display3.position, CGPointMake(11.44, -5.264)))
         XCTAssertTrue(NSEqualRanges(display3.range, NSMakeRange(0, 1)))
         XCTAssertFalse(display3.hasScript);
         XCTAssertEqual(display3.index, 0);
@@ -322,7 +322,7 @@ final class MTTypesetterTests: XCTestCase {
         
         // dimensions
         XCTAssertEqual(display.ascent, 16.584, accuracy: 0.01)
-        XCTAssertEqual(display.descent, 5.292, accuracy: 0.01)
+        XCTAssertEqual(display.descent, 5.264, accuracy: 0.01)
         XCTAssertEqual(display.width, 18.44, accuracy: 0.01)
     }
 
@@ -354,7 +354,7 @@ final class MTTypesetterTests: XCTestCase {
 
         let display2 = radical.radicand!
         XCTAssertEqual(display2.type, .regular);
-        XCTAssertTrue(NSEqualPoints(display2.position, CGPointMake(16.66, 0)))
+        XCTAssertTrue(CGPointEqualToPoint(display2.position, CGPointMake(16.66, 0)))
         XCTAssertTrue(NSEqualRanges(display2.range, NSMakeRange(0, 1)));
         XCTAssertFalse(display2.hasScript);
         XCTAssertEqual(display2.index, NSNotFound);
@@ -371,7 +371,7 @@ final class MTTypesetterTests: XCTestCase {
         
         // dimensions
         XCTAssertEqual(display.ascent, 19.34, accuracy: 0.01)
-        XCTAssertEqual(display.descent, 1.48, accuracy: 0.01)
+        XCTAssertEqual(display.descent, 1.46, accuracy: 0.01)
         XCTAssertEqual(display.width, 26.66, accuracy: 0.01)
     }
 
@@ -406,7 +406,7 @@ final class MTTypesetterTests: XCTestCase {
         
         let display2 = radical.radicand!
         XCTAssertEqual(display2.type, .regular);
-        XCTAssertTrue(NSEqualPoints(display2.position, CGPointMake(16.66, 0)))
+        XCTAssertTrue(CGPointEqualToPoint(display2.position, CGPointMake(16.66, 0)))
         XCTAssertTrue(NSEqualRanges(display2.range, NSMakeRange(0, 1)));
         XCTAssertFalse(display2.hasScript);
         XCTAssertEqual(display2.index, NSNotFound);
@@ -423,7 +423,7 @@ final class MTTypesetterTests: XCTestCase {
         
         let display3 = radical.degree!
         XCTAssertEqual(display3.type, .regular);
-        XCTAssertTrue(NSEqualPoints(display3.position, CGPointMake(6.12, 10.716)))
+        XCTAssertTrue(CGPointEqualToPoint(display3.position, CGPointMake(6.12, 10.728)))
         XCTAssertTrue(NSEqualRanges(display3.range, NSMakeRange(0, 1)));
         XCTAssertFalse(display3.hasScript);
         XCTAssertEqual(display3.index, NSNotFound);
@@ -440,7 +440,7 @@ final class MTTypesetterTests: XCTestCase {
         
         // dimensions
         XCTAssertEqual(display.ascent, 19.34, accuracy: 0.01)
-        XCTAssertEqual(display.descent, 1.48, accuracy: 0.01)
+        XCTAssertEqual(display.descent, 1.46, accuracy: 0.01)
         XCTAssertEqual(display.width, 26.66, accuracy: 0.01)
     }
 
@@ -475,7 +475,7 @@ final class MTTypesetterTests: XCTestCase {
         
         let display2 = fraction.numerator!
         XCTAssertEqual(display2.type, .regular);
-        XCTAssertTrue(NSEqualPoints(display2.position, CGPointMake(0, 13.54)))
+        XCTAssertTrue(CGPointEqualToPoint(display2.position, CGPointMake(0, 13.54)))
         XCTAssertTrue(NSEqualRanges(display2.range, NSMakeRange(0, 1)));
         XCTAssertFalse(display2.hasScript);
         XCTAssertEqual(display2.index, NSNotFound);
@@ -492,7 +492,7 @@ final class MTTypesetterTests: XCTestCase {
         
         let display3 = fraction.denominator!
         XCTAssertEqual(display3.type, .regular);
-        XCTAssertTrue(NSEqualPoints(display3.position, CGPointMake(0, -13.72)))
+        XCTAssertTrue(CGPointEqualToPoint(display3.position, CGPointMake(0, -13.72)))
         XCTAssertTrue(NSEqualRanges(display3.range, NSMakeRange(0, 1)));
         XCTAssertFalse(display3.hasScript);
         XCTAssertEqual(display3.index, NSNotFound);
@@ -509,7 +509,7 @@ final class MTTypesetterTests: XCTestCase {
         
         // dimensions
         XCTAssertEqual(display.ascent, 26.86, accuracy: 0.01)
-        XCTAssertEqual(display.descent, 14.18, accuracy: 0.01)
+        XCTAssertEqual(display.descent, 14.16, accuracy: 0.01)
         XCTAssertEqual(display.width, 10, accuracy: 0.01)
     }
 
@@ -544,7 +544,7 @@ final class MTTypesetterTests: XCTestCase {
         
         let display2 = fraction.numerator!
         XCTAssertEqual(display2.type, .regular);
-        XCTAssertTrue(NSEqualPoints(display2.position, CGPointMake(0, 13.54)))
+        XCTAssertTrue(CGPointEqualToPoint(display2.position, CGPointMake(0, 13.54)))
         XCTAssertTrue(NSEqualRanges(display2.range, NSMakeRange(0, 1)));
         XCTAssertFalse(display2.hasScript);
         XCTAssertEqual(display2.index, NSNotFound);
@@ -561,7 +561,7 @@ final class MTTypesetterTests: XCTestCase {
         
         let display3 = fraction.denominator!
         XCTAssertEqual(display3.type, .regular);
-        XCTAssertTrue(NSEqualPoints(display3.position, CGPointMake(0, -13.72)))
+        XCTAssertTrue(CGPointEqualToPoint(display3.position, CGPointMake(0, -13.72)))
         XCTAssertTrue(NSEqualRanges(display3.range, NSMakeRange(0, 1)));
         XCTAssertFalse(display3.hasScript);
         XCTAssertEqual(display3.index, NSNotFound);
@@ -578,7 +578,7 @@ final class MTTypesetterTests: XCTestCase {
         
         // dimensions
         XCTAssertEqual(display.ascent, 26.86, accuracy: 0.01)
-        XCTAssertEqual(display.descent, 14.18, accuracy: 0.01)
+        XCTAssertEqual(display.descent, 14.16, accuracy: 0.01)
         XCTAssertEqual(display.width, 10, accuracy: 0.01)
     }
 
@@ -627,13 +627,13 @@ final class MTTypesetterTests: XCTestCase {
         let fraction = subFrac as! MTFractionDisplay
         XCTAssertTrue(NSEqualRanges(fraction.range, NSMakeRange(0, 1)));
         XCTAssertFalse(fraction.hasScript);
-        XCTAssertTrue(NSEqualPoints(fraction.position, CGPointMake(14.72, 0)))
+        XCTAssertTrue(CGPointEqualToPoint(fraction.position, CGPointMake(14.72, 0)))
         XCTAssertNotNil(fraction.numerator);
         XCTAssertNotNil(fraction.denominator);
         
         let display2 = fraction.numerator!
         XCTAssertEqual(display2.type, .regular);
-        XCTAssertTrue(NSEqualPoints(display2.position, CGPointMake(14.72, 13.54)))
+        XCTAssertTrue(CGPointEqualToPoint(display2.position, CGPointMake(14.72, 13.54)))
         XCTAssertTrue(NSEqualRanges(display2.range, NSMakeRange(0, 1)));
         XCTAssertFalse(display2.hasScript);
         XCTAssertEqual(display2.index, NSNotFound);
@@ -650,7 +650,7 @@ final class MTTypesetterTests: XCTestCase {
         
         let display3 = fraction.denominator!
         XCTAssertEqual(display3.type, .regular);
-        XCTAssertTrue(NSEqualPoints(display3.position, CGPointMake(14.72, -13.72)))
+        XCTAssertTrue(CGPointEqualToPoint(display3.position, CGPointMake(14.72, -13.72)))
         XCTAssertTrue(NSEqualRanges(display3.range, NSMakeRange(0, 1)));
         XCTAssertFalse(display3.hasScript);
         XCTAssertEqual(display3.index, NSNotFound);
@@ -668,13 +668,13 @@ final class MTTypesetterTests: XCTestCase {
         let subRight = display0.subDisplays[2];
         XCTAssertTrue(subRight is MTGlyphDisplay);
         let glyph2 = subRight as! MTGlyphDisplay
-        XCTAssertTrue(NSEqualPoints(glyph2.position, CGPointMake(24.72, 0)))
+        XCTAssertTrue(CGPointEqualToPoint(glyph2.position, CGPointMake(24.72, 0)))
         XCTAssertTrue(NSEqualRanges(glyph2.range, NSMakeRange(NSNotFound, 0)), "Got \(glyph2.range) instead")
         XCTAssertFalse(glyph2.hasScript);
         
         // dimensions
-        XCTAssertEqual(display.ascent, 28.93, accuracy: 0.001);
-        XCTAssertEqual(display.descent, 18.93, accuracy: 0.001);
+        XCTAssertEqual(display.ascent, 28.92, accuracy: 0.001);
+        XCTAssertEqual(display.descent, 18.92, accuracy: 0.001);
         XCTAssertEqual(display.width, 39.44, accuracy: 0.001);
     }
 
@@ -706,12 +706,12 @@ final class MTTypesetterTests: XCTestCase {
         let line2 = sub1 as! MTCTLineDisplay
         XCTAssertEqual(line2.atoms.count, 1);
         XCTAssertEqual(line2.attributedString?.string, "𝑥");
-        XCTAssertTrue(NSEqualPoints(line2.position, CGPointMake(27.893, 0)))
+        XCTAssertTrue(CGPointEqualToPoint(line2.position, CGPointMake(27.893, 0)))
         XCTAssertTrue(NSEqualRanges(line2.range, NSMakeRange(1, 1)), "Got \(line2.range) instead")
         XCTAssertFalse(line2.hasScript);
         
         XCTAssertEqual(display.ascent, 13.14, accuracy: 0.01)
-        XCTAssertEqual(display.descent, 0.24, accuracy: 0.01)
+        XCTAssertEqual(display.descent, 0.22, accuracy: 0.01)
         XCTAssertEqual(display.width, 39.33, accuracy: 0.01)
     }
 
@@ -742,12 +742,12 @@ final class MTTypesetterTests: XCTestCase {
         let line2 = sub1 as! MTCTLineDisplay
         XCTAssertEqual(line2.atoms.count, 1);
         XCTAssertEqual(line2.attributedString?.string, "𝑥");
-        XCTAssertTrue(NSEqualPoints(line2.position, CGPointMake(23.313, 0)))
+        XCTAssertTrue(CGPointEqualToPoint(line2.position, CGPointMake(23.313, 0)))
         XCTAssertTrue(NSEqualRanges(line2.range, NSMakeRange(1, 1)), "Got \(line2.range) instead")
         XCTAssertFalse(line2.hasScript);
         
-        XCTAssertEqual(display.ascent, 27.23, accuracy: 0.01)
-        XCTAssertEqual(display.descent, 17.23, accuracy: 0.01)
+        XCTAssertEqual(display.ascent, 27.22, accuracy: 0.01)
+        XCTAssertEqual(display.descent, 17.22, accuracy: 0.01)
         XCTAssertEqual(display.width, 34.753, accuracy: 0.01)
     }
 
@@ -775,7 +775,7 @@ final class MTTypesetterTests: XCTestCase {
         XCTAssertTrue(sub0 is MTMathListDisplay);
         let display0 = sub0 as! MTMathListDisplay
         XCTAssertEqual(display0.type, .superscript);
-        XCTAssertTrue(NSEqualPoints(display0.position, CGPointMake(19.98, 23.73)))
+        XCTAssertTrue(CGPointEqualToPoint(display0.position, CGPointMake(19.98, 23.72)))
         XCTAssertTrue(NSEqualRanges(display0.range, NSMakeRange(0, 1)))
         XCTAssertFalse(display0.hasScript);
         XCTAssertEqual(display0.index, 0);
@@ -794,7 +794,7 @@ final class MTTypesetterTests: XCTestCase {
         let display1 = sub1 as! MTMathListDisplay
         XCTAssertEqual(display1.type, .ssubscript);
         // Due to italic correction, positioned before subscript.
-        XCTAssertTrue(NSEqualPoints(display1.position, CGPointMake(8.16, -20.03)))
+        XCTAssertTrue(CGPointEqualToPoint(display1.position, CGPointMake(8.16, -20.02)))
         XCTAssertTrue(NSEqualRanges(display1.range, NSMakeRange(0, 1)))
         XCTAssertFalse(display1.hasScript);
         XCTAssertEqual(display1.index, 0);
@@ -820,12 +820,12 @@ final class MTTypesetterTests: XCTestCase {
         let line2 = sub3 as! MTCTLineDisplay
         XCTAssertEqual(line2.atoms.count, 1);
         XCTAssertEqual(line2.attributedString?.string, "𝑥");
-        XCTAssertTrue(NSEqualPoints(line2.position, CGPointMake(31.433, 0)))
+        XCTAssertTrue(CGPointEqualToPoint(line2.position, CGPointMake(31.433, 0)))
         XCTAssertTrue(NSEqualRanges(line2.range, NSMakeRange(1, 1)), "Got \(line2.range) instead")
         XCTAssertFalse(line1.hasScript);
         
-        XCTAssertEqual(display.ascent, 33.054, accuracy: 0.001);
-        XCTAssertEqual(display.descent, 20.352, accuracy: 0.001);
+        XCTAssertEqual(display.ascent, 33.044, accuracy: 0.001);
+        XCTAssertEqual(display.descent, 20.328, accuracy: 0.001);
         XCTAssertEqual(display.width, 42.873, accuracy: 0.001);
     }
 
@@ -858,7 +858,7 @@ final class MTTypesetterTests: XCTestCase {
         
         let display2 = largeOp.lowerLimit!
         XCTAssertEqual(display2.type, .regular);
-        XCTAssertTrue(NSEqualPoints(display2.position, CGPointMake(6.89, -12.02)))
+        XCTAssertTrue(CGPointEqualToPoint(display2.position, CGPointMake(6.89, -12.09)))
         XCTAssertTrue(NSEqualRanges(display2.range, NSMakeRange(0, 1)));
         XCTAssertFalse(display2.hasScript);
         XCTAssertEqual(display2.index, NSNotFound);
@@ -877,12 +877,12 @@ final class MTTypesetterTests: XCTestCase {
         let line2 = sub3 as! MTCTLineDisplay
         XCTAssertEqual(line2.atoms.count, 1);
         XCTAssertEqual(line2.attributedString?.string, "𝑥");
-        XCTAssertTrue(NSEqualPoints(line2.position, CGPointMake(31.1133, 0)))
+        XCTAssertTrue(CGPointEqualToPoint(line2.position, CGPointMake(31.1133, 0)))
         XCTAssertTrue(NSEqualRanges(line2.range, NSMakeRange(1, 1)), "Got \(line2.range) instead")
         XCTAssertFalse(line1.hasScript);
         
         XCTAssertEqual(display.ascent, 13.88, accuracy: 0.01)
-        XCTAssertEqual(display.descent, 12.188, accuracy: 0.01)
+        XCTAssertEqual(display.descent, 12.154, accuracy: 0.01)
         XCTAssertEqual(display.width, 42.553, accuracy: 0.01)
     }
 
@@ -916,7 +916,7 @@ final class MTTypesetterTests: XCTestCase {
         
         let display2 = largeOp.lowerLimit!
         XCTAssertEqual(display2.type, .regular);
-        XCTAssertTrue(NSEqualPoints(display2.position, CGPointMake(10.94, -21.674)))
+        XCTAssertTrue(CGPointEqualToPoint(display2.position, CGPointMake(10.94, -21.664)))
         XCTAssertTrue(NSEqualRanges(display2.range, NSMakeRange(0, 1)))
         XCTAssertFalse(display2.hasScript);
         XCTAssertEqual(display2.index, NSNotFound);
@@ -932,7 +932,7 @@ final class MTTypesetterTests: XCTestCase {
         
         let displayU = largeOp.upperLimit!
         XCTAssertEqual(displayU.type, .regular);
-        XCTAssertTrue(NSEqualPoints(displayU.position, CGPointMake(7.44, 23.178)))
+        XCTAssertTrue(CGPointEqualToPoint(displayU.position, CGPointMake(7.44, 23.154)))
         XCTAssertTrue(NSEqualRanges(displayU.range, NSMakeRange(0, 1)))
         XCTAssertFalse(displayU.hasScript);
         XCTAssertEqual(displayU.index, NSNotFound);
@@ -951,12 +951,12 @@ final class MTTypesetterTests: XCTestCase {
         let line2 = sub3 as! MTCTLineDisplay
         XCTAssertEqual(line2.atoms.count, 1);
         XCTAssertEqual(line2.attributedString?.string, "𝑥");
-        XCTAssertTrue(NSEqualPoints(line2.position, CGPointMake(32.2133, 0)))
+        XCTAssertTrue(CGPointEqualToPoint(line2.position, CGPointMake(32.2133, 0)))
         XCTAssertTrue(NSEqualRanges(line2.range, NSMakeRange(1, 1)), "Got \(line2.range) instead")
         XCTAssertFalse(line2.hasScript);
         
-        XCTAssertEqual(display.ascent, 29.366, accuracy: 0.001);
-        XCTAssertEqual(display.descent, 21.996, accuracy: 0.001);
+        XCTAssertEqual(display.ascent, 29.342, accuracy: 0.001);
+        XCTAssertEqual(display.descent, 21.972, accuracy: 0.001);
         XCTAssertEqual(display.width, 43.653, accuracy: 0.001);
     }
 
@@ -1001,7 +1001,7 @@ final class MTTypesetterTests: XCTestCase {
         XCTAssertTrue(sub3 is MTMathListDisplay);
         let display3 = sub3 as! MTMathListDisplay
         XCTAssertEqual(display3.type, .regular);
-        XCTAssertTrue(NSEqualPoints(display3.position, CGPointMake(7.78, 0)))
+        XCTAssertTrue(CGPointEqualToPoint(display3.position, CGPointMake(7.78, 0)))
         XCTAssertTrue(NSEqualRanges(display3.range, NSMakeRange(0, 1)));
         XCTAssertFalse(display3.hasScript);
         XCTAssertEqual(display3.index, NSNotFound);
@@ -1019,7 +1019,7 @@ final class MTTypesetterTests: XCTestCase {
         let subRight = display2.subDisplays[2];
         XCTAssertTrue(subRight is MTGlyphDisplay);
         let glyph2 = subRight as! MTGlyphDisplay
-        XCTAssertTrue(NSEqualPoints(glyph2.position, CGPointMake(19.22, 0)))
+        XCTAssertTrue(CGPointEqualToPoint(glyph2.position, CGPointMake(19.22, 0)))
         XCTAssertTrue(NSEqualRanges(glyph2.range, NSMakeRange(NSNotFound, 0)), "Got \(glyph2.range) instead");
         XCTAssertFalse(glyph2.hasScript);
         
@@ -1028,8 +1028,8 @@ final class MTTypesetterTests: XCTestCase {
         XCTAssertEqual(display.descent, display2.descent);
         XCTAssertEqual(display.width, display2.width);
         
-        XCTAssertEqual(display.ascent, 14.97, accuracy: 0.001);
-        XCTAssertEqual(display.descent, 4.97, accuracy: 0.001);
+        XCTAssertEqual(display.ascent, 14.96, accuracy: 0.001);
+        XCTAssertEqual(display.descent, 4.96, accuracy: 0.001);
         XCTAssertEqual(display.width, 27, accuracy: 0.01)
     }
 
@@ -1060,7 +1060,7 @@ final class MTTypesetterTests: XCTestCase {
         
         let display2 = overline.inner!
         XCTAssertEqual(display2.type, .regular);
-        XCTAssertTrue(NSEqualPoints(display2.position, CGPointZero))
+        XCTAssertTrue(CGPointEqualToPoint(display2.position, CGPointZero))
         XCTAssertTrue(NSEqualRanges(display2.range, NSMakeRange(0, 1)));
         XCTAssertFalse(display2.hasScript);
         XCTAssertEqual(display2.index, NSNotFound);
@@ -1077,7 +1077,7 @@ final class MTTypesetterTests: XCTestCase {
         
         // dimensions
         XCTAssertEqual(display.ascent, 17.32, accuracy: 0.01)
-        XCTAssertEqual(display.descent, 0.02, accuracy: 0.01)
+        XCTAssertEqual(display.descent, 0.00, accuracy: 0.01)
         XCTAssertEqual(display.width, 10, accuracy: 0.01)
     }
 
@@ -1108,7 +1108,7 @@ final class MTTypesetterTests: XCTestCase {
         
         let display2 = underline.inner!
         XCTAssertEqual(display2.type, .regular);
-        XCTAssertTrue(NSEqualPoints(display2.position, CGPointZero))
+        XCTAssertTrue(CGPointEqualToPoint(display2.position, CGPointZero))
         XCTAssertTrue(NSEqualRanges(display2.range, NSMakeRange(0, 1)));
         XCTAssertFalse(display2.hasScript);
         XCTAssertEqual(display2.index, NSNotFound);
@@ -1125,7 +1125,7 @@ final class MTTypesetterTests: XCTestCase {
         
         // dimensions
         XCTAssertEqual(display.ascent, 13.32, accuracy: 0.01)
-        XCTAssertEqual(display.descent, 4.02, accuracy: 0.01)
+        XCTAssertEqual(display.descent, 4.00, accuracy: 0.01)
         XCTAssertEqual(display.width, 10, accuracy: 0.01)
     }
 
@@ -1160,7 +1160,7 @@ final class MTTypesetterTests: XCTestCase {
         XCTAssertEqual(line2.atoms.count, 1);
         // The x is italicized
         XCTAssertEqual(line2.attributedString?.string, "𝑦");
-        XCTAssertTrue(NSEqualPoints(line2.position, CGPointMake(21.44, 0)))
+        XCTAssertTrue(CGPointEqualToPoint(line2.position, CGPointMake(21.44, 0)))
             XCTAssertTrue(NSEqualRanges(line2.range, NSMakeRange(2, 1)), "Got \(line2.range) instead")
         XCTAssertFalse(line2.hasScript);
         
@@ -1182,8 +1182,8 @@ final class MTTypesetterTests: XCTestCase {
         let display = MTTypesetter.createLineForMathList(list, font:self.font, style:.display)!
         
         // dimensions
-        XCTAssertEqual(display.ascent, 49.18, accuracy: 0.01)
-        XCTAssertEqual(display.descent, 21.308, accuracy: 0.01)
+        XCTAssertEqual(display.ascent, 49.16, accuracy: 0.01)
+        XCTAssertEqual(display.descent, 21.288, accuracy: 0.01)
         XCTAssertEqual(display.width, 82.569, accuracy: 0.01)
     }
 
@@ -1231,12 +1231,12 @@ final class MTTypesetterTests: XCTestCase {
         
         let display2 = sub0 as! MTMathListDisplay
         XCTAssertEqual(display2.type, .regular);
-        XCTAssertTrue(NSEqualPoints(display2.position, CGPointZero))
+        XCTAssertTrue(CGPointEqualToPoint(display2.position, CGPointZero))
         XCTAssertTrue(NSEqualRanges(display2.range, NSMakeRange(0, 1)))
         XCTAssertFalse(display2.hasScript);
         XCTAssertEqual(display2.index, NSNotFound);
         XCTAssertEqual(display2.subDisplays.count, 3);
-        let rowPos = [ 30.31, -2.67, -31.95 ]
+        let rowPos = [ 30.28, -2.68, -31.95 ]
         // alignment is right, center, left.
         let cellPos = [ [ 35.89, 65.89, 129.438 ], [ 45.89, 76.94, 129.438 ], [ 0, 87.66, 129.438] ]
         // check the 3 rows of the matrix
@@ -1246,7 +1246,7 @@ final class MTTypesetterTests: XCTestCase {
             
             let row = sub0i as! MTMathListDisplay
             XCTAssertEqual(row.type, .regular)
-            XCTAssertTrue(NSEqualPoints(row.position, CGPointMake(0, rowPos[i])))
+            XCTAssertTrue(CGPointEqualToPoint(row.position, CGPointMake(0, rowPos[i])))
             XCTAssertTrue(NSEqualRanges(row.range, NSMakeRange(0, 3)));
             XCTAssertFalse(row.hasScript);
             XCTAssertEqual(row.index, NSNotFound);
@@ -1258,7 +1258,7 @@ final class MTTypesetterTests: XCTestCase {
                 
                 let col = sub0ij as! MTMathListDisplay
                 XCTAssertEqual(col.type, .regular);
-                XCTAssertTrue(NSEqualPoints(col.position, CGPointMake(cellPos[i][j], 0)))
+                XCTAssertTrue(CGPointEqualToPoint(col.position, CGPointMake(cellPos[i][j], 0)))
                 XCTAssertFalse(col.hasScript)
                 XCTAssertEqual(col.index, NSNotFound);
             }
@@ -1294,7 +1294,7 @@ final class MTTypesetterTests: XCTestCase {
                 // These large operators are rendered differently;
                 XCTAssertTrue(sub0 is MTGlyphDisplay);
                 let glyph = sub0 as! MTGlyphDisplay
-                XCTAssertTrue(NSEqualPoints(glyph.position, CGPointZero))
+                XCTAssertTrue(CGPointEqualToPoint(glyph.position, CGPointZero))
                 XCTAssertTrue(NSEqualRanges(glyph.range, NSMakeRange(0, 1)))
                 XCTAssertFalse(glyph.hasScript);
             } else {
@@ -1395,9 +1395,9 @@ final class MTTypesetterTests: XCTestCase {
 
     func testStyleChanges() throws {
         let frac = MTMathAtomFactory.fraction(withNumeratorString: "1", denominatorString: "2")
-        let list = MTMathList(atom: frac)
-        // let style = MTMathStyle(style: .text)
-        let textList = MTMathList(atom: frac)
+        let list = MTMathList(atoms: [frac])
+        let style = MTMathStyle(style: .text)
+        let textList = MTMathList(atoms: [style, frac])
         
         // This should make the display same as text.
         let display = MTTypesetter.createLineForMathList(textList, font:self.font, style:.display)!
@@ -1486,7 +1486,7 @@ final class MTTypesetterTests: XCTestCase {
 
         let display2 = accentDisp.accentee!
         XCTAssertEqual(display2.type, .regular);
-        XCTAssertTrue(NSEqualPoints(display2.position, CGPointZero))
+        XCTAssertTrue(CGPointEqualToPoint(display2.position, CGPointZero))
         XCTAssertTrue(NSEqualRanges(display2.range, NSMakeRange(0, 1)));
         XCTAssertFalse(display2.hasScript);
         XCTAssertEqual(display2.index, NSNotFound);
@@ -1502,13 +1502,13 @@ final class MTTypesetterTests: XCTestCase {
         XCTAssertFalse(line2.hasScript);
 
         let glyph = accentDisp.accent!
-        XCTAssertTrue(NSEqualPoints(glyph.position, CGPointMake(11.86, 0)))
+        XCTAssertTrue(CGPointEqualToPoint(glyph.position, CGPointMake(11.86, 0)))
         XCTAssertTrue(NSEqualRanges(glyph.range, NSMakeRange(0, 1)))
         XCTAssertFalse(glyph.hasScript);
 
         // dimensions
         XCTAssertEqual(display.ascent, 14.68, accuracy: 0.01)
-        XCTAssertEqual(display.descent, 0.24, accuracy: 0.01)
+        XCTAssertEqual(display.descent, 0.22, accuracy: 0.01)
         XCTAssertEqual(display.width, 11.44, accuracy: 0.01)
     }
 
@@ -1538,7 +1538,7 @@ final class MTTypesetterTests: XCTestCase {
 
         let display2 = accentDisp.accentee!
         XCTAssertEqual(display2.type, .regular);
-        XCTAssertTrue(NSEqualPoints(display2.position, CGPointZero))
+        XCTAssertTrue(CGPointEqualToPoint(display2.position, CGPointZero))
         XCTAssertTrue(NSEqualRanges(display2.range, NSMakeRange(0, 4)));
         XCTAssertFalse(display2.hasScript);
         XCTAssertEqual(display2.index, NSNotFound);
@@ -1554,13 +1554,13 @@ final class MTTypesetterTests: XCTestCase {
         XCTAssertFalse(line2.hasScript);
 
         let glyph = accentDisp.accent!
-        XCTAssertTrue(NSEqualPoints(glyph.position, CGPointMake(3.47, 0)))
+        XCTAssertTrue(CGPointEqualToPoint(glyph.position, CGPointMake(3.47, 0)))
         XCTAssertTrue(NSEqualRanges(glyph.range, NSMakeRange(0, 1)))
         XCTAssertFalse(glyph.hasScript);
 
         // dimensions
         XCTAssertEqual(display.ascent, 14.98, accuracy: 0.01)
-        XCTAssertEqual(display.descent, 4.12, accuracy: 0.01)
+        XCTAssertEqual(display.descent, 4.10, accuracy: 0.01)
         XCTAssertEqual(display.width, 44.86, accuracy: 0.01)
     }
 

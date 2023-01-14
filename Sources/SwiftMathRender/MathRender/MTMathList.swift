@@ -129,11 +129,11 @@ public class MTMathAtom: NSObject {
         }
     }
     public var nucleus: String = ""
-    public var childAtoms = [MTMathAtom]()   // atoms that fused to create this one
+  //  public var childAtoms = [MTMathAtom]()   // atoms that fused to create this one
     public var indexRange = NSRange(location: 0, length: 0) // indexRange in list that this atom tracks:
     
     var fontStyle: MTFontStyle = .defaultStyle
-    var fusedAtoms: MTMathList?
+    var fusedAtoms = [MTMathAtom]()             // atoms that fused to create this one
     
     init(_ atom:MTMathAtom?) {
         guard let atom = atom else { return }
@@ -143,8 +143,8 @@ public class MTMathAtom: NSObject {
         self.superScript = MTMathList(atom.superScript)
         self.indexRange = atom.indexRange
         self.fontStyle = atom.fontStyle
-        self.childAtoms = [MTMathAtom](atom.childAtoms)
-        self.fusedAtoms = MTMathList(atom.fusedAtoms)
+ //       self.childAtoms = [MTMathAtom](atom.childAtoms)
+        self.fusedAtoms = atom.fusedAtoms
     }
     
     override init() { }
@@ -239,19 +239,17 @@ public class MTMathAtom: NSObject {
         assert(self.subScript == nil, "Cannot fuse into an atom which has a subscript: \(self)");
         assert(self.superScript == nil, "Cannot fuse into an atom which has a superscript: \(self)");
         assert(atom.type == self.type, "Only atoms of the same type can be fused. \(self), \(atom)");
-        guard self.subScript == nil,
-            self.superScript == nil,
-            self.type == atom.type
-        else {
-            print("Can't fuse these 2 atoms")
-            return
-        }
+        guard self.subScript == nil, self.superScript == nil, self.type == atom.type
+        else { print("Can't fuse these 2 atoms"); return }
         
-        self.childAtoms.append(self)
-        if atom.childAtoms.count > 0 {
-            self.childAtoms += atom.childAtoms
+        // Update the fused atoms list
+        if self.fusedAtoms.isEmpty {
+            self.fusedAtoms.append(MTMathAtom(self))
+        }
+        if atom.fusedAtoms.count > 0 {
+            self.fusedAtoms.append(contentsOf: atom.fusedAtoms)
         } else {
-            self.childAtoms.append(atom)
+            self.fusedAtoms.append(atom)
         }
         
         // Update nucleus:

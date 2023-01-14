@@ -33,7 +33,7 @@ protocol DownShift {
 // MARK: - MTDisplay
 
 /// The base class for rendering a math equation.
-class MTDisplay {
+class MTDisplay:NSObject {
     
     // needed for isIos6Supported() func above
     static var initialized = false
@@ -49,7 +49,6 @@ class MTDisplay {
             context.restoreGState()
         }
     }
-    
     
     /// Gets the bounding rectangle for the MTDisplay
     func displayBounds() -> CGRect {
@@ -117,7 +116,11 @@ class MTCTLineDisplay : MTDisplay {
     var line:CTLine!
     /// The attributed string used to generate the CTLineRef. Note setting this does not reset the dimensions of
     /// the display. So set only when
-    var attributedString:NSAttributedString?
+    var attributedString:NSAttributedString? {
+        didSet {
+            line = CTLineCreateWithAttributedString(attributedString!)
+        }
+    }
     
     /// An array of MTMathAtoms that this CTLine displays. Used for indexing back into the MTMathList
     var atoms = [MTMathAtom]()
@@ -126,6 +129,7 @@ class MTCTLineDisplay : MTDisplay {
         super.init()
         self.position = position
         self.attributedString = attrString
+        self.line = CTLineCreateWithAttributedString(attrString!)
         self.range = range
         self.atoms = atoms
         // We can't use typographic bounds here as the ascent and descent returned are for the font and not for the line.
@@ -142,10 +146,10 @@ class MTCTLineDisplay : MTDisplay {
         }
     }
     
-    func set(attrString: NSAttributedString?) {
-        attributedString = attrString
-        line = CTLineCreateWithAttributedString(attributedString!)
-    }
+//    func set(attrString: NSAttributedString?) {
+//        attributedString = attrString
+//        line = CTLineCreateWithAttributedString(attributedString!)
+//    }
 
     func set(textColor:MTColor) {
         self.textColor = textColor
@@ -219,7 +223,7 @@ class MTMathListDisplay : MTDisplay {
         super.init()
         self.subDisplays = displays
         self.position = CGPoint.zero
-        self.type = .regular //kMTLinePositionRegular;
+        self.type = .regular 
         self.index = NSNotFound
         self.range = range
         self.recomputeDimensions()
@@ -623,8 +627,8 @@ class MTLargeOpLimitsDisplay : MTDisplay {
         self.lowerLimit = lowerLimit;
         self.nucleus = nucleus;
         
-        var maxWidth = max(nucleus!.width, upperLimit!.width);
-        maxWidth = max(maxWidth, lowerLimit!.width);
+        var maxWidth = max(nucleus!.width, upperLimit?.width ?? 0)
+        maxWidth = max(maxWidth, lowerLimit?.width ?? 0)
         
         self.limitShift = limitShift;
         self.upperLimitGap = 0;
