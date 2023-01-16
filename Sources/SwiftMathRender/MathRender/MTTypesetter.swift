@@ -1079,40 +1079,39 @@ class MTTypesetter {
     }
     
     func makeRadical(_ radicand:MTMathList?, range:NSRange) -> MTRadicalDisplay? {
-        let innerDisplay = MTTypesetter.createLineForMathList(radicand, font:font, style:style, cramped:true)
-        var clearance : CGFloat = self.radicalVerticalGap()
-        let radicalRuleThickness : CGFloat = styleFont.mathTable!.radicalRuleThickness
-        let radicalHeight = innerDisplay!.ascent + innerDisplay!.descent + clearance + radicalRuleThickness;
+        let innerDisplay = MTTypesetter.createLineForMathList(radicand, font:font, style:style, cramped:true)!
+        var clearance = self.radicalVerticalGap()
+        let radicalRuleThickness = styleFont.mathTable!.radicalRuleThickness
+        let radicalHeight = innerDisplay.ascent + innerDisplay.descent + clearance + radicalRuleThickness
         
-        let glyph = self.getRadicalGlyphWithHeight(radicalHeight)
-        
+        let glyph = self.getRadicalGlyphWithHeight(radicalHeight)!
         
         // Note this is a departure from Latex. Latex assumes that glyphAscent == thickness.
         // Open type math makes no such assumption, and ascent and descent are independent of the thickness.
         // Latex computes delta as descent - (h(inner) + d(inner) + clearance)
         // but since we may not have ascent == thickness, we modify the delta calculation slightly.
         // If the font designer followes Latex conventions, it will be identical.
-        let delta : CGFloat = (glyph!.descent + glyph!.ascent) - (innerDisplay!.ascent + innerDisplay!.descent + clearance + radicalRuleThickness);
+        let delta = (glyph.descent + glyph.ascent) - (innerDisplay.ascent + innerDisplay.descent + clearance + radicalRuleThickness)
         if delta > 0 {
-            clearance += delta/2;  // increase the clearance to center the radicand inside the sign.
+            clearance += delta/2  // increase the clearance to center the radicand inside the sign.
         }
         
         // we need to shift the radical glyph up, to coincide with the baseline of inner.
         // The new ascent of the radical glyph should be thickness + adjusted clearance + h(inner)
-        let radicalAscent = radicalRuleThickness + clearance + innerDisplay!.ascent;
-        let shiftUp = radicalAscent - glyph!.ascent;  // Note: if the font designer followed latex conventions, this is the same as glyphAscent == thickness.
-        glyph!.shiftDown = -shiftUp;
+        let radicalAscent = radicalRuleThickness + clearance + innerDisplay.ascent
+        let shiftUp = radicalAscent - glyph.ascent  // Note: if the font designer followed latex conventions, this is the same as glyphAscent == thickness.
+        glyph.shiftDown = -shiftUp
         
-        let radical = MTRadicalDisplay(withRadicand: innerDisplay, glyph: glyph!, position: currentPosition, range: range)
-        radical.ascent = radicalAscent + styleFont.mathTable!.radicalExtraAscender;
-        radical.topKern = styleFont.mathTable!.radicalExtraAscender;
-        radical.lineThickness = radicalRuleThickness;
+        let radical = MTRadicalDisplay(withRadicand: innerDisplay, glyph: glyph, position: currentPosition, range: range)
+        radical.ascent = radicalAscent + styleFont.mathTable!.radicalExtraAscender
+        radical.topKern = styleFont.mathTable!.radicalExtraAscender
+        radical.lineThickness = radicalRuleThickness
         // Note: Until we have radical construction from parts, it is possible that glyphAscent+glyphDescent is less
         // than the requested height of the glyph (i.e. radicalHeight), so in the case the innerDisplay has a larger
         // descent we use the innerDisplay's descent.
-        radical.descent = max(glyph!.ascent + glyph!.descent  - radicalAscent, innerDisplay!.descent);
-        radical.width = glyph!.width + innerDisplay!.width;
-        return radical;
+        radical.descent = max(glyph.ascent + glyph.descent - radicalAscent, innerDisplay.descent)
+        radical.width = glyph.width + innerDisplay.width
+        return radical
     }
     
     // MARK: - Glyphs
@@ -1170,9 +1169,7 @@ class MTTypesetter {
     }
     
     func constructGlyphWithParts(_ parts:[GlyphPart], glyphHeight:CGFloat, glyphs:inout [NSNumber], offsets:inout [NSNumber], height:inout CGFloat) {
-        // assert(!glyphs.isEmpty)
-        // assert(!offsets.isEmpty)
-        
+        // Loop forever until the glyph height is valid
         for numExtenders in 0..<Int.max {
             var glyphsRv = [NSNumber]()
             var offsetsRv = [NSNumber]()

@@ -146,18 +146,24 @@ class MTCTLineDisplay : MTDisplay {
         }
     }
     
-//    func set(attrString: NSAttributedString?) {
-//        attributedString = attrString
-//        line = CTLineCreateWithAttributedString(attributedString!)
-//    }
-
-    func set(textColor:MTColor) {
-        self.textColor = textColor
-        let attrStr = NSMutableAttributedString(attributedString: self.attributedString!)
-        let foregroundColor = NSAttributedString.Key(kCTForegroundColorAttributeName as String)
-        attrStr.addAttribute(foregroundColor, value:self.textColor!.cgColor, range:NSMakeRange(0, attrStr.length))
-        self.attributedString = attrStr
+    override var textColor: MTColor? {
+        set {
+            super.textColor = newValue
+            let attrStr = NSMutableAttributedString(attributedString: self.attributedString!)
+            let foregroundColor = NSAttributedString.Key(kCTForegroundColorAttributeName as String)
+            attrStr.addAttribute(foregroundColor, value:self.textColor!.cgColor, range:NSMakeRange(0, attrStr.length))
+            self.attributedString = attrStr
+        }
+        get { super.textColor }
     }
+
+//    func set(textColor:MTColor) {
+//        self.textColor = textColor
+//        let attrStr = NSMutableAttributedString(attributedString: self.attributedString!)
+//        let foregroundColor = NSAttributedString.Key(kCTForegroundColorAttributeName as String)
+//        attrStr.addAttribute(foregroundColor, value:self.textColor!.cgColor, range:NSMakeRange(0, attrStr.length))
+//        self.attributedString = attrStr
+//    }
 
     func computeDimensions(_ font:MTFont?) {
         let runs = CTLineGetGlyphRuns(line) as NSArray
@@ -229,20 +235,30 @@ class MTMathListDisplay : MTDisplay {
         self.recomputeDimensions()
     }
 
-    func setType(_ type:LinePosition) {
-        self.type = type
-    }
+//    func setType(_ type:LinePosition) {
+//        self.type = type
+//    }
+//
+//    func setIndex(_ index:Int) {
+//        self.index = index
+//    }
 
-    func setIndex(_ index:Int) {
-        self.index = index
-    }
-
-    func setTextColor(_ textColor:MTColor) {
-        // Set the color on all subdisplays
-        self.textColor = textColor
-        for displayAtom in self.subDisplays {
-            displayAtom.textColor = textColor
+//    func setTextColor(_ textColor:MTColor) {
+//        // Set the color on all subdisplays
+//        self.textColor = textColor
+//        for displayAtom in self.subDisplays {
+//            displayAtom.textColor = textColor
+//        }
+//    }
+    
+    override var textColor: MTColor? {
+        set {
+            super.textColor = newValue
+            for displayAtom in self.subDisplays {
+                displayAtom.textColor = newValue
+            }
         }
+        get { super.textColor }
     }
 
     func draw(context: CGContext) {
@@ -341,16 +357,22 @@ class MTFractionDisplay : MTDisplay {
         numerator?.position = CGPointMake(self.position.x + (self.width - numerator!.width)/2, self.position.y + self.numeratorUp)
     }
 
-    func setPosition(_ position: CGPoint) {
-        super.position = position
-        self.updateDenominatorPosition()
-        self.updateNumeratorPosition()
+    override var position: CGPoint {
+        set {
+            super.position = newValue
+            self.updateDenominatorPosition()
+            self.updateNumeratorPosition()
+        }
+        get { super.position }
     }
-
-    func setTextColor(_ textColor:MTColor) {
-        super.textColor = textColor
-        numerator?.textColor = textColor
-        denominator?.textColor = textColor
+    
+    override var textColor: MTColor? {
+        set {
+            super.textColor = newValue
+            numerator?.textColor = newValue
+            denominator?.textColor = newValue
+        }
+        get { super.textColor }
     }
 
     override func draw(_ context:CGContext) {
@@ -386,6 +408,23 @@ class MTRadicalDisplay : MTDisplay {
      to the parent is not treated as a sub-display.
      */
     var degree:MTMathListDisplay?
+    
+    override var position: CGPoint {
+        set {
+            super.position = newValue
+            self.updateRadicandPosition()
+        }
+        get { super.position }
+    }
+    
+    override var textColor: MTColor? {
+        set {
+            super.textColor = newValue
+            self.radicand!.textColor = newValue
+            self.degree!.textColor = newValue
+        }
+        get { super.textColor }
+    }
     
     private var _radicalGlyph:MTDisplay?
     private var _radicalShift:CGFloat=0
@@ -430,10 +469,10 @@ class MTRadicalDisplay : MTDisplay {
         self.updateRadicandPosition()
     }
 
-    func setPosition(_ position:CGPoint) {
-        super.position = position
-        self.updateRadicandPosition()
-    }
+//    func setPosition(_ position:CGPoint) {
+//        super.position = position
+//        self.updateRadicandPosition()
+//    }
 
     func updateRadicandPosition() {
         // The position of the radicand includes the position of the MTRadicalDisplay
@@ -443,11 +482,11 @@ class MTRadicalDisplay : MTDisplay {
         self.radicand!.position = CGPointMake(self.position.x + _radicalShift + _radicalGlyph!.width, self.position.y);
     }
 
-    func setTextColor(textColor:MTColor) {
-        super.textColor = textColor
-        self.radicand!.textColor = textColor
-        self.degree!.textColor = textColor
-    }
+//    func setTextColor(textColor:MTColor) {
+//        super.textColor = textColor
+//        self.radicand!.textColor = textColor
+//        self.degree!.textColor = textColor
+//    }
 
     func draw(context: CGContext) {
         // draw the radicand & degree at its position
@@ -662,13 +701,22 @@ class MTLargeOpLimitsDisplay : MTDisplay {
             }
         }
     }
-
-    func setPosition(_ position:CGPoint) {
-        super.position = position;
-        self.updateLowerLimitPosition()
-        self.updateUpperLimitPosition()
-        self.updateNucleusPosition()
+    
+    override var position: CGPoint {
+        set {
+            self.updateLowerLimitPosition()
+            self.updateUpperLimitPosition()
+            self.updateNucleusPosition()
+        }
+        get { super.position }
     }
+
+//    func setPosition(_ position:CGPoint) {
+//        super.position = position;
+//        self.updateLowerLimitPosition()
+//        self.updateUpperLimitPosition()
+//        self.updateNucleusPosition()
+//    }
 
     func updateLowerLimitPosition() {
         if self.lowerLimit != nil {
@@ -696,13 +744,23 @@ class MTLargeOpLimitsDisplay : MTDisplay {
         // Center the nucleus
         nucleus?.position = CGPointMake(self.position.x + (self.width - nucleus!.width)/2, self.position.y);
     }
-
-    func setTextColor(_ textColor:MTColor) {
-        super.textColor = textColor
-        self.upperLimit?.textColor = textColor
-        self.lowerLimit?.textColor = textColor
-        nucleus?.textColor = textColor
+    
+    override var textColor: MTColor? {
+        set {
+            super.textColor = newValue
+            self.upperLimit?.textColor = newValue
+            self.lowerLimit?.textColor = newValue
+            nucleus?.textColor = newValue
+        }
+        get { super.textColor }
     }
+
+//    func setTextColor(_ textColor:MTColor) {
+//        super.textColor = textColor
+//        self.upperLimit?.textColor = textColor
+//        self.lowerLimit?.textColor = textColor
+//        nucleus?.textColor = textColor
+//    }
 
     override func draw(_ context:CGContext) {
         // Draw the elements.
@@ -732,11 +790,27 @@ class MTLineDisplay : MTDisplay {
         self.position = position;
         self.range = range;
     }
-
-    func setTextColor(_ textColor:MTColor) {
-        super.textColor = textColor
-        inner?.textColor = textColor
+    
+    override var textColor: MTColor? {
+        set {
+            super.textColor = newValue
+            inner?.textColor = newValue
+        }
+        get { super.textColor }
     }
+    
+    override var position: CGPoint {
+        set {
+            super.position = newValue
+            self.updateInnerPosition()
+        }
+        get { super.position }
+    }
+
+//    func setTextColor(_ textColor:MTColor) {
+//        super.textColor = textColor
+//        inner?.textColor = textColor
+//    }
 
     override func draw(_ context:CGContext) {
         self.inner?.draw(context)
@@ -757,10 +831,10 @@ class MTLineDisplay : MTDisplay {
         context.restoreGState();
     }
 
-    func setPosition(_ position:CGPoint) {
-        super.position = position;
-        self.updateInnerPosition()
-    }
+//    func setPosition(_ position:CGPoint) {
+//        super.position = position;
+//        self.updateInnerPosition()
+//    }
 
     func updateInnerPosition() {
         self.inner?.position = CGPointMake(self.position.x, self.position.y);
@@ -789,16 +863,33 @@ class MTAccentDisplay : MTDisplay {
         self.accentee?.position = CGPoint.zero
         self.range = range
     }
-
-    func setTextColor(_ textColor:MTColor) {
-        super.textColor = textColor
-        accentee?.textColor = textColor
-        accent?.textColor = textColor
+    
+    override var textColor: MTColor? {
+        set {
+            super.textColor = newValue
+            accentee?.textColor = newValue
+            accent?.textColor = newValue
+        }
+        get { super.textColor }
     }
 
-    func setPosition(_ position:CGPoint) {
-        super.position = position
-        self.updateAccenteePosition()
+//    func setTextColor(_ textColor:MTColor) {
+//        super.textColor = textColor
+//        accentee?.textColor = textColor
+//        accent?.textColor = textColor
+//    }
+
+//    func setPosition(_ position:CGPoint) {
+//        super.position = position
+//        self.updateAccenteePosition()
+//    }
+    
+    override var position: CGPoint {
+        set {
+            super.position = newValue
+            self.updateAccenteePosition()
+        }
+        get { super.position }
     }
 
     func updateAccenteePosition() {
