@@ -873,17 +873,6 @@ class MTAccentDisplay : MTDisplay {
         get { super.textColor }
     }
 
-//    func setTextColor(_ textColor:MTColor) {
-//        super.textColor = textColor
-//        accentee?.textColor = textColor
-//        accent?.textColor = textColor
-//    }
-
-//    func setPosition(_ position:CGPoint) {
-//        super.position = position
-//        self.updateAccenteePosition()
-//    }
-    
     override var position: CGPoint {
         set {
             super.position = newValue
