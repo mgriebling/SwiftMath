@@ -49,6 +49,8 @@ public enum MTTextAlignment : UInt {
 @IBDesignable
 public class MTMathUILabel : MTView {
     
+    private var _mathList:MTMathList?
+    
     /** The `MTMathList` to render. Setting this will remove any
      `latex` that has already been set. If `latex` has been set, this will
      return the parsed `MTMathList` if the `latex` parses successfully. Use this
@@ -56,27 +58,31 @@ public class MTMathUILabel : MTView {
      is preferred to use `latex`.
      */
     var mathList:MTMathList? {
-        didSet {
-            mathList = nil
+        set {
+            _mathList = newValue
             error = nil
-            latex = MTMathListBuilder.mathListToString(mathList)
+            _latex = MTMathListBuilder.mathListToString(mathList)
             self.invalidateIntrinsicContentSize()
             self.setNeedsLayout()
         }
+        get { _mathList }
     }
+    
+    private var _latex:String=""
     
     /** The latex string to be displayed. Setting this will remove any `mathList` that
      has been set. If latex has not been set, this will return the latex output for the
      `mathList` that is set.
      @see error */
     @IBInspectable
-    public var latex = "" {
-        didSet {
+    public var latex:String {
+        set {
+            _latex = newValue
             self.error = nil
             var error : NSError? = nil
-            mathList = MTMathListBuilder.build(fromString: latex, error: &error)
+            _mathList = MTMathListBuilder.build(fromString: latex, error: &error)
             if error != nil {
-                self.mathList = nil
+                _mathList = nil
                 self.error = error
                 self.errorLabel?.text = error!.localizedDescription
                 self.errorLabel?.frame = self.bounds
@@ -87,6 +93,7 @@ public class MTMathUILabel : MTView {
             self.invalidateIntrinsicContentSize()
             self.setNeedsLayout()
         }
+        get { _latex }
     }
     
     /** This contains any error that occurred when parsing the latex. */
