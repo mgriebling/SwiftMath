@@ -209,7 +209,11 @@ public class MTMathUILabel : MTView {
         context.restoreGState()
     }
     
-    override public func layoutSubviews() {
+    #if os(iOS)
+    override public func layoutSubviews() { _layoutSubviews() }
+    #endif
+    
+    public func _layoutSubviews() {
         if mathList != nil {
             displayList = MTTypesetter.createLineForMathList(mathList, font: font, style: currentStyle)
             displayList?.textColor = textColor
@@ -257,7 +261,7 @@ public class MTMathUILabel : MTView {
     func setNeedsLayout() { self.needsLayout = true }
     override public var isFlipped: Bool { false }
     override public func layout() {
-        self.layoutSubviews()
+        self._layoutSubviews()
         super.layout()
     }
     #endif
