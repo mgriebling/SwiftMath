@@ -48,7 +48,7 @@ public enum MTTextAlignment : UInt {
  the `font` parameter.
  */
 @IBDesignable
-class MTMathUILabel : MTView {
+public class MTMathUILabel : MTView {
     
     /** The `MTMathList` to render. Setting this will remove any
      `latex` that has already been set. If `latex` has been set, this will
@@ -70,7 +70,7 @@ class MTMathUILabel : MTView {
      `mathList` that is set.
      @see error */
     @IBInspectable
-    var latex = "" {
+    public var latex = "" {
         didSet {
             self.error = nil
             var error : NSError? = nil
@@ -105,7 +105,7 @@ class MTMathUILabel : MTView {
     
     /** Convenience method to just set the size of the font without changing the fontface. */
     @IBInspectable
-    var fontSize = MTFontManager.fontManager.kDefaultFontSize {
+    public var fontSize = MTFontManager.fontManager.kDefaultFontSize {
         didSet {
             self.font = font?.copy(withSize: fontSize)
         }
@@ -113,7 +113,7 @@ class MTMathUILabel : MTView {
     
     /** This sets the text color of the rendered math formula. The default color is black. */
     @IBInspectable
-    var textColor:MTColor? = MTColor.black {
+    public var textColor:MTColor? = MTColor.black {
         didSet {
             self.displayList?.textColor = textColor
             self.setNeedsDisplay()
@@ -125,7 +125,7 @@ class MTMathUILabel : MTView {
      the border/background color. sizeThatFits: will have its returned size increased by these insets.
      */
     @IBInspectable
-    var contentInsets = MTEdgeInsetsZero {
+    public var contentInsets = MTEdgeInsetsZero {
         didSet {
             self.invalidateIntrinsicContentSize()
             self.setNeedsLayout()
@@ -185,7 +185,7 @@ class MTMathUILabel : MTView {
         self.addSubview(errorLabel!)
     }
     
-    override func draw(_ dirtyRect: MTRect) {
+    override public func draw(_ dirtyRect: MTRect) {
         super.draw(dirtyRect)
         if self.mathList == nil { return }
      
@@ -237,19 +237,19 @@ class MTMathUILabel : MTView {
         return size
     }
     
-    override var intrinsicContentSize: CGSize { _sizeThatFits(CGSizeZero) }
+    override public var intrinsicContentSize: CGSize { _sizeThatFits(CGSizeZero) }
     
     #if os(macOS)
-    override var isFlipped: Bool { false }
+    override public var isFlipped: Bool { false }
     func setNeedsDisplay() { self.needsDisplay = true }
     func setNeedsLayout() { self.needsLayout = true }
-    override func layout() {
+    override public func layout() {
         self._layoutSubviews()
         super.layout()
     }
     #else
-    override func layoutSubviews() { self._layoutSubviews() }
-    override func sizeThatFits(_ size: CGSize) -> CGSize { self._sizeThatFits(size) }
+    override public func layoutSubviews() { self._layoutSubviews() }
+    override public func sizeThatFits(_ size: CGSize) -> CGSize { self._sizeThatFits(size) }
     #endif
     
 }

@@ -11,11 +11,11 @@ import Foundation
 
 import UIKit
 
-typealias MTView = UIView
-typealias MTColor = UIColor
-typealias MTBezierPath = UIBezierPath
-typealias MTLabel = UILabel
-typealias MTRect = CGRect
+public typealias MTView = UIView
+public typealias MTColor = UIColor
+public typealias MTBezierPath = UIBezierPath
+public typealias MTLabel = UILabel
+public typealias MTRect = CGRect
 
 let MTEdgeInsetsZero = UIEdgeInsets.zero
 func MTGraphicsGetCurrentContext() -> CGContext? { UIGraphicsGetCurrentContext() }
@@ -24,11 +24,11 @@ func MTGraphicsGetCurrentContext() -> CGContext? { UIGraphicsGetCurrentContext()
 
 import AppKit
 
-typealias MTView = NSView
-typealias MTColor = NSColor
-typealias MTBezierPath = NSBezierPath
-typealias MTEdgeInsets = NSEdgeInsets
-typealias MTRect = NSRect
+public typealias MTView = NSView
+public typealias MTColor = NSColor
+public typealias MTBezierPath = NSBezierPath
+public typealias MTEdgeInsets = NSEdgeInsets
+public typealias MTRect = NSRect
 
 let MTEdgeInsetsZero = NSEdgeInsets.init(top: 0, left: 0, bottom: 0, right: 0)
 func MTGraphicsGetCurrentContext() -> CGContext? { NSGraphicsContext.current?.cgContext }
