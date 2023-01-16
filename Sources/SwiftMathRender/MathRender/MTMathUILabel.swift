@@ -140,7 +140,7 @@ public class MTMathUILabel : MTView {
     }
     
     /** The Label mode for the label. The default mode is Display */
-    var labelMode = MTMathUILabelMode.display {
+    public var labelMode = MTMathUILabelMode.display {
         didSet {
             self.invalidateIntrinsicContentSize()
             self.setNeedsLayout()
@@ -148,7 +148,7 @@ public class MTMathUILabel : MTView {
     }
     
     /** Horizontal alignment for the text. The default is align left. */
-    var textAlignment = MTTextAlignment.left {
+    public var textAlignment = MTTextAlignment.left {
         didSet {
             self.invalidateIntrinsicContentSize()
             self.setNeedsLayout()
@@ -158,7 +158,7 @@ public class MTMathUILabel : MTView {
     /** The internal display of the MTMathUILabel. This is for advanced use only. */
     var displayList: MTMathListDisplay? = nil
     
-    var currentStyle:MTLineStyle {
+    public var currentStyle:MTLineStyle {
         switch labelMode {
             case .display: return .display
             case .text: return .text
@@ -272,18 +272,5 @@ public class MTMathUILabel : MTView {
         super.layout()
     }
     #endif
-    
-//    #if os(macOS)
-//    override public var isFlipped: Bool { false }
-//    func setNeedsDisplay() { self.needsDisplay = true }
-//    func setNeedsLayout() { self.needsLayout = true }
-//    override public func layout() {
-//        self._layoutSubviews()
-//        super.layout()
-//    }
-//    #else
-//    override public func layoutSubviews() { self._layoutSubviews() }
-//    override public func sizeThatFits(_ size: CGSize) -> CGSize { self._sizeThatFits(size) }
-//    #endif
     
 }

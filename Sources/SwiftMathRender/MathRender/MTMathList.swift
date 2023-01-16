@@ -129,7 +129,6 @@ public class MTMathAtom: NSObject {
         }
     }
     public var nucleus: String = ""
-  //  public var childAtoms = [MTMathAtom]()   // atoms that fused to create this one
     public var indexRange = NSRange(location: 0, length: 0) // indexRange in list that this atom tracks:
     
     var fontStyle: MTFontStyle = .defaultStyle
@@ -143,7 +142,6 @@ public class MTMathAtom: NSObject {
         self.superScript = MTMathList(atom.superScript)
         self.indexRange = atom.indexRange
         self.fontStyle = atom.fontStyle
- //       self.childAtoms = [MTMathAtom](atom.childAtoms)
         self.fusedAtoms = atom.fusedAtoms
     }
     
