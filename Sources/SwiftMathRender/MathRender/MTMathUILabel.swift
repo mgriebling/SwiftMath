@@ -171,6 +171,7 @@ public class MTMathUILabel : MTView {
     }
     
     func initCommon() {
+        errorLabel = MTLabel()
         #if os(macOS)
         self.layer?.isGeometryFlipped = true
         errorLabel?.layer?.isGeometryFlipped = true
@@ -179,7 +180,6 @@ public class MTMathUILabel : MTView {
         errorLabel?.layer.isGeometryFlipped = true
         #endif
         self.backgroundColor = MTColor.clear
-        errorLabel = MTLabel()
         errorLabel?.isHidden = true
         errorLabel?.textColor = MTColor.red
         self.addSubview(errorLabel!)
