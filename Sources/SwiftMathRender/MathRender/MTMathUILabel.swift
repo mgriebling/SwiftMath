@@ -47,7 +47,7 @@ public enum MTTextAlignment : UInt {
  When created it uses `[MTFontManager defaultFont]` as its font. This can be changed using
  the `font` parameter.
  */
-@IBDesignable
+//@IBDesignable
 public class MTMathUILabel : MTView {
     
     /** The `MTMathList` to render. Setting this will remove any
@@ -69,7 +69,7 @@ public class MTMathUILabel : MTView {
      has been set. If latex has not been set, this will return the latex output for the
      `mathList` that is set.
      @see error */
-    @IBInspectable
+//    @IBInspectable
     public var latex = "" {
         didSet {
             self.error = nil
@@ -104,7 +104,7 @@ public class MTMathUILabel : MTView {
     }
     
     /** Convenience method to just set the size of the font without changing the fontface. */
-    @IBInspectable
+//    @IBInspectable
     public var fontSize = MTFontManager.fontManager.kDefaultFontSize {
         didSet {
             self.font = font?.copy(withSize: fontSize)
@@ -112,7 +112,7 @@ public class MTMathUILabel : MTView {
     }
     
     /** This sets the text color of the rendered math formula. The default color is black. */
-    @IBInspectable
+//    @IBInspectable
     public var textColor:MTColor? = MTColor.black {
         didSet {
             self.displayList?.textColor = textColor
@@ -124,7 +124,7 @@ public class MTMathUILabel : MTView {
      `UIEdgeInsetsZero` by default. This is useful if you need some padding between the math and
      the border/background color. sizeThatFits: will have its returned size increased by these insets.
      */
-    @IBInspectable
+ //   @IBInspectable
     public var contentInsets = MTEdgeInsetsZero {
         didSet {
             self.invalidateIntrinsicContentSize()
