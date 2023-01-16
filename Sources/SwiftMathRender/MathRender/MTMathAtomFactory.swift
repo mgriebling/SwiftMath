@@ -526,7 +526,7 @@ public class MTMathAtomFactory {
     public static func atom(forCharacter ch: Character) -> MTMathAtom? {
         let chStr = String(ch)
         switch chStr {
-            case "\\u{0410}"..."\\u{044F}":
+            case "\u{0410}"..."\u{044F}":
                 return MTMathAtom(type: .ordinary, value: chStr)
             case _ where ch.utf32Char < 0x0021 || ch.utf32Char > 0x007E:
                 return nil
