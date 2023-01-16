@@ -328,11 +328,13 @@ class MTFractionDisplay : MTDisplay {
     }
 
     func updateDenominatorPosition() {
-        denominator?.position = CGPointMake(self.position.x + (self.width - denominator!.width)/2, self.position.y - self.denominatorDown)
+        guard denominator != nil else { return }
+        denominator!.position = CGPointMake(self.position.x + (self.width - denominator!.width)/2, self.position.y - self.denominatorDown)
     }
 
     func updateNumeratorPosition() {
-        numerator?.position = CGPointMake(self.position.x + (self.width - numerator!.width)/2, self.position.y + self.numeratorUp)
+        guard numerator != nil else { return }
+        numerator!.position = CGPointMake(self.position.x + (self.width - numerator!.width)/2, self.position.y + self.numeratorUp)
     }
 
     override var position: CGPoint {
@@ -399,8 +401,8 @@ class MTRadicalDisplay : MTDisplay {
     override var textColor: MTColor? {
         set {
             super.textColor = newValue
-            self.radicand!.textColor = newValue
-            self.degree!.textColor = newValue
+            self.radicand?.textColor = newValue
+            self.degree?.textColor = newValue
         }
         get { super.textColor }
     }
