@@ -178,7 +178,7 @@ class MTCTLineDisplay : MTDisplay {
         }
     }
     
-    override func draw(_ context: CGContext) {
+    override public func draw(_ context: CGContext) {
         super.draw(context)
         context.saveGState()
         
@@ -238,7 +238,7 @@ public class MTMathListDisplay : MTDisplay {
         get { super.textColor }
     }
 
-    public func draw(context: CGContext) {
+    override public func draw(_ context: CGContext) {
         super.draw(context)
         context.saveGState()
         
@@ -353,7 +353,7 @@ class MTFractionDisplay : MTDisplay {
         get { super.textColor }
     }
 
-    override func draw(_ context:CGContext) {
+    override public func draw(_ context:CGContext) {
         super.draw(context)
         numerator?.draw(context)
         denominator?.draw(context)
@@ -456,7 +456,7 @@ class MTRadicalDisplay : MTDisplay {
         self.radicand!.position = CGPointMake(self.position.x + _radicalShift + _radicalGlyph!.width, self.position.y);
     }
 
-    func draw(context: CGContext) {
+    override public func draw(_ context: CGContext) {
         super.draw(context)
         
         // draw the radicand & degree at its position
@@ -509,7 +509,7 @@ class MTGlyphDisplay : MTDisplayDS {
         self.range = range
     }
 
-    func draw(context: CGContext) {
+    override public func draw(_ context: CGContext) {
         super.draw(context)
         context.saveGState()
 
@@ -567,7 +567,7 @@ class MTGlyphConstructionDisplay:MTDisplayDS {
         self.position = CGPoint.zero
     }
     
-    override func draw(_ context: CGContext) {
+    override public func draw(_ context: CGContext) {
         super.draw(context)
         context.saveGState()
         
@@ -843,7 +843,7 @@ class MTAccentDisplay : MTDisplay {
         context.translateBy(x: self.position.x, y: self.position.y);
         context.textPosition = CGPoint.zero
 
-        self.accent?.draw(context: context)
+        self.accent?.draw(context)
 
         context.restoreGState();
     }
