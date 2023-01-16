@@ -232,7 +232,11 @@ public class MTMathListDisplay : MTDisplay {
         set {
             super.textColor = newValue
             for displayAtom in self.subDisplays {
-                displayAtom.textColor = newValue
+                if displayAtom.localTextColor == nil {
+                    displayAtom.textColor = newValue
+                } else {
+                    displayAtom.textColor = displayAtom.localTextColor
+                }
             }
         }
         get { super.textColor }
