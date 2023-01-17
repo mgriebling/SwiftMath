@@ -201,22 +201,22 @@ class MTFontMathTable {
         return self.getVariantsForGlyph(glyph, inDictionary:variants)
     }
     
-    func getVariantsForGlyph(_ glyph: CGGlyph, inDictionary variants:NSDictionary?) -> [NSNumber?] {
+    func getVariantsForGlyph(_ glyph: CGGlyph, inDictionary variants:NSDictionary?) -> [NSNumber] {
         let glyphName = self.font!.get(nameForGlyph: glyph)
         let variantGlyphs = variants![glyphName] as! NSArray?
-        let glyphArray = NSMutableArray(capacity: variantGlyphs!.count)
+        var glyphArray = [NSNumber]()
         if variantGlyphs == nil {
             // There are no extra variants, so just add the current glyph to it.
             let glyph = self.font!.get(glyphWithName: glyphName)
-            glyphArray.add(glyph as Any)
-            return glyphArray as! [NSNumber?]
+            glyphArray.append(NSNumber(value:glyph))
+            return glyphArray
         }
         for gvn in variantGlyphs! {
             let glyphVariantName = gvn as! String?
             let variantGlyph = self.font?.get(glyphWithName: glyphVariantName!)
-            glyphArray.add(variantGlyph as Any)
+            glyphArray.append(NSNumber(value:variantGlyph!))
         }
-        return glyphArray as! [NSNumber?]
+        return glyphArray
     }
 
     /** Returns a larger vertical variant of the given glyph if any.
