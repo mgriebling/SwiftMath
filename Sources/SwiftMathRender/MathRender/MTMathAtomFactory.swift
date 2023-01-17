@@ -351,6 +351,7 @@ public class MTMathAtomFactory {
         "ldots" : MTMathAtom(type: .ordinary, value: "\u{2026}"),
         "prime" : MTMathAtom(type: .ordinary, value: "\u{2032}"),
         "hbar" : MTMathAtom(type: .ordinary, value: "\u{210F}"),
+        "lbar" : MTMathAtom(type: .ordinary, value: "\u{019B}"),  // NEW ƛ
         "Im" : MTMathAtom(type: .ordinary, value: "\u{2111}"),
         "ell" : MTMathAtom(type: .ordinary, value: "\u{2113}"),
         "wp" : MTMathAtom(type: .ordinary, value: "\u{2118}"),
@@ -468,48 +469,41 @@ public class MTMathAtomFactory {
     
     // Return an atom for times sign \times or *
     public static func times() -> MTMathAtom {
-        return MTMathAtom(type: .binaryOperator, value: UnicodeSymbol.multiplication)
+        MTMathAtom(type: .binaryOperator, value: UnicodeSymbol.multiplication)
     }
     
     // Return an atom for division sign \div or /
     public static func divide() -> MTMathAtom {
-        return MTMathAtom(type: .binaryOperator, value: UnicodeSymbol.division)
+        MTMathAtom(type: .binaryOperator, value: UnicodeSymbol.division)
     }
     
     // Return an atom aka placeholder square
     public static func placeholder() -> MTMathAtom {
-        return MTMathAtom(type: .placeholder, value: UnicodeSymbol.whiteSquare)
+        MTMathAtom(type: .placeholder, value: UnicodeSymbol.whiteSquare)
     }
     
     public static func placeholderFraction() -> MTFraction {
         let frac = MTFraction()
-        
         frac.numerator = MTMathList()
         frac.numerator?.add(placeholder())
         frac.denominator = MTMathList()
         frac.denominator?.add(placeholder())
-        
         return frac
     }
     
     public static func placeholderSquareRoot() -> MTRadical {
         let rad = MTRadical()
-        
         rad.radicand = MTMathList()
         rad.radicand?.add(placeholder())
-        
         return rad
     }
     
     public static func placeholderRadical() -> MTRadical {
         let rad = MTRadical()
-        
         rad.radicand = MTMathList()
         rad.degree = MTMathList()
-        
         rad.radicand?.add(placeholder())
         rad.degree?.add(placeholder())
-        
         return rad
     }
     
@@ -525,7 +519,7 @@ public class MTMathAtomFactory {
      */
     public static func atom(forCharacter ch: Character) -> MTMathAtom? {
         let chStr = String(ch)
-        switch chStr {
+        switch chStr {      
             case "\u{0410}"..."\u{044F}":
                 return MTMathAtom(type: .ordinary, value: chStr)
             case _ where ch.utf32Char < 0x0021 || ch.utf32Char > 0x007E:
@@ -564,13 +558,11 @@ public class MTMathAtomFactory {
      convert the characters to atoms. Any character that cannot be converted is ignored. */
     public static func atomList(for string: String) -> MTMathList {
         let list = MTMathList()
-        
         for character in string {
             if let newAtom = atom(forCharacter: character) {
                 list.add(newAtom)
             }
         }
-        
         return list
     }
     
@@ -579,15 +571,12 @@ public class MTMathAtomFactory {
      */
     public static func atom(forLatexSymbol name: String) -> MTMathAtom? {
         var name = name
-        
         if let canonicalName = aliases[name] {
             name = canonicalName
         }
-        
         if let atom = supportedLatexSymbols[name] {
             return atom.copy()
         }
-        
         return nil
     }
     
@@ -603,7 +592,6 @@ public class MTMathAtomFactory {
         if atom.nucleus.count == 0 {
             return nil
         }
-        
         return sharedInstance.textToLatexSymbolName[atom.nucleus]
     }
     
@@ -620,7 +608,7 @@ public class MTMathAtomFactory {
     /** Returns a large opertor for the given name. If limits is true, limits are set up on
      the operator and displayed differently. */
     public static func operatorWithName(_ name: String, limits: Bool) -> MTLargeOperator {
-        return MTLargeOperator(value: name, limits: limits)
+        MTLargeOperator(value: name, limits: limits)
     }
     
     /** Returns an accent with the given name. The name of the accent is the LaTeX name
@@ -637,7 +625,7 @@ public class MTMathAtomFactory {
     /** Returns the accent name for the given accent. This is the reverse of the above
      function. */
     public static func accentName(_ accent: MTAccent) -> String? {
-        return accentValueToName[accent.nucleus]
+        accentValueToName[accent.nucleus]
     }
     
     /** Creates a new boundary atom for the given delimiter name. If the delimiter name
@@ -820,8 +808,6 @@ public class MTMathAtomFactory {
                 table.set(alignment: .left, forColumn: 1)
                 
                 let style = MTMathStyle(style: .text)
-                
-                
                 for i in 0..<table.cells.count {
                     for j in 0..<table.cells[i].count {
                         table.cells[i][j].insert(style, at: 0)

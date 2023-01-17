@@ -86,11 +86,3 @@ extension Character {
 
     var isGreekSymbol : Bool { self.greekSymbolOrder != nil }
 }
-
-extension String {
-    
-    var unicodeLength:Int {
-        self.lengthOfBytes(using: .utf32) / 4
-    }
-    
-}

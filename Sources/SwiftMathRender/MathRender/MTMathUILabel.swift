@@ -61,7 +61,7 @@ public class MTMathUILabel : MTView {
         set {
             _mathList = newValue
             error = nil
-            _latex = MTMathListBuilder.mathListToString(mathList)
+            _latex = MTMathListBuilder.mathListToString(newValue)
             self.invalidateIntrinsicContentSize()
             self.setNeedsLayout()
         }
@@ -80,7 +80,7 @@ public class MTMathUILabel : MTView {
             _latex = newValue
             self.error = nil
             var error : NSError? = nil
-            _mathList = MTMathListBuilder.build(fromString: latex, error: &error)
+            _mathList = MTMathListBuilder.build(fromString: newValue, error: &error)
             if error != nil {
                 _mathList = nil
                 self.error = error
@@ -97,10 +97,10 @@ public class MTMathUILabel : MTView {
     }
     
     /** This contains any error that occurred when parsing the latex. */
-    var error:NSError?
+    public var error:NSError?
     
     /** If true, if there is an error it displays the error message inline. Default true. */
-    var displayErrorInline = true
+    public var displayErrorInline = true
     
     /** The MTFont to use for rendering. */
     var font = MTFontManager.fontManager.defaultFont {
@@ -220,7 +220,7 @@ public class MTMathUILabel : MTView {
     override public func layoutSubviews() { _layoutSubviews() }
     #endif
     
-    public func _layoutSubviews() {
+    func _layoutSubviews() {
         if mathList != nil {
             displayList = MTTypesetter.createLineForMathList(mathList, font: font, style: currentStyle)
             displayList?.textColor = textColor
