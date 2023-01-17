@@ -46,9 +46,7 @@ public enum MTMathAtomType: Int, CustomStringConvertible, Comparable {
         }
     }
     
-    func isScriptAllowed() -> Bool {
-        return self != .boundary && self != .space && self != .style && self != .table
-    }
+    func isScriptAllowed() -> Bool { self < .boundary }
     
     // we want string representations to be capitalized
     public var description: String {
@@ -80,9 +78,7 @@ public enum MTMathAtomType: Int, CustomStringConvertible, Comparable {
     }
     
     // comparable support
-    public static func < (lhs: MTMathAtomType, rhs: MTMathAtomType) -> Bool {
-        lhs.rawValue < rhs.rawValue
-    }
+    public static func < (lhs: MTMathAtomType, rhs: MTMathAtomType) -> Bool { lhs.rawValue < rhs.rawValue }
     
 }
 
@@ -109,6 +105,8 @@ public enum MTFontStyle:Int {
     boldItalic
 }
 
+// MARK: - MTMathAtom
+
 public class MTMathAtom: NSObject {
     
     public var type = MTMathAtomType.ordinary
@@ -128,6 +126,7 @@ public class MTMathAtom: NSObject {
             }
         }
     }
+    
     public var nucleus: String = ""
     public var indexRange = NSRange(location: 0, length: 0) // indexRange in list that this atom tracks:
     
@@ -180,22 +179,6 @@ public class MTMathAtom: NSObject {
                 return MTMathTable(self as! MTMathTable)
             default:
                 return MTMathAtom(self)
-        }
-    }
-    
-    public func setSuperScript(_ list: MTMathList?) {
-        if self.isScriptAllowed() {
-            self.superScript = list
-        } else {
-            NSException(name: NSExceptionName(rawValue: "Error"), reason: "Superscripts not allowed for atom \(self.type.rawValue)").raise()
-        }
-    }
-    
-    public func setSubScript(_ list: MTMathList?) {
-        if self.isScriptAllowed() {
-            self.subScript = list
-        } else {
-            NSException(name: NSExceptionName(rawValue: "Error"), reason: "Subscripts not allowed for atom \(self.type.rawValue)").raise()
         }
     }
     
@@ -267,25 +250,27 @@ public class MTMathAtom: NSObject {
 }
 
 func isNotBinaryOperator(_ prevNode:MTMathAtom?) -> Bool {
-    if prevNode == nil { return true }
-    return prevNode!.type.isNotBinaryOperator()
+    guard let prevNode = prevNode else { return true }
+    return prevNode.type.isNotBinaryOperator()
 }
+
+// MARK: - MTFraction
 
 public class MTFraction: MTMathAtom {
     public var hasRule: Bool = true
     public var leftDelimiter: String?
     public var rightDelimiter: String?
-    public var numerator:  MTMathList?
-    public var denominator:  MTMathList?
+    public var numerator: MTMathList?
+    public var denominator: MTMathList?
     
     init(_ frac: MTFraction?) {
         super.init(frac)
         self.type = .fraction
-        self.numerator = MTMathList(frac?.numerator)
-        self.denominator = MTMathList(frac?.denominator)
-        self.hasRule = frac?.hasRule ?? true
-        self.leftDelimiter = frac?.leftDelimiter
-        self.rightDelimiter = frac?.rightDelimiter
+        self.numerator = MTMathList(frac!.numerator)
+        self.denominator = MTMathList(frac!.denominator)
+        self.hasRule = frac!.hasRule
+        self.leftDelimiter = frac!.leftDelimiter
+        self.rightDelimiter = frac!.rightDelimiter
     }
     
     init(hasRule rule:Bool = true) {
@@ -322,14 +307,14 @@ public class MTFraction: MTMathAtom {
     
     override public var finalized: MTMathAtom {
         let finalized: MTFraction = super.finalized as! MTFraction
-        
         finalized.numerator = finalized.numerator?.finalized
         finalized.denominator = finalized.denominator?.finalized
-        
         return finalized
     }
     
 }
+
+// MARK: - MTRadical
 
 public class MTRadical: MTMathAtom {
     // Under the roof
@@ -383,19 +368,19 @@ public class MTRadical: MTMathAtom {
     }
 }
 
+// MARK: - MTLargeOperator
+
 public class MTLargeOperator: MTMathAtom {
     public var limits: Bool = false
     
     init(_ op:MTLargeOperator?) {
         super.init(op)
         self.type = .largeOperator
-        self.limits = op?.limits ?? false
+        self.limits = op!.limits
     }
     
     init(value: String, limits: Bool) {
-        super.init()
-        self.type = .largeOperator
-        self.nucleus = value
+        super.init(type: .largeOperator, value: value)
         self.limits = limits
     }
 }
@@ -463,6 +448,8 @@ public class MTInner: MTMathAtom {
     }
 }
 
+// MARK: - MTOverLIne
+
 public class MTOverLine: MTMathAtom {
     public var innerList:  MTMathList?
     
@@ -484,6 +471,8 @@ public class MTOverLine: MTMathAtom {
     }
 }
 
+// MARK: - MTUnderLine
+
 public class MTUnderLine: MTMathAtom {
     public var innerList:  MTMathList?
     
@@ -504,6 +493,8 @@ public class MTUnderLine: MTMathAtom {
         self.type = .underline
     }
 }
+
+// MARK: - MTAccent
 
 public class MTAccent: MTMathAtom {
     public var innerList:  MTMathList?
@@ -527,6 +518,8 @@ public class MTAccent: MTMathAtom {
     }
 }
 
+// MARK: - MTMathSpace
+
 public class MTMathSpace: MTMathAtom {
     public var space: CGFloat = 0
     
@@ -543,25 +536,24 @@ public class MTMathSpace: MTMathAtom {
     }
 }
 
-public enum MTLineStyle {
+public enum MTLineStyle:Int, Comparable {
+
     case display
     case text
     case script
     case scriptOfScript
     
     public func inc() -> MTLineStyle {
-        switch self {
-            case .display: return .text
-            case .text: return .script
-            case .script: return .scriptOfScript
-            case .scriptOfScript: return .display
-        }
+        let raw = self.rawValue + 1
+        if let style = MTLineStyle(rawValue: raw) { return style }
+        return .display
     }
     
-    public var isNotScript:Bool {
-        self == .display || self == .text
-    }
+    public var isNotScript:Bool { self < .script }
+    public static func < (lhs: MTLineStyle, rhs: MTLineStyle) -> Bool { lhs.rawValue < rhs.rawValue }
 }
+
+// MARK: - MTMathStyle
 
 public class MTMathStyle: MTMathAtom {
     public var style: MTLineStyle = .display
@@ -569,7 +561,7 @@ public class MTMathStyle: MTMathAtom {
     init(_ style:MTMathStyle?) {
         super.init(style)
         self.type = .style
-        self.style = style?.style ?? .display
+        self.style = style!.style
     }
     
     init(style:MTLineStyle) {
@@ -578,6 +570,8 @@ public class MTMathStyle: MTMathAtom {
         self.style = style
     }
 }
+
+// MARK: - MTMathColor
 
 public class MTMathColor: MTMathAtom {
     public var colorString:String=""
@@ -599,6 +593,8 @@ public class MTMathColor: MTMathAtom {
         "\\color{\(self.colorString)}{\(self.innerList!.string)}"
     }
 }
+
+// MARK: - MTMathColorbox
 
 public class MTMathColorbox: MTMathAtom {
     public var colorString:String=""
@@ -626,6 +622,8 @@ public enum MTColumnAlignment {
     case center
     case right
 }
+
+// MARK: - MTMathTable
 
 public class MTMathTable: MTMathAtom {
     public var alignments = [MTColumnAlignment]()
@@ -711,18 +709,16 @@ public class MTMathTable: MTMathAtom {
     
     public var numColumns: Int {
         var numberOfCols = 0
-        
         for row in self.cells {
             numberOfCols = max(numberOfCols, row.count)
         }
-        
         return numberOfCols
     }
     
-    public var numRows: Int {
-        return self.cells.count
-    }
+    public var numRows: Int { self.cells.count }
 }
+
+// MARK: - MTMathList
 
 // represent list of math objects
 extension MTMathList {
@@ -759,22 +755,15 @@ public class MTMathList : NSObject {
                 if prevNode == nil || prevNode!.isNotBinaryOperator()  {
                     newNode.type = .unaryOperator
                 }
-                break
             case .relation, .punctuation, .close:
-                if prevNode != nil &&
-                    prevNode!.type == .binaryOperator {
+                if prevNode != nil && prevNode!.type == .binaryOperator {
                     prevNode!.type = .unaryOperator
                 }
-                break
             case .number:
-                if prevNode != nil &&
-                    prevNode!.type == .number &&
-                    prevNode!.subScript == nil &&
-                    prevNode!.superScript == nil {
+                if prevNode != nil && prevNode!.type == .number && prevNode!.subScript == nil && prevNode!.superScript == nil {
                     prevNode!.fuse(with: newNode)
                     continue
                 }
-                break
             default: break
             }
             
@@ -840,7 +829,7 @@ public class MTMathList : NSObject {
     }
     
     func removeLastAtom() {
-        if self.atoms.count > 0 {
+        if !self.atoms.isEmpty {
             self.atoms.removeLast()
         }
     }
@@ -856,7 +845,5 @@ public class MTMathList : NSObject {
         self.atoms.removeSubrange(range)
     }
     
-    func isAtomAllowed(_ atom: MTMathAtom?) -> Bool {
-        return atom?.type != .boundary
-    }
+    func isAtomAllowed(_ atom: MTMathAtom?) -> Bool { atom?.type != .boundary }
 }

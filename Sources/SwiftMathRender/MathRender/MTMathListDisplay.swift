@@ -682,6 +682,7 @@ class MTLargeOpLimitsDisplay : MTDisplay {
     
     override var position: CGPoint {
         set {
+            super.position = newValue
             self.updateLowerLimitPosition()
             self.updateUpperLimitPosition()
             self.updateNucleusPosition()

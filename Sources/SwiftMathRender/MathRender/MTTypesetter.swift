@@ -346,9 +346,13 @@ class MTTypesetter {
     var currentLine:NSMutableAttributedString!
     var currentAtoms = [MTMathAtom]()   // List of atoms that make the line
     var currentLineIndexRange = NSMakeRange(0, 0)
-    var style:MTLineStyle
+    var style:MTLineStyle { didSet { _styleFont = nil } }
+    private var _styleFont:MTFont?
     var styleFont:MTFont {
-        self.font.copy(withSize: Self.getStyleSize(self.style, font: self.font))
+        if _styleFont == nil {
+            _styleFont = font.copy(withSize: Self.getStyleSize(style, font: font))
+        }
+        return _styleFont!
     }
     var cramped = false
     var spaced = false
@@ -752,18 +756,12 @@ class MTTypesetter {
     func getSpacingInMu(_ type: InterElementSpaceType) -> Int {
         // let valid = [MTLineStyle.display, .text]
         switch type {
-            case .invalid:
-                return -1;
-            case .none:
-                return 0;
-            case .thin:
-                return 3;
-            case .nsThin:
-                return style.isNotScript ? 3 : 0;
-            case .nsMedium:
-                return style.isNotScript ? 4 : 0;
-            case .nsThick:
-                return style.isNotScript ? 5 : 0;
+            case .invalid:  return -1
+            case .none:     return 0
+            case .thin:     return 3
+            case .nsThin:   return style.isNotScript ? 3 : 0;
+            case .nsMedium: return style.isNotScript ? 4 : 0;
+            case .nsThick:  return style.isNotScript ? 5 : 0;
         }
     }
     
@@ -788,25 +786,19 @@ class MTTypesetter {
     
     func scriptStyle() -> MTLineStyle {
         switch style {
-            case .display, .text:
-                return .script
-            case .script, .scriptOfScript:
-                return .scriptOfScript
+            case .display, .text:          return .script
+            case .script, .scriptOfScript: return .scriptOfScript
         }
     }
     
     // subscript is always cramped
-    func subscriptCramped() -> Bool {
-        return true;
-    }
+    func subscriptCramped() -> Bool { true }
     
     // superscript is cramped only if the current style is cramped
-    func superScriptCramped() -> Bool {
-        return cramped;
-    }
+    func superScriptCramped() -> Bool { cramped }
     
     func superScriptShiftUp() -> CGFloat {
-        if (cramped) {
+        if cramped {
             return styleFont.mathTable!.superscriptShiftUpCramped;
         } else {
             return styleFont.mathTable!.superscriptShiftUp;
@@ -822,7 +814,6 @@ class MTTypesetter {
         var subscriptShiftDown = 0.0
         
         display?.hasScript = true
-        // let classy = display is MTCTLineDisplay
         if !(display is MTCTLineDisplay) {
             // get the font in script style
             let scriptFontSize = Self.getStyleSize(self.scriptStyle(), font:font)
@@ -893,21 +884,21 @@ class MTTypesetter {
     func numeratorShiftUp(_ hasRule:Bool) -> CGFloat {
         if hasRule {
             if style == .display {
-                return styleFont.mathTable!.fractionNumeratorDisplayStyleShiftUp;
+                return styleFont.mathTable!.fractionNumeratorDisplayStyleShiftUp
             } else {
-                return styleFont.mathTable!.fractionNumeratorShiftUp;
+                return styleFont.mathTable!.fractionNumeratorShiftUp
             }
         } else {
-            if (style == .display) {
-                return styleFont.mathTable!.stackTopDisplayStyleShiftUp;
+            if style == .display {
+                return styleFont.mathTable!.stackTopDisplayStyleShiftUp
             } else {
-                return styleFont.mathTable!.stackTopShiftUp;
+                return styleFont.mathTable!.stackTopShiftUp
             }
         }
     }
     
     func numeratorGapMin() -> CGFloat {
-        if (style == .display) {
+        if style == .display {
             return styleFont.mathTable!.fractionNumeratorDisplayStyleGapMin;
         } else {
             return styleFont.mathTable!.fractionNumeratorGapMin;
@@ -916,13 +907,13 @@ class MTTypesetter {
     
     func denominatorShiftDown(_ hasRule:Bool) -> CGFloat {
         if hasRule {
-            if (style == .display) {
+            if style == .display {
                 return styleFont.mathTable!.fractionDenominatorDisplayStyleShiftDown;
             } else {
                 return styleFont.mathTable!.fractionDenominatorShiftDown;
             }
         } else {
-            if (style == .display) {
+            if style == .display {
                 return styleFont.mathTable!.stackBottomDisplayStyleShiftDown;
             } else {
                 return styleFont.mathTable!.stackBottomShiftDown;
@@ -1295,7 +1286,7 @@ class MTTypesetter {
             currentPosition.x += display!.width
             return display;
         }
-        if (op.limits && style == .display) {
+        if op.limits && style == .display {
             // make limits
             var superScript:MTMathListDisplay? = nil, subScript:MTMathListDisplay? = nil
             if op.superScript != nil {
@@ -1304,7 +1295,7 @@ class MTTypesetter {
             if op.subScript != nil {
                 subScript = MTTypesetter.createLineForMathList(op.subScript, font:font, style:self.scriptStyle(), cramped:self.subscriptCramped())
             }
-            assert((superScript != nil) || (subScript != nil), "Atleast one of superscript or subscript should have been present.");
+            assert((superScript != nil) || (subScript != nil), "At least one of superscript or subscript should have been present.");
             let opsDisplay = MTLargeOpLimitsDisplay(withNucleus:display, upperLimit:superScript, lowerLimit:subScript, limitShift:delta/2, extraPadding:0)
             if superScript != nil {
                 let upperLimitGap = max(styleFont.mathTable!.upperLimitGapMin, styleFont.mathTable!.upperLimitBaselineRiseMin - superScript!.descent);

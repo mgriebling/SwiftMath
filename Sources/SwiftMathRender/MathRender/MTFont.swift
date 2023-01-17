@@ -10,10 +10,8 @@ import CoreGraphics
 import CoreText
 
 //
-//  Font.swift
-//  iosMath
-//
 //  Created by Kostub Deshmukh on 5/18/16.
+//  Modified by Michael Griebling on 17 Jan 2023.
 //
 //  This software may be modified and distributed under the terms of the
 //  MIT license. See the LICENSE file for details.
@@ -42,16 +40,15 @@ public class MTFont {
         
         self.ctFont = CTFontCreateWithGraphicsFont(self.defaultCGFont, size, nil, nil);
         
+        print("Loading associated .plist")
         let mathTablePlist = bundle.url(forResource:name, withExtension:"plist")
-        let dict = NSDictionary(contentsOf: mathTablePlist!) // dictionaryWithContentsOfFile:mathTablePlist];
-        self.rawMathTable = dict
+        self.rawMathTable = NSDictionary(contentsOf: mathTablePlist!)
         self.mathTable = MTFontMathTable(withFont:self, mathTable:rawMathTable!)
     }
     
     static var fontBundle:Bundle {
         // Uses bundle for class so that this can be access by the unit tests.
-        let url = Bundle.module.url(forResource: "mathFonts", withExtension: "bundle")!
-        return Bundle(url: url)!
+        Bundle(url: Bundle.module.url(forResource: "mathFonts", withExtension: "bundle")!)!
     }
     
     func copy(withSize size: CGFloat) -> MTFont {
@@ -65,15 +62,13 @@ public class MTFont {
     
     func get(nameForGlyph glyph:CGGlyph) -> String {
         let name = defaultCGFont.name(for: glyph) as? String
-        return name!
+        return name ?? ""
     }
     
     func get(glyphWithName name:String) -> CGGlyph {
-        return defaultCGFont.getGlyphWithGlyphName(name: name as CFString)
+        defaultCGFont.getGlyphWithGlyphName(name: name as CFString)
     }
     
-    var fontSize:CGFloat {
-        return CTFontGetSize(self.ctFont)
-    }
+    var fontSize:CGFloat { CTFontGetSize(self.ctFont) }
     
 }

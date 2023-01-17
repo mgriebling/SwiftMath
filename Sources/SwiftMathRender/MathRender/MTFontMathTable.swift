@@ -56,7 +56,7 @@ class MTFontMathTable {
     var muUnit:CGFloat { _fontSize/18 }
     
     func fontUnitsToPt(_ fontUnits:Int) -> CGFloat {
-        return CGFloat(fontUnits) * _fontSize / CGFloat(_unitsPerEm)
+        CGFloat(fontUnits) * _fontSize / CGFloat(_unitsPerEm)
     }
     
     init(withFont font: MTFont?, mathTable:NSDictionary) {
@@ -286,7 +286,7 @@ class MTFontMathTable {
     let kAssemblyParts = "parts"
 
     /** Returns an array of the glyph parts to be used for constructing vertical variants
-     of this glyph. If there is no glyph assembly defined, returns nil. */
+     of this glyph. If there is no glyph assembly defined, returns an empty array. */
     func getVerticalGlyphAssembly(forGlyph glyph:CGGlyph) -> [GlyphPart] {
         let assemblyTable = _mathTable[kVertAssembly] as! NSDictionary?
         let glyphName = self.font?.get(nameForGlyph: glyph) //  getGlyphName:glyph];
