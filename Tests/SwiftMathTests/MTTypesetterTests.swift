@@ -1,5 +1,5 @@
 import XCTest
-@testable import SwiftMathRender
+@testable import SwiftMath
 
 //
 //  MathTypesetterTests.swift
@@ -11,8 +11,7 @@ import XCTest
 extension CGPoint {
     
     func isEqual(to p:CGPoint, accuracy:CGFloat) -> Bool {
-        let p1 = self
-        return abs(p1.x - p.x) < accuracy && abs(p1.y - p.y) < accuracy
+        abs(self.x - p.x) < accuracy && abs(self.y - p.y) < accuracy
     }
     
 }

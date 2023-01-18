@@ -1,5 +1,5 @@
 import XCTest
-@testable import SwiftMathRender
+@testable import SwiftMath
 
 //
 //  MathRenderSwiftTests.swift
