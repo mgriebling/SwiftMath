@@ -1,9 +1,14 @@
 # MathRender Examples
 
 ## Square of sums
-$$
+```LaTeX
 (a_1 + a_2)^2 = a_1^2 + 2a_1a_2 + a_2^2
-$$
+```
+
+As rendered by MathJax: $ (a_1 + a_2)^2 = a_1^2 + 2a_1a_2 + a_2^2 $
+
+As rendered by SwiftMath:
+ 
 
 ![Square Formula](img/square.png)
 
