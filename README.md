@@ -4,6 +4,10 @@
 for displaying beautifully rendered math equations in iOS and MacOS applications. It typesets formulae written 
 using LaTeX in a `UILabel` equivalent class. It uses the same typesetting rules as LaTeX and
 so the equations are rendered exactly as LaTeX would render them. 
+`
+SwiftMath` is a Swift translation of the latest `iosMath` v0.9.5 release but includes bug fixes
+and enhancements like a new \lbar (lambda bar) character and cyrillic alphabet support.
+Please let me know of any bugs or bug fixes that you find. 
 
 `SwiftMath` prepackages everything needed for direct access via the Swift Package Manager.
 No need for complicated alien pods that never seem to work quite right.
@@ -16,11 +20,28 @@ importantly, it is significantly faster than using a `UIWebView`.
 ## Examples
 Here are screenshots of some formulae that were rendered with this library:
 
+```LaTeX
+x = \frac{-b \pm \sqrt{b^2-4ac}}{2a}
+```
+
 ![Quadratic Formula](img/quadratic.png) 
+
+```LaTeX
+f(x) = \int\limits_{-\infty}^\infty\!\hat f(\xi)\,e^{2 \pi i \xi x}\,\mathrm{d}\xi
+```
 
 ![Calculus](img/calculus.png)
 
+```LaTeX
+\frac{1}{n}\sum_{i=1}^{n}x_i \geq \sqrt[n]{\prod_{i=1}^{n}x_i}
+```
+
 ![AM-GM](img/amgm.png)
+
+```LaTex
+    \frac{1}{\left(\sqrt{\phi \sqrt{5}}-\phi\\right) e^{\frac25 \pi}}
+    = 1+\frac{e^{-2\pi}} {1 +\frac{e^{-4\pi}} {1+\frac{e^{-6\pi}} {1+\frac{e^{-8\pi}} {1+\cdots} } } }
+```
 
 ![Ramanujan Identity](img/ramanujan.png)
 
