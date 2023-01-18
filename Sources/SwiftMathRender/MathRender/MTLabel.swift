@@ -10,7 +10,7 @@ import SwiftUI
 
 #if os(macOS)
 
-class MTLabel : NSTextField {
+public class MTLabel : NSTextField {
     
     init() {
         super.init(frame: .zero)
