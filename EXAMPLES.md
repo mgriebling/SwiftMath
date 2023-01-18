@@ -16,20 +16,12 @@ SwiftMath:
 x = \frac{-b \pm \sqrt{b^2-4ac}}{2a}
 ```
 
-MathJax: $x = \frac{-b \pm \sqrt{b^2-4ac}}{2a}$
-
-SwiftMath: 
-
 ![Quadratic Formula](img/quadratic.png)
 
 ## Standard Deviation
 ```LaTeX
 \sigma = \sqrt{\frac{1}{N}\sum_{i=1}^N (x_i - \mu)^2}
 ```
-
-MathJax: $$\sigma = \sqrt{\frac{1}{N}\sum_{i=1}^N (x_i - \mu)^2}$$
-
-SwiftMath: 
 
 ![Standard Deviation](img/standard.png)
 
@@ -38,20 +30,12 @@ SwiftMath:
 \neg(P\land Q) \iff (\neg P)\lor(\neg Q)
 ```
 
-MathJax: $\neg(P\land Q) \iff (\neg P)\lor(\neg Q)$
-
-SwiftMath: 
-
 ![De Morgan](img/demorgan.png)
 
 ## Log Change of Base
 ```LaTeX
 \log_b(x) = \frac{\log_a(x)}{\log_a(b)}
 ```
-
-MathJax: $\log_b(x) = \frac{\log_a(x)}{\log_a(b)}$
-
-SwiftMath: 
 
 ![Log Base Change](img/log.png)
 
@@ -60,20 +44,12 @@ SwiftMath:
 \cos(\theta + \varphi) = \cos(\theta)\cos(\varphi) - \sin(\theta)\sin(\varphi)
 ```
 
-MathJax: $\cos(\theta + \varphi) = \cos(\theta)\cos(\varphi) - \sin(\theta)\sin(\varphi)$
-
-SwiftMath: 
-
 ![Cos Sum](img/trig.png)
 
 ## Limit e^k
 ```LaTeX
 \lim_{x\to\infty}\left(1 + \frac{k}{x}\right)^x = e^k
 ```
-
-MathJax: $\lim_{x\to\infty}\left(1 + \frac{k}{x}\right)^x = e^k$
-
-SwiftMath: 
 
 ![Limit](img/limit.png)
 
@@ -82,20 +58,12 @@ SwiftMath:
 f(x) = \int\limits_{-\infty}^\infty\hat f(\xi)\,e^{2 \pi i \xi x}\,\mathrm{d}\xi
 ```
 
-MathJax: $$f(x) = \int\limits_{-\infty}^\infty\!\hat f(\xi)\,e^{2 \pi i \xi x}\,\mathrm{d}\xi$$
-
-SwiftMath: 
-
 ![Calculus](img/calculus.png)
 
 ## Stirling Numbers of the Second Kind
 ```LaTeX
 {n \brace k} = \frac{1}{k!}\sum_{j=0}^k (-1)^{k-j}\binom{k}{j}(k-j)^n
 ```
-
-MathJax: ${n \brace k} = \frac{1}{k!}\sum_{j=0}^k (-1)^{k-j}\binom{k}{j}(k-j)^n$
-
-SwiftMath: 
 
 ![Stirling Numbers](img/stirling.png)
 
@@ -104,20 +72,12 @@ SwiftMath:
 \int_{-\infty}^{\infty} \! e^{-x^2} dx = \sqrt{\pi}
 ```
 
-MathJax: $\int_{-\infty}^{\infty} \! e^{-x^2} dx = \sqrt{\pi}$
-
-SwiftMath: 
-
 ![Gauss Integral](img/gaussintegral.png)
 
 ## Arithmetic mean, geometric mean inequality
 ```LaTeX
 \frac{1}{n}\sum_{i=1}^{n}x_i \geq \sqrt[n]{\prod_{i=1}^{n}x_i}
 ```
-
-MathJax: $\frac{1}{n}\sum_{i=1}^{n}x_i \geq \sqrt[n]{\prod_{i=1}^{n}x_i}$
-
-SwiftMath: 
 
 ![AM-GM](img/amgm.png)
 
@@ -126,20 +86,12 @@ SwiftMath:
 \left(\sum_{k=1}^n a_k b_k \right)^2 \le \left(\sum_{k=1}^n a_k^2\right)\left(\sum_{k=1}^n b_k^2\right)
 ```
 
-MathJax: $\left(\sum_{k=1}^n a_k b_k \right)^2 \le \left(\sum_{k=1}^n a_k^2\right)\left(\sum_{k=1}^n b_k^2\right)$
-
-SwiftMath: 
-
 ![Cauchy Schwarz](img/cauchyschwarz.png)
 
 ## Cauchy integral formula
 ```LaTeX
 f^{(n)}(z_0) = \frac{n!}{2\pi i}\oint_\gamma\frac{f(z)}{(z-z_0)^{n+1}}dz
 ```
-
-MathJax: $f^{(n)}(z_0) = \frac{n!}{2\pi i}\oint_\gamma\frac{f(z)}{(z-z_0)^{n+1}}dz$
-
-SwiftMath: 
 
 ![Cauchy Integral](img/cauchyintegral.png)
 
@@ -148,11 +100,6 @@ SwiftMath:
 i\hbar\frac{\partial}{\partial t}\mathbf\Psi(\mathbf{x},t) = -\frac{\hbar}{2m}\nabla^2\mathbf\Psi(\mathbf{x},t)
 + V(\mathbf{x})\mathbf\Psi(\mathbf{x},t)
 ```
-
-MathJax: $i\hbar\frac{\partial}{\partial t}\mathbf\Psi(\mathbf{x},t) = -\frac{\hbar}{2m}\nabla^2\mathbf\Psi(\mathbf{x},t)
-+ V(\mathbf{x})\mathbf\Psi(\mathbf{x},t)$
-
-SwiftMath: 
 
 ![Schroedinger](img/schroedinger.png)
 
@@ -167,14 +114,6 @@ equations.
 \end{gather}
 ```
 
-MathJax: $\begin{gather}
-\dot{x} = \sigma(y-x) \\
-\dot{y} = \rho x - y - xz \\
-\dot{z} = -\beta z + xy"
-\end{gather}$
-
-SwiftMath: 
-
 ![Lorentz](img/lorentz.png)
 
 ## Cross product
@@ -185,14 +124,6 @@ SwiftMath:
 \frac{\partial X}{\partial v} & \frac{\partial Y}{\partial v} & 0
 \end{vmatrix}
 ```
-
-MathJax: $\vec \bf V_1 \times \vec \bf V_2 =  \begin{vmatrix}
-\hat \imath &\hat \jmath &\hat k \\
-\frac{\partial X}{\partial u} & \frac{\partial Y}{\partial u} & 0 \\
-\frac{\partial X}{\partial v} & \frac{\partial Y}{\partial v} & 0
-\end{vmatrix}$
-
-SwiftMath: 
 
 ![Cross Product](img/cross.png)
 
@@ -207,15 +138,6 @@ multiple equations.
 \nabla \times \vec{\bf B} & = \mu_0\vec{\bf J} + \mu_0\varepsilon_0 \frac{\partial\vec{\bf E}}{\partial t}
 \end{eqalign}
 ```
-
-MathJax: $begin{eqalign}
-\nabla \cdot \vec{\bf E} & = \frac {\rho} {\varepsilon_0} \\
-\nabla \cdot \vec{\bf B} & = 0 \\
-\nabla \times \vec{\bf E} &= - \frac{\partial\vec{\bf B}}{\partial t} \\
-\nabla \times \vec{\bf B} & = \mu_0\vec{\bf J} + \mu_0\varepsilon_0 \frac{\partial\vec{\bf E}}{\partial t}
-\end{eqalign}$
-
-SwiftMath: 
 
 ![Maxwell's Equations](img/maxwell.png)
 
@@ -235,19 +157,6 @@ c\alpha + d\gamma & c\beta + d \delta
 \end{pmatrix}
 ```
 
-MathJax: $\begin{pmatrix}
-a & b\\ c & d
-\end{pmatrix}
-\begin{pmatrix}
-\alpha & \beta \\ \gamma & \delta
-\end{pmatrix} = 
-\begin{pmatrix}
-a\alpha + b\gamma & a\beta + b \delta \\
-c\alpha + d\gamma & c\beta + d \delta 
-\end{pmatrix}$
-
-SwiftMath: 
-
 ![Matrix Multiplication](img/matrixmult.png)
 
 ## Cases
@@ -258,13 +167,6 @@ f(x) = \begin{cases}
 \end{cases}
 ```
 
-MathJax: $f(x) = \begin{cases}
-\frac{e^x}{2} & x \geq 0 \\
-1 & x < 0
-\end{cases}$
-
-SwiftMath: 
-
 ![Cases](img/cases.png)
 
 ## Splitting long equations
@@ -274,12 +176,5 @@ SwiftMath:
 \quad \left( \log(2 \pi ) + \log \left| \cal C_m^{(s)} \right| +
 \left( o_t - \hat{\mu}_m^{(s)} \right) ^T \cal C_m^{(s)-1} \right) 
 ```
-
-MathJax: $\frak Q(\lambda,\hat{\lambda}) =
--\frac{1}{2} \mathbb P(O \mid \lambda ) \sum_s \sum_m \sum_t \gamma_m^{(s)} (t) +\\
-\quad \left( \log(2 \pi ) + \log \left| \cal C_m^{(s)} \right| +
-\left( o_t - \hat{\mu}_m^{(s)} \right) ^T \cal C_m^{(s)-1} \right)$
-
-SwiftMath: 
 
 ![Long equation](img/long.png)
