@@ -149,7 +149,7 @@ class MTCTLineDisplay : MTDisplay {
     override var textColor: MTColor? {
         set {
             super.textColor = newValue
-            let attrStr = NSMutableAttributedString(attributedString: self.attributedString!)
+            let attrStr = attributedString!.mutableCopy() as! NSMutableAttributedString
             let foregroundColor = NSAttributedString.Key(kCTForegroundColorAttributeName as String)
             attrStr.addAttribute(foregroundColor, value:self.textColor!.cgColor, range:NSMakeRange(0, attrStr.length))
             self.attributedString = attrStr
