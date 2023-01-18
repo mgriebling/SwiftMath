@@ -27,7 +27,7 @@ SwiftMath:
 \sigma = \sqrt{\frac{1}{N}\sum_{i=1}^N (x_i - \mu)^2}
 ```
 
-MathJax: $\sigma = \sqrt{\frac{1}{N}\sum_{i=1}^N (x_i - \mu)^2}$
+MathJax: $$\sigma = \sqrt{\frac{1}{N}\sum_{i=1}^N (x_i - \mu)^2}$$
 
 SwiftMath: 
 
@@ -79,10 +79,10 @@ SwiftMath:
 
 ## Calculus
 ```LaTeX
-f(x) = \int\limits_{-\infty}^\infty\!\hat f(\xi)\,e^{2 \pi i \xi x}\,\mathrm{d}\xi
+f(x) = \int\limits_{-\infty}^\infty\hat f(\xi)\,e^{2 \pi i \xi x}\,\mathrm{d}\xi
 ```
 
-MathJax: $f(x) = \int\limits_{-\infty}^\infty\!\hat f(\xi)\,e^{2 \pi i \xi x}\,\mathrm{d}\xi$
+MathJax: $$f(x) = \int\limits_{-\infty}^\infty\!\hat f(\xi)\,e^{2 \pi i \xi x}\,\mathrm{d}\xi$$
 
 SwiftMath: 
 
