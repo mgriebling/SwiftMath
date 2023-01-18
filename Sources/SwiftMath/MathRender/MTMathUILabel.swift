@@ -267,17 +267,14 @@ public class MTMathUILabel : MTView {
     }
     
     func _sizeThatFits(_ size:CGSize) -> CGSize {
+        guard _mathList != nil else { return size }
         var size = size
         var displayList:MTMathListDisplay? = nil
-        if _mathList != nil {
-            displayList = MTTypesetter.createLineForMathList(_mathList, font: font, style: currentStyle)
-        }
+        displayList = MTTypesetter.createLineForMathList(_mathList, font: font, style: currentStyle)
         size.width = displayList!.width + contentInsets.left + contentInsets.right
         size.height = displayList!.ascent + displayList!.descent + contentInsets.top + contentInsets.bottom
         return size
     }
-    
-    //override public var intrinsicContentSize: CGSize { _sizeThatFits(CGSizeZero) }
     
 #if os(macOS)
     func setNeedsDisplay() { self.needsDisplay = true }
