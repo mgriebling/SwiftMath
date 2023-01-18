@@ -7,7 +7,7 @@
 
 As rendered by MathJax: $(a_1 + a_2)^2 = a_1^2 + 2a_1a_2 + a_2^2$
 
-![Square Formula](img/square.png)
+MathRender: ![Square Formula](img/square.png)
 
 ## Quadratic Formula 
 ```LaTeX
