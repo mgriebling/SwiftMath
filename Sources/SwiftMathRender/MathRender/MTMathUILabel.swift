@@ -240,10 +240,10 @@ public class MTMathUILabel : MTView {
     
     func _layoutSubviews() {
         if _mathList != nil {
-            print("Pre list = \(_mathList!)")
+            // print("Pre list = \(_mathList!)")
             _displayList = MTTypesetter.createLineForMathList(_mathList, font: font, style: currentStyle)
             _displayList!.textColor = textColor
-            print("Post list = \(_mathList!)")
+            // print("Post list = \(_mathList!)")
             var textX = CGFloat(0)
             switch self.textAlignment {
                 case .left:   textX = contentInsets.left
