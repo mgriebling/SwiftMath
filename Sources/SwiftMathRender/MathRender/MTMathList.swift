@@ -195,13 +195,9 @@ public class MTMathAtom: NSObject {
     }
     
     public var finalized: MTMathAtom {
-        let finalized = self
-        if finalized.superScript != nil {
-            finalized.superScript = finalized.superScript!.finalized
-        }
-        if finalized.subScript != nil {
-            finalized.subScript = finalized.subScript!.finalized
-        }
+        let finalized : MTMathAtom = self.copy()
+        finalized.superScript = finalized.superScript?.finalized
+        finalized.subScript = finalized.subScript?.finalized
         return finalized
     }
     
@@ -306,10 +302,10 @@ public class MTFraction: MTMathAtom {
     }
     
     override public var finalized: MTMathAtom {
-        let finalized: MTFraction = super.finalized as! MTFraction
-        finalized.numerator = finalized.numerator?.finalized
-        finalized.denominator = finalized.denominator?.finalized
-        return finalized
+        let newFrac = super.finalized as! MTFraction
+        newFrac.numerator = newFrac.numerator?.finalized
+        newFrac.denominator = newFrac.denominator?.finalized
+        return newFrac
     }
     
 }
@@ -359,12 +355,10 @@ public class MTRadical: MTMathAtom {
     }
     
     override public var finalized: MTMathAtom {
-        let finalized: MTRadical = super.finalized as! MTRadical
-        
-        finalized.radicand = finalized.radicand?.finalized
-        finalized.degree = finalized.degree?.finalized
-        
-        return finalized
+        let newRad = super.finalized as! MTRadical
+        newRad.radicand = newRad.radicand?.finalized
+        newRad.degree = newRad.degree?.finalized
+        return newRad
     }
 }
 
@@ -442,9 +436,9 @@ public class MTInner: MTMathAtom {
     }
     
     override public var finalized: MTMathAtom {
-        let finalized: MTInner = super.finalized as! MTInner
-        finalized.innerList = finalized.innerList?.finalized
-        return finalized
+        let newInner = super.finalized as! MTInner
+        newInner.innerList = newInner.innerList?.finalized
+        return newInner
     }
 }
 
@@ -454,15 +448,15 @@ public class MTOverLine: MTMathAtom {
     public var innerList:  MTMathList?
     
     override public var finalized: MTMathAtom {
-        let finalized: MTOverLine = super.finalized as! MTOverLine
-        finalized.innerList = finalized.innerList?.finalized
-        return finalized
+        let newOverline = MTOverLine(self)
+        newOverline.innerList = newOverline.innerList?.finalized
+        return newOverline
     }
     
     init(_ over: MTOverLine?) {
         super.init(over)
         self.type = .overline
-        self.innerList = MTMathList(self.innerList)
+        self.innerList = MTMathList(over!.innerList)
     }
     
     override init() {
@@ -477,9 +471,9 @@ public class MTUnderLine: MTMathAtom {
     public var innerList:  MTMathList?
     
     override public var finalized: MTMathAtom {
-        let finalized: MTUnderLine = super.finalized as! MTUnderLine
-        finalized.innerList = finalized.innerList?.finalized
-        return finalized
+        let newUnderline = super.finalized as! MTUnderLine
+        newUnderline.innerList = newUnderline.innerList?.finalized
+        return newUnderline
     }
     
     init(_ under: MTUnderLine?) {
@@ -500,9 +494,9 @@ public class MTAccent: MTMathAtom {
     public var innerList:  MTMathList?
     
     override public var finalized: MTMathAtom {
-        let finalized: MTAccent = super.finalized as! MTAccent
-        finalized.innerList = finalized.innerList?.finalized
-        return finalized
+        let newAccent = super.finalized as! MTAccent
+        newAccent.innerList = newAccent.innerList?.finalized
+        return newAccent
     }
     
     init(_ accent: MTAccent?) {
@@ -592,6 +586,12 @@ public class MTMathColor: MTMathAtom {
     public override var string: String {
         "\\color{\(self.colorString)}{\(self.innerList!.string)}"
     }
+    
+    override public var finalized: MTMathAtom {
+        let newColor = super.finalized as! MTMathColor
+        newColor.innerList = newColor.innerList?.finalized
+        return newColor
+    }
 }
 
 // MARK: - MTMathColorbox
@@ -615,6 +615,12 @@ public class MTMathColorbox: MTMathAtom {
     public override var string: String {
         "\\colorbox{\(self.colorString)}{\(self.innerList!.string)}"
     }
+    
+    override public var finalized: MTMathAtom {
+        let newColor = super.finalized as! MTMathColorbox
+        newColor.innerList = newColor.innerList?.finalized
+        return newColor
+    }
 }
 
 public enum MTColumnAlignment {
@@ -634,15 +640,13 @@ public class MTMathTable: MTMathAtom {
     public var interRowAdditionalSpacing: CGFloat = 0
     
     override public var finalized: MTMathAtom {
-        let finalized: MTMathTable = super.finalized as! MTMathTable
-        
-        for var row in finalized.cells {
+        let table = super.finalized as! MTMathTable
+        for var row in table.cells {
             for i in 0..<row.count {
                 row[i] = row[i].finalized
             }
         }
-        
-        return finalized
+        return table
     }
     
     init(environment: String?) {
@@ -752,7 +756,7 @@ public class MTMathList : NSObject {
             
             switch newNode.type {
             case .binaryOperator:
-                if prevNode == nil || prevNode!.isNotBinaryOperator()  {
+                if isNotBinaryOperator(prevNode)  {
                     newNode.type = .unaryOperator
                 }
             case .relation, .punctuation, .close:
@@ -762,21 +766,16 @@ public class MTMathList : NSObject {
             case .number:
                 if prevNode != nil && prevNode!.type == .number && prevNode!.subScript == nil && prevNode!.superScript == nil {
                     prevNode!.fuse(with: newNode)
-                    continue
+                    continue // skip the current node, we are done here.
                 }
             default: break
             }
-            
             finalizedList.add(newNode)
             prevNode = newNode
         }
-        
         if prevNode != nil && prevNode!.type == .binaryOperator {
             prevNode!.type = .unaryOperator
-            finalizedList.removeLastAtom()
-            finalizedList.add(prevNode)
         }
-        
         return finalizedList
     }
     
