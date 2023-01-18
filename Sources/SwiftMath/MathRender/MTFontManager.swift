@@ -9,7 +9,7 @@ import Foundation
 
 public class MTFontManager {
     
-    static var manager:MTFontManager? = nil
+    static public var manager:MTFontManager? = nil
     
     let kDefaultFontSize = CGFloat(20)
     
