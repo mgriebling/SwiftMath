@@ -5,14 +5,11 @@
 (a_1 + a_2)^2 = a_1^2 + 2a_1a_2 + a_2^2
 ```
 
-As rendered by MathJax: $ (a_1 + a_2)^2 = a_1^2 + 2a_1a_2 + a_2^2 $
-
-As rendered by SwiftMath:
- 
+As rendered by MathJax: $(a_1 + a_2)^2 = a_1^2 + 2a_1a_2 + a_2^2$
 
 ![Square Formula](img/square.png)
 
-## Quadratic Formula
+## Quadratic Formula 
 ```LaTeX
 x = \frac{-b \pm \sqrt{b^2-4ac}}{2a}
 ```
