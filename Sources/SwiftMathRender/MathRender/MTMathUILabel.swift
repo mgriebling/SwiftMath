@@ -238,13 +238,9 @@ public class MTMathUILabel : MTView {
         context.restoreGState()
     }
     
-    #if os(iOS)
-    override public func layoutSubviews() { _layoutSubviews() }
-    #endif
-    
     func _layoutSubviews() {
-        if mathList != nil {
-            _displayList = MTTypesetter.createLineForMathList(mathList, font: font, style: currentStyle)
+        if _mathList != nil {
+            _displayList = MTTypesetter.createLineForMathList(_mathList, font: font, style: currentStyle)
             _displayList!.textColor = textColor
             var textX = CGFloat(0)
             switch self.textAlignment {
@@ -279,16 +275,20 @@ public class MTMathUILabel : MTView {
         return size
     }
     
-    override public var intrinsicContentSize: CGSize { _sizeThatFits(CGSizeZero) }
+    //override public var intrinsicContentSize: CGSize { _sizeThatFits(CGSizeZero) }
     
-    #if os(macOS)
+#if os(macOS)
     func setNeedsDisplay() { self.needsDisplay = true }
     func setNeedsLayout() { self.needsLayout = true }
+    public override var fittingSize: CGSize { _sizeThatFits(CGSizeZero) }
     override public var isFlipped: Bool { false }
     override public func layout() {
         self._layoutSubviews()
         super.layout()
     }
-    #endif
+#else
+    public override var intrinsicContentSize: CGSize { _sizeThatFits(CGSizeZero) }
+    override public func layoutSubviews() { _layoutSubviews() }
+#endif
     
 }

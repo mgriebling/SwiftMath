@@ -15,6 +15,7 @@ public typealias MTView = UIView
 public typealias MTColor = UIColor
 public typealias MTBezierPath = UIBezierPath
 public typealias MTLabel = UILabel
+public typealias MTEdgeInsets = UIEdgeInsets
 public typealias MTRect = CGRect
 
 let MTEdgeInsetsZero = UIEdgeInsets.zero
