@@ -329,7 +329,7 @@ public class MTMathAtomFactory {
         // Latex command characters
         "{" : MTMathAtom(type: .open, value: "{"),
         "}" : MTMathAtom(type: .close, value: "}"),
-        "$" : MTMathAtom(type: .ordinary, value: "{"),
+        "$" : MTMathAtom(type: .ordinary, value: "$"),
         "&" : MTMathAtom(type: .ordinary, value: "&"),
         "#" : MTMathAtom(type: .ordinary, value: "#"),
         "%" : MTMathAtom(type: .ordinary, value: "%"),
