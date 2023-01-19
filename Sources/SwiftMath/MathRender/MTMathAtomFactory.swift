@@ -93,7 +93,7 @@ public class MTMathAtomFactory {
         "dot" :  "\u{0307}",
         "ddot" :  "\u{0308}",
         "check" :  "\u{030C}",
-        "vec" :  "\u{20D7}",
+        "vec" :  "\u{0304}", // "\u{20D7}", doesn't expand horizontally
         "widehat" :  "\u{0302}",
         "widetilde" :  "\u{0303}"
     ]
