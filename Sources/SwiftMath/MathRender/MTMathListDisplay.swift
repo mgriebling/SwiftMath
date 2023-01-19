@@ -369,11 +369,14 @@ class MTFractionDisplay : MTDisplay {
         self.textColor?.setStroke()
         
         // draw the horizontal line
-        let path = MTBezierPath()
-        path.move(to: CGPointMake(self.position.x, self.position.y + self.linePosition))
-        path.addLine(to: CGPointMake(self.position.x + self.width, self.position.y + self.linePosition))
-        path.lineWidth = self.lineThickness
-        path.stroke()
+        // Note: line thickness of 0 draws the thinnest possible line - we want no line so check for 0s
+        if self.lineThickness > 0 {
+            let path = MTBezierPath()
+            path.move(to: CGPointMake(self.position.x, self.position.y + self.linePosition))
+            path.addLine(to: CGPointMake(self.position.x + self.width, self.position.y + self.linePosition))
+            path.lineWidth = self.lineThickness
+            path.stroke()
+        }
         
         context.restoreGState()
     }

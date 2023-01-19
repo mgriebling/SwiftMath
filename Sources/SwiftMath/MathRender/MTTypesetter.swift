@@ -962,7 +962,7 @@ class MTTypesetter {
         var numeratorShiftUp = self.numeratorShiftUp(frac!.hasRule)
         var denominatorShiftDown = self.denominatorShiftDown(frac!.hasRule)
         let barLocation = styleFont.mathTable!.axisHeight
-        let barThickness = frac!.hasRule ? styleFont.mathTable!.fractionRuleThickness : 0;
+        let barThickness = frac!.hasRule ? styleFont.mathTable!.fractionRuleThickness : 0
         
         if frac!.hasRule {
             // This is the difference between the lowest edge of the numerator and the top edge of the fraction bar

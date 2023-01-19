@@ -7,6 +7,8 @@ so the equations are rendered exactly as LaTeX would render them.
 `
 SwiftMath` is a Swift translation of the latest `iosMath` v0.9.5 release but includes bug fixes
 and enhancements like a new \lbar (lambda bar) character and cyrillic alphabet support.
+The original `iosMath` test suites have also been translated to Swift and run without errors.
+Note: Error test conditions are ignored to avoid tagging everything with silly `throw`s.
 Please let me know of any bugs or bug fixes that you find. 
 
 `SwiftMath` prepackages everything needed for direct access via the Swift Package Manager.
