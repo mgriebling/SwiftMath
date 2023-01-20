@@ -1,15 +1,16 @@
 //
-//  MTFontMathTable.swift
-//  MathRenderSwift
-//
 //  Created by Mike Griebling on 2022-12-31.
+//  Translated from an Objective-C implementation by Kostub Deshmukh.
+//
+//  This software may be modified and distributed under the terms of the
+//  MIT license. See the LICENSE file for details.
 //
 
 import Foundation
 import CoreGraphics
 import CoreText
 
-class GlyphPart {
+struct GlyphPart {
     /// The glyph that represents this part
     var glyph: CGGlyph!
 
@@ -33,14 +34,13 @@ class GlyphPart {
  How the constants in this class affect the display is documented here:
  http://www.tug.org/TUGboat/tb30-1/tb94vieth.pdf
 
- @note We don't parse the math table from the open type font. Rather we parse it
+ Note: We don't parse the math table from the open type font. Rather we parse it
  in python and convert it to a .plist file which is easily consumed by this class.
  This approach is preferable to spending an inordinate amount of time figuring out
  how to parse the returned NSData object using the open type rules.
  
- @remark This class is not meant to be used outside of this library.
+ Remark: This class is not meant to be used outside of this library.
  */
-
 class MTFontMathTable {
     
     // The font for this math table.
@@ -100,21 +100,21 @@ class MTFontMathTable {
     var skewedFractionVerticalGap:CGFloat { constantFromTable("SkewedFractionVerticalGap") }                         // \sigma_21 in TeX
     
     // MARK: - Non-standard
-    // FractionDelimiterSize and FractionDelimiterDisplayStyleSize are not constants
-    // specified in the OpenType Math specification. Rather these are proposed LuaTeX extensions
-    // for the TeX parameters \sigma_20 (delim1) and \sigma_21 (delim2). Since these do not
-    // exist in the fonts that we have, we use the same approach as LuaTeX and use the fontSize
-    // to determine these values. The constants used are the same as LuaTeX and KaTeX and match the
-    // metrics values of the original TeX fonts.
-    // Note: An alternative approach is to use DelimitedSubFormulaMinHeight for \sigma21 and use a factor
-    // of 2 to get \sigma 20 as proposed in Vieth paper.
-    // The XeTeX implementation sets \sigma21 = fontSize and \sigma20 = DelimitedSubFormulaMinHeight which
-    // will produce smaller delimiters.
-    // Of all the approaches we've implemented LuaTeX's approach since it mimics LaTeX most accurately.
-    var fractionDelimiterSize: CGFloat { return 1.01 * _fontSize }
+    /// FractionDelimiterSize and FractionDelimiterDisplayStyleSize are not constants
+    /// specified in the OpenType Math specification. Rather these are proposed LuaTeX extensions
+    /// for the TeX parameters \sigma_20 (delim1) and \sigma_21 (delim2). Since these do not
+    /// exist in the fonts that we have, we use the same approach as LuaTeX and use the fontSize
+    /// to determine these values. The constants used are the same as LuaTeX and KaTeX and match the
+    /// metrics values of the original TeX fonts.
+    /// Note: An alternative approach is to use DelimitedSubFormulaMinHeight for \sigma21 and use a factor
+    /// of 2 to get \sigma 20 as proposed in Vieth paper.
+    /// The XeTeX implementation sets \sigma21 = fontSize and \sigma20 = DelimitedSubFormulaMinHeight which
+    /// will produce smaller delimiters.
+    /// Of all the approaches we've implemented LuaTeX's approach since it mimics LaTeX most accurately.
+    var fractionDelimiterSize: CGFloat { 1.01 * _fontSize }
     
     /// Modified constant from 2.4 to 2.39, it matches KaTeX and looks better.
-    var fractionDelimiterDisplayStyleSize: CGFloat { return 2.39 * _fontSize }
+    var fractionDelimiterDisplayStyleSize: CGFloat { 2.39 * _fontSize }
 
     // MARK: - Stacks
     var stackTopDisplayStyleShiftUp:CGFloat { constantFromTable("StackTopDisplayStyleShiftUp")  }                   // \sigma_8 in TeX
@@ -303,7 +303,7 @@ class MTFontMathTable {
         var rv = [GlyphPart]()
         for part in parts! {
             let partInfo = part as! NSDictionary?
-            let part = GlyphPart()
+            var part = GlyphPart()
             let adv = partInfo!["advance"] as! NSNumber?
             part.fullAdvance = self.fontUnitsToPt(adv!.intValue)
             let end = partInfo!["endConnector"] as! NSNumber?

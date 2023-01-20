@@ -1,8 +1,9 @@
 //
-//  MTMathListDisplay.swift
-//  MathRenderSwift
-//
 //  Created by Mike Griebling on 2022-12-31.
+//  Translated from an Objective-C implementation by Kostub Deshmukh.
+//
+//  This software may be modified and distributed under the terms of the
+//  MIT license. See the LICENSE file for details.
 //
 
 import Foundation
@@ -26,6 +27,7 @@ func isIos6Supported() -> Bool {
     return MTDisplay.supported
 }
 
+// The Downshift protocol allows an MTDisplay to be shifted down by a given amount.
 protocol DownShift {
     var shiftDown:CGFloat { set get }
 }
@@ -52,7 +54,7 @@ public class MTDisplay:NSObject {
     
     /// Gets the bounding rectangle for the MTDisplay
     func displayBounds() -> CGRect {
-        return CGRectMake(self.position.x, self.position.y - self.descent, self.width, self.ascent + self.descent)
+        CGRectMake(self.position.x, self.position.y - self.descent, self.width, self.ascent + self.descent)
     }
     
     /// For debugging. Shows the object in quick look in Xcode.
@@ -81,17 +83,17 @@ public class MTDisplay:NSObject {
 #endif
     
     /// The distance from the axis to the top of the display
-    var ascent:CGFloat = 0
+    public var ascent:CGFloat = 0
     /// The distance from the axis to the bottom of the display
-    var descent:CGFloat = 0
+    public var descent:CGFloat = 0
     /// The width of the display
-    var width:CGFloat = 0
+    public var width:CGFloat = 0
     /// Position of the display with respect to the parent view or display.
-    var position=CGPoint.zero
+    var position = CGPoint.zero
     /// The range of characters supported by this item
-    var range:NSRange=NSMakeRange(0, 0)
+    public var range:NSRange=NSMakeRange(0, 0)
     /// Whether the display has a subscript/superscript following it.
-    var hasScript:Bool = false
+    public var hasScript:Bool = false
     /// The text color for this display
     var textColor: MTColor?
     /// The local color, if the color was mutated local with the color command
@@ -101,6 +103,7 @@ public class MTDisplay:NSObject {
     
 }
 
+/// Special class to be inherited from that implements the DownShift protocol
 class MTDisplayDS : MTDisplay, DownShift {
     
     var shiftDown: CGFloat = 0
@@ -110,10 +113,10 @@ class MTDisplayDS : MTDisplay, DownShift {
 // MARK: - MTCTLineDisplay
 
 /// A rendering of a single CTLine as an MTDisplay
-class MTCTLineDisplay : MTDisplay {
+public class MTCTLineDisplay : MTDisplay {
     
     /// The CTLine being displayed
-    var line:CTLine!
+    public var line:CTLine!
     /// The attributed string used to generate the CTLineRef. Note setting this does not reset the dimensions of
     /// the display. So set only when
     var attributedString:NSAttributedString? {
@@ -123,7 +126,7 @@ class MTCTLineDisplay : MTDisplay {
     }
     
     /// An array of MTMathAtoms that this CTLine displays. Used for indexing back into the MTMathList
-    var atoms = [MTMathAtom]()
+    public fileprivate(set) var atoms = [MTMathAtom]()
     
     init(withString attrString:NSAttributedString?, position:CGPoint, range:NSRange, font:MTFont?, atoms:[MTMathAtom]) {
         super.init()
@@ -197,10 +200,9 @@ class MTCTLineDisplay : MTDisplay {
 public class MTMathListDisplay : MTDisplay {
 
     /**
-     @typedef MTLinePosition
-     @brief The type of position for a line, i.e. subscript/superscript or regular.
+          The type of position for a line, i.e. subscript/superscript or regular.
      */
-    enum LinePosition : Int {
+    public enum LinePosition : Int {
         /// Regular
         case regular
         /// Positioned at a subscript
@@ -210,13 +212,13 @@ public class MTMathListDisplay : MTDisplay {
     }
     
     /// Where the line is positioned
-    var type:LinePosition = .regular
+    public var type:LinePosition = .regular
     /// An array of MTDisplays which are positioned relative to the position of the
     /// the current display.
-    var subDisplays = [MTDisplay]()
+    public fileprivate(set) var subDisplays = [MTDisplay]()
     /// If a subscript or superscript this denotes the location in the parent MTList. For a
     /// regular list this is NSNotFound
-    var index: Int = 0
+    public var index: Int = 0
     
     init(withDisplays displays:[MTDisplay], range:NSRange) {
         super.init()
@@ -287,23 +289,19 @@ public class MTMathListDisplay : MTDisplay {
 // MARK: - MTFractionDisplay
 
 /// Rendering of an MTFraction as an MTDisplay
-class MTFractionDisplay : MTDisplay {
+public class MTFractionDisplay : MTDisplay {
     
     /** A display representing the numerator of the fraction. Its position is relative
      to the parent and is not treated as a sub-display.
      */
-    var numerator:MTMathListDisplay?
+    public fileprivate(set) var numerator:MTMathListDisplay?
     /** A display representing the denominator of the fraction. Its position is relative
      to the parent is not treated as a sub-display.
      */
-    var denominator:MTMathListDisplay?
+    public fileprivate(set) var denominator:MTMathListDisplay?
     
-    var numeratorUp:CGFloat=0 {
-        didSet { self.updateNumeratorPosition() }
-    }
-    var denominatorDown:CGFloat=0 {
-        didSet { self.updateDenominatorPosition() }
-    }
+    var numeratorUp:CGFloat=0 { didSet { self.updateNumeratorPosition() } }
+    var denominatorDown:CGFloat=0 { didSet { self.updateDenominatorPosition() } }
     var linePosition:CGFloat=0
     var lineThickness:CGFloat=0
     
@@ -316,17 +314,17 @@ class MTFractionDisplay : MTDisplay {
         assert(self.range.length == 1, "Fraction range length not 1 - range (\(range.location), \(range.length)")
     }
 
-    override var ascent:CGFloat {
+    override public var ascent:CGFloat {
         set { super.ascent = newValue }
         get { numerator!.ascent + self.numeratorUp }
     }
 
-    override var descent:CGFloat {
+    override public var descent:CGFloat {
         set { super.descent = newValue }
         get { denominator!.descent + self.denominatorDown }
     }
 
-    override var width:CGFloat {
+    override public var width:CGFloat {
         set { super.width = newValue }
         get { max(numerator!.width, denominator!.width) }
     }
@@ -391,11 +389,11 @@ class MTRadicalDisplay : MTDisplay {
     /** A display representing the radicand of the radical. Its position is relative
      to the parent is not treated as a sub-display.
      */
-    var radicand:MTMathListDisplay?
+    public fileprivate(set) var radicand:MTMathListDisplay?
     /** A display representing the degree of the radical. Its position is relative
      to the parent is not treated as a sub-display.
      */
-    var degree:MTMathListDisplay?
+    public fileprivate(set) var degree:MTMathListDisplay?
     
     override var position: CGPoint {
         set {
@@ -536,21 +534,13 @@ class MTGlyphDisplay : MTDisplayDS {
     }
 
     override var ascent:CGFloat {
-        set {
-            super.ascent = newValue
-        }
-        get {
-            return super.ascent - self.shiftDown;
-        }
+        set { super.ascent = newValue }
+        get { super.ascent - self.shiftDown }
     }
 
     override var descent:CGFloat {
-        set {
-            super.descent = newValue
-        }
-        get {
-            return super.descent + self.shiftDown;
-        }
+        set { super.descent = newValue }
+        get { super.descent + self.shiftDown }
     }
 }
 
@@ -593,21 +583,13 @@ class MTGlyphConstructionDisplay:MTDisplayDS {
     }
     
     override var ascent:CGFloat {
-        set {
-            super.ascent = newValue
-        }
-        get {
-            return super.ascent - self.shiftDown;
-        }
+        set { super.ascent = newValue }
+        get { super.ascent - self.shiftDown }
     }
 
     override var descent:CGFloat {
-        set {
-            super.descent = newValue
-        }
-        get {
-            return super.descent + self.shiftDown;
-        }
+        set { super.descent = newValue }
+        get { super.descent + self.shiftDown }
     }
     
 }
@@ -627,16 +609,8 @@ class MTLargeOpLimitsDisplay : MTDisplay {
     var lowerLimit:MTMathListDisplay?
     
     var limitShift:CGFloat=0
-    var upperLimitGap:CGFloat=0 {
-        didSet {
-            self.updateUpperLimitPosition()
-        }
-    }
-    var lowerLimitGap:CGFloat=0 {
-        didSet {
-            self.updateUpperLimitPosition()
-        }
-    }
+    var upperLimitGap:CGFloat=0 { didSet { self.updateUpperLimitPosition() } }
+    var lowerLimitGap:CGFloat=0 { didSet { self.updateLowerLimitPosition() } }
     var extraPadding:CGFloat=0
 
     var nucleus:MTDisplay?
@@ -658,9 +632,7 @@ class MTLargeOpLimitsDisplay : MTDisplay {
     }
 
     override var ascent:CGFloat {
-        set {
-            super.ascent = newValue
-        }
+        set { super.ascent = newValue }
         get {
             if self.upperLimit != nil {
                 return nucleus!.ascent + extraPadding + self.upperLimit!.ascent + upperLimitGap + self.upperLimit!.descent
@@ -671,9 +643,7 @@ class MTLargeOpLimitsDisplay : MTDisplay {
     }
 
     override var descent:CGFloat {
-        set {
-            super.descent = newValue
-        }
+        set { super.descent = newValue }
         get {
             if self.lowerLimit != nil {
                 return nucleus!.descent + extraPadding + lowerLimitGap + self.lowerLimit!.descent + self.lowerLimit!.ascent;

@@ -1,15 +1,16 @@
 //
-//  MTTypesetter.swift
-//  MathRenderSwift
+//  Created by Mike Griebling on 2022-12-31.
+//  Translated from an Objective-C implementation by Kostub Deshmukh.
 //
-//  Created by Mike Griebling on 2023-01-01.
+//  This software may be modified and distributed under the terms of the
+//  MIT license. See the LICENSE file for details.
 //
 
 import Foundation
 import CoreGraphics
 import CoreText
 
-// MARK: - - Inter Element Spacing
+// MARK: - Inter Element Spacing
 
 enum InterElementSpaceType : Int {
     case invalid = -1
@@ -76,7 +77,7 @@ func getInterElementSpaceArrayIndexForType(_ type:MTMathAtomType, row:Bool) -> I
     }
 }
 
-// MARK: - - Italics
+// MARK: - Italics
 // mathit
 func getItalicized(_ ch:Character) -> UTF32Char  {
     var unicode = ch.utf32Char
@@ -235,7 +236,7 @@ func getSansSerif(_ ch:Character) -> UTF32Char {
 // mathfrak
 func getFraktur(_ ch:Character) -> UTF32Char {
     // Fraktur has exceptions:
-    switch(ch) {
+    switch ch {
         case "C":
             return 0x212D;   // C Fraktur
         case "H":
@@ -337,7 +338,7 @@ func getBboxDetails(_ bbox:CGRect, ascent:inout CGFloat, descent:inout CGFloat) 
     descent = max(0, 0 - CGRectGetMinY(bbox))
 }
 
-// MARK: - - MTTypesetter
+// MARK: - MTTypesetter
 
 class MTTypesetter {
     var font:MTFont!
@@ -879,7 +880,7 @@ class MTTypesetter {
         currentPosition.x += max(superScript!.width + delta, ssubscript!.width) + styleFont.mathTable!.spaceAfterScript;
     }
     
-    // MARK: - - Fractions
+    // MARK: - Fractions
     
     func numeratorShiftUp(_ hasRule:Bool) -> CGFloat {
         if hasRule {
@@ -1002,7 +1003,7 @@ class MTTypesetter {
         display.denominatorDown = denominatorShiftDown;
         display.lineThickness = barThickness;
         display.linePosition = barLocation;
-        if frac!.leftDelimiter == nil && frac!.rightDelimiter == nil {
+        if frac!.leftDelimiter.isEmpty && frac!.rightDelimiter.isEmpty {
             return display
         } else {
             return self.addDelimitersToFractionDisplay(display, forFraction:frac)
@@ -1010,13 +1011,13 @@ class MTTypesetter {
     }
     
     func addDelimitersToFractionDisplay(_ display:MTFractionDisplay?, forFraction frac:MTFraction?) -> MTDisplay? {
-        assert(frac!.leftDelimiter != nil || frac!.rightDelimiter != nil, "Fraction should have a delimiters to call this function");
+        assert(!frac!.leftDelimiter.isEmpty || !frac!.rightDelimiter.isEmpty, "Fraction should have a delimiters to call this function");
         
         var innerElements = [MTDisplay]()
         let glyphHeight = self.fractionDelimiterHeight
         var position = CGPoint.zero
-        if !frac!.leftDelimiter!.isEmpty {
-            let leftGlyph = self.findGlyphForBoundary(frac!.leftDelimiter!, withHeight:glyphHeight())
+        if !frac!.leftDelimiter.isEmpty {
+            let leftGlyph = self.findGlyphForBoundary(frac!.leftDelimiter, withHeight:glyphHeight())
             leftGlyph!.position = position
             position.x += leftGlyph!.width
             innerElements.append(leftGlyph!)
@@ -1026,8 +1027,8 @@ class MTTypesetter {
         position.x += display!.width
         innerElements.append(display!)
         
-        if !frac!.rightDelimiter!.isEmpty {
-            let rightGlyph = self.findGlyphForBoundary(frac!.rightDelimiter!, withHeight:glyphHeight())
+        if !frac!.rightDelimiter.isEmpty {
+            let rightGlyph = self.findGlyphForBoundary(frac!.rightDelimiter, withHeight:glyphHeight())
             rightGlyph!.position = position
             position.x += rightGlyph!.width
             innerElements.append(rightGlyph!)

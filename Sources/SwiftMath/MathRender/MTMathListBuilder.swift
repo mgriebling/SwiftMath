@@ -1,8 +1,9 @@
 //
-//  MTMathListBuilder.swift
-//  MathRenderSwift
-//
 //  Created by Mike Griebling on 2022-12-31.
+//  Translated from an Objective-C implementation by Kostub Deshmukh.
+//
+//  This software may be modified and distributed under the terms of the
+//  MIT license. See the LICENSE file for details.
 //
 
 import Foundation
@@ -23,10 +24,9 @@ struct MTEnvProperties {
 }
 
 /**
- @typedef case s
- @brief The error encountered when parsing a LaTeX string.
+ The error encountered when parsing a LaTeX string.
  
- The `code` in the `NSError` is one of the following indiciating why the LaTeX string
+ The `code` in the `NSError` is one of the following indicating why the LaTeX string
  could not be parsed.
  */
 enum MTParseErrors:Int {
@@ -62,7 +62,10 @@ enum MTParseErrors:Int {
 
 let MTParseError = "ParseError"
 
-public class MTMathListBuilder {
+/** `MTMathListBuilder` is a class for parsing LaTeX into an `MTMathList` that
+ can be rendered and processed mathematically.
+ */
+public struct MTMathListBuilder {
     var string: String
     var currentCharIndex: String.Index
     var currentInnerAtom: MTInner?
@@ -73,7 +76,41 @@ public class MTMathListBuilder {
     /** Contains any error that occurred during parsing. */
     var error:NSError?
     
+    // MARK: - Character-handling routines
+    
     var hasCharacters: Bool { currentCharIndex < string.endIndex }
+    
+    // gets the next character and increments the index
+    mutating func getNextCharacter() -> Character {
+        assert(self.hasCharacters, "Retrieving character at index \(self.currentCharIndex) beyond length \(self.string.count)")
+        let ch = string[currentCharIndex]
+        currentCharIndex = string.index(after: currentCharIndex)
+        return ch
+    }
+    
+    mutating func unlookCharacter() {
+        assert(currentCharIndex > string.startIndex, "Unlooking when at the first character.")
+        if currentCharIndex > string.startIndex {
+            currentCharIndex = string.index(before: currentCharIndex)
+        }
+    }
+    
+    mutating func expectCharacter(_ ch: Character) -> Bool {
+        MTAssertNotSpace(ch)
+        self.skipSpaces()
+        
+        if self.hasCharacters {
+            let nextChar = self.getNextCharacter()
+            MTAssertNotSpace(nextChar)
+            if nextChar == ch {
+                return true
+            } else {
+                self.unlookCharacter()
+                return false
+            }
+        }
+        return false
+    }
     
     public static let spaceToCommands: [CGFloat: String] = [
         3 : ",",
@@ -99,7 +136,10 @@ public class MTMathListBuilder {
         self.spacesAllowed = false
     }
     
-    public func build() -> MTMathList? {
+    // MARK: - MTMathList builder functions
+    
+    /// Builds a mathlist from the internal `string`. Returns nil if there is an error.
+    public mutating func build() -> MTMathList? {
         let list = self.buildInternal(false)
         if self.hasCharacters && error == nil {
             self.setError(.mismatchBraces, message: "Mismatched braces: \(self.string)")
@@ -111,13 +151,20 @@ public class MTMathListBuilder {
         return list
     }
     
+    /** Construct a math list from a given string. If there is parse error, returns
+     nil. To retrieve the error use the function `MTMathListBuilder.build(fromString:error:)`.
+     */
     public static func build(fromString string: String) -> MTMathList? {
-        let builder = MTMathListBuilder(string: string)
+        var builder = MTMathListBuilder(string: string)
         return builder.build()
     }
     
+    /** Construct a math list from a given string. If there is an error while
+     constructing the string, this returns nil. The error is returned in the
+     `error` parameter.
+     */
     public static func build(fromString string: String, error:inout NSError?) -> MTMathList? {
-        let builder = MTMathListBuilder(string: string)
+        var builder = MTMathListBuilder(string: string)
         let output = builder.build()
         if builder.error != nil {
             error = builder.error
@@ -126,227 +173,29 @@ public class MTMathListBuilder {
         return output
     }
     
-    public static func mathListToString(_ ml: MTMathList?) -> String {
-        var str = ""
-        var currentfontStyle = MTFontStyle.defaultStyle
-        if let atomList = ml {
-            for atom in atomList.atoms {
-                if currentfontStyle != atom.fontStyle {
-                    if currentfontStyle != .defaultStyle {
-                        str += "}"
-                    }
-                    if atom.fontStyle != .defaultStyle {
-                        let fontStyleName = MTMathAtomFactory.fontNameForStyle(atom.fontStyle)
-                        str += "\\\(fontStyleName){"
-                    }
-                    currentfontStyle = atom.fontStyle
-                }
-                if atom.type == .fraction {
-                    if let frac = atom as? MTFraction {
-                        if frac.hasRule {
-                            str += "\\frac{\(mathListToString(frac.numerator!))}{\(mathListToString(frac.denominator!))}"
-                        } else {
-                            var command: String? = nil
-                            if frac.leftDelimiter == nil && frac.rightDelimiter == nil {
-                                command = "atop"
-                            } else if frac.leftDelimiter == "(" && frac.rightDelimiter == ")" {
-                                command = "choose"
-                            } else if frac.leftDelimiter == "{" && frac.rightDelimiter == "}" {
-                                command = "brace"
-                            } else if frac.leftDelimiter == "[" && frac.rightDelimiter == "]" {
-                                command = "brack"
-                            } else {
-                                command = "atopwithdelims\(frac.leftDelimiter!)\(frac.rightDelimiter!)"
-                            }
-                            str += "{\(mathListToString(frac.numerator!)) \\\(command!) \(mathListToString(frac.denominator!))}"
-                        }
-                    }
-                } else if atom.type == .radical {
-                    str += "\\sqrt"
-                    if let rad = atom as? MTRadical {
-                        if rad.degree != nil {
-                            str += "[\(mathListToString(rad.degree!))]"
-                        }
-                        str += "{\(mathListToString(rad.radicand!))}"
-                    }
-                } else if atom.type == .inner {
-                    if let inner = atom as? MTInner {
-                        if inner.leftBoundary != nil || inner.rightBoundary != nil {
-                            if inner.leftBoundary != nil {
-                                str += "\\left\(delimToString(delim: inner.leftBoundary!)) "
-                            } else {
-                                str += "\\left. "
-                            }
-                            
-                            str += mathListToString(inner.innerList!)
-                            
-                            if inner.rightBoundary != nil {
-                                str += "\\right\(delimToString(delim: inner.rightBoundary!)) "
-                            } else {
-                                str += "\\right. "
-                            }
-                        } else {
-                            str += "{\(mathListToString(inner.innerList!))}"
-                        }
-                    }
-                } else if atom.type == .table {
-                    if let table = atom as? MTMathTable {
-                        if table.environment != nil {
-                            str += "\\begin{\(table.environment!)}"
-                        }
-                        
-                        for i in 0..<table.numRows {
-                            let row = table.cells[i]
-                            for j in 0..<row.count {
-                                let cell = row[j]
-                                if table.environment == "matrix" {
-                                    if cell.atoms.count >= 1 && cell.atoms[0].type == .style {
-                                        // remove first atom
-                                        cell.atoms.removeFirst()
-                                    }
-                                }
-                                if table.environment == "eqalign" || table.environment == "aligned" || table.environment == "split" {
-                                    if j == 1 && cell.atoms.count >= 1 && cell.atoms[0].type == .ordinary && cell.atoms[0].nucleus.count == 0 {
-                                        // remove empty nucleus added for spacing
-                                        cell.atoms.removeFirst()
-                                    }
-                                }
-                                str += mathListToString(cell)
-                                if j < row.count - 1 {
-                                    str += "&"
-                                }
-                            }
-                            if i < table.numRows - 1 {
-                                str += "\\\\ "
-                            }
-                        }
-                        if table.environment != nil {
-                            str += "\\end{\(table.environment!)}"
-                        }
-                    }
-                } else if atom.type == .overline {
-                    if let overline = atom as? MTOverLine {
-                        str += "\\overline"
-                        str += "{\(mathListToString(overline.innerList!))}"
-                    }
-                } else if atom.type == .underline {
-                    if let underline = atom as? MTUnderLine {
-                        str += "\\underline"
-                        str += "{\(mathListToString(underline.innerList!))}"
-                    }
-                } else if atom.type == .accent {
-                    if let accent = atom as? MTAccent {
-                        str += "\\\(MTMathAtomFactory.accentName(accent)!){\(mathListToString(accent.innerList!))}"
-                    }
-                } else if atom.type == .largeOperator {
-                    let op = atom as! MTLargeOperator
-                    let command = MTMathAtomFactory.latexSymbolName(for: atom)
-                    let originalOp = MTMathAtomFactory.atom(forLatexSymbol: command!) as! MTLargeOperator
-                    str += "\\\(command!) "
-                    if originalOp.limits != op.limits {
-                        if op.limits {
-                            str += "\\limits "
-                        } else {
-                            str += "\\nolimits "
-                        }
-                    }
-                } else if atom.type == .space {
-                    if let space = atom as? MTMathSpace {
-                        if let command = MTMathListBuilder.spaceToCommands[space.space] {
-                            str += "\\\(command) "
-                        } else {
-                            str += String(format: "\\mkern%.1fmu", space.space)
-                        }
-                    }
-                } else if atom.type == .style {
-                    if let style = atom as? MTMathStyle {
-                        if let command = MTMathListBuilder.styleToCommands[style.style] {
-                            str += "\\\(command) "
-                        }
-                    }
-                } else if atom.nucleus.isEmpty {
-                    str += "{}"
-                } else if atom.nucleus == "\u{2236}" {
-                    // math colon
-                    str += ":"
-                } else if atom.nucleus == "\u{2212}" {
-                    // math minus
-                    str += "-"
-                } else {
-                    if let command = MTMathAtomFactory.latexSymbolName(for: atom) {
-                        str += "\\\(command) "
-                    } else {
-                        str += "\(atom.nucleus)"
-                    }
-                }
-                
-                if atom.superScript != nil {
-                    str += "^{\(mathListToString(atom.superScript!))}"
-                }
-                
-                if atom.subScript != nil {
-                    str += "_{\(mathListToString(atom.subScript!))}"
-                }
-            }
-        }
-        if currentfontStyle != .defaultStyle {
-            str += "}"
-        }
-        return str
+    public mutating func buildInternal(_ oneCharOnly: Bool) -> MTMathList? {
+        self.buildInternal(oneCharOnly, stopChar: nil)
     }
     
-    public static func delimToString(delim: MTMathAtom) -> String {
-        if let command = MTMathAtomFactory.getDelimiterName(of: delim) {
-            let singleChars = [ "(", ")", "[", "]", "<", ">", "|", ".", "/"]
-            if singleChars.contains(command) {
-                return command
-            } else if command == "||" {
-                return "\\|"
-            } else {
-                return "\\\(command)"
-            }
-        }
-        
-        return ""
-    }
-    
-    func getNextCharacter() -> Character {
-        assert(self.hasCharacters, "Retrieving character at index \(self.currentCharIndex) beyond length \(self.string.count)")
-        let ch = string[currentCharIndex]
-        currentCharIndex = string.index(after: currentCharIndex)
-        return ch
-    }
-    
-    func unlookCharacter() {
-        assert(currentCharIndex > string.startIndex, "Unlooking when at the first character.")
-        if currentCharIndex > string.startIndex {
-            currentCharIndex = string.index(before: currentCharIndex)
-        } else {
-            print("unlooking at first character")
-        }
-    }
-    
-    public func buildInternal(_ oneCharOnly: Bool) -> MTMathList? {
-        return self.buildInternal(oneCharOnly, stopChar: nil)
-    }
-    
-    public func buildInternal(_ oneCharOnly: Bool, stopChar stop: Character?) -> MTMathList? {
+    public mutating func buildInternal(_ oneCharOnly: Bool, stopChar stop: Character?) -> MTMathList? {
         let list = MTMathList()
         assert(!(oneCharOnly && stop != nil), "Cannot set both oneCharOnly and stopChar.")
         var prevAtom: MTMathAtom? = nil
         while self.hasCharacters {
-            if error != nil { return nil }
+            if error != nil { return nil } // If there is an error thus far then bail out.
             
             var atom: MTMathAtom? = nil
             let char = self.getNextCharacter()
             
             if oneCharOnly {
                 if char == "^" || char == "}" || char == "_" || char == "&" {
+                    // this is not the character we are looking for.
+                    // They are meant for the caller to look at.
                     self.unlookCharacter()
                     return list
                 }
             }
-            
+            // If there is a stop character, keep scanning 'til we find it
             if stop != nil && char == stop! {
                 return list
             }
@@ -359,7 +208,8 @@ public class MTMathListBuilder {
                     prevAtom = MTMathAtom(type: .ordinary, value: "")
                     list.add(prevAtom!)
                 }
-                
+                // this is a superscript for the previous atom
+                // note: if the next char is the stopChar it will be consumed by the ^ and so it doesn't count as stop
                 prevAtom!.superScript = self.buildInternal(true)
                 continue
             } else if char == "_" {
@@ -370,6 +220,8 @@ public class MTMathListBuilder {
                     prevAtom = MTMathAtom(type: .ordinary, value: "")
                     list.add(prevAtom!)
                 }
+                // this is a subscript for the previous atom
+                // note: if the next char is the stopChar it will be consumed by the _ and so it doesn't count as stop
                 prevAtom!.subScript = self.buildInternal(true)
                 continue
             } else if char == "{" {
@@ -382,6 +234,7 @@ public class MTMathListBuilder {
                 }
                 continue
             } else if char == "}" {
+                // \ means a command
                 assert(!oneCharOnly, "This should have been handled before")
                 assert(stop == nil, "This should have been handled before")
                 // We encountered a closing brace when there is no stop set, that means there was no
@@ -428,18 +281,22 @@ public class MTMathListBuilder {
                     return nil
                 }
             } else if char == "&" {
+                // used for column separation in tables
                 assert(!oneCharOnly, "This should have been handled before")
                 if self.currentEnv != nil {
                     return list
                 } else {
+                    // Create a new table with the current list and a default env
                     let table = self.buildTable(env: nil, firstList: list, isRow: false)
                     return MTMathList(atom: table!)
                 }
             } else if spacesAllowed && char == " " {
+                // If spaces are allowed then spaces do not need escaping with a \ before being used.
                 atom = MTMathAtomFactory.atom(forLatexSymbol: " ")
             } else {
                 atom = MTMathAtomFactory.atom(forCharacter: char)
                 if atom == nil {
+                    // Not a recognized character
                     continue
                 }
             }
@@ -453,7 +310,6 @@ public class MTMathListBuilder {
                 return list
             }
         }
-        
         if stop != nil {
             if stop == "}" {
                 // We did not find a corresponding closing brace.
@@ -467,7 +323,194 @@ public class MTMathListBuilder {
         return list
     }
     
-    func atomForCommand(_ command:String) -> MTMathAtom? {
+    
+    // MARK: - MTMathList to LaTeX conversion
+    
+    /// This converts the MTMathList to LaTeX.
+    public static func mathListToString(_ ml: MTMathList?) -> String {
+        var str = ""
+        var currentfontStyle = MTFontStyle.defaultStyle
+        if let atomList = ml {
+            for atom in atomList.atoms {
+                if currentfontStyle != atom.fontStyle {
+                    if currentfontStyle != .defaultStyle {
+                        str += "}"
+                    }
+                    if atom.fontStyle != .defaultStyle {
+                        let fontStyleName = MTMathAtomFactory.fontNameForStyle(atom.fontStyle)
+                        str += "\\\(fontStyleName){"
+                    }
+                    currentfontStyle = atom.fontStyle
+                }
+                if atom.type == .fraction {
+                    if let frac = atom as? MTFraction {
+                        if frac.hasRule {
+                            str += "\\frac{\(mathListToString(frac.numerator!))}{\(mathListToString(frac.denominator!))}"
+                        } else {
+                            let command: String
+                            if frac.leftDelimiter.isEmpty && frac.rightDelimiter.isEmpty {
+                                command = "atop"
+                            } else if frac.leftDelimiter == "(" && frac.rightDelimiter == ")" {
+                                command = "choose"
+                            } else if frac.leftDelimiter == "{" && frac.rightDelimiter == "}" {
+                                command = "brace"
+                            } else if frac.leftDelimiter == "[" && frac.rightDelimiter == "]" {
+                                command = "brack"
+                            } else {
+                                command = "atopwithdelims\(frac.leftDelimiter)\(frac.rightDelimiter)"
+                            }
+                            str += "{\(mathListToString(frac.numerator!)) \\\(command) \(mathListToString(frac.denominator!))}"
+                        }
+                    }
+                } else if atom.type == .radical {
+                    str += "\\sqrt"
+                    if let rad = atom as? MTRadical {
+                        if rad.degree != nil {
+                            str += "[\(mathListToString(rad.degree!))]"
+                        }
+                        str += "{\(mathListToString(rad.radicand!))}"
+                    }
+                } else if atom.type == .inner {
+                    if let inner = atom as? MTInner {
+                        if inner.leftBoundary != nil || inner.rightBoundary != nil {
+                            if inner.leftBoundary != nil {
+                                str += "\\left\(delimToString(delim: inner.leftBoundary!)) "
+                            } else {
+                                str += "\\left. "
+                            }
+                            
+                            str += mathListToString(inner.innerList!)
+                            
+                            if inner.rightBoundary != nil {
+                                str += "\\right\(delimToString(delim: inner.rightBoundary!)) "
+                            } else {
+                                str += "\\right. "
+                            }
+                        } else {
+                            str += "{\(mathListToString(inner.innerList!))}"
+                        }
+                    }
+                } else if atom.type == .table {
+                    if let table = atom as? MTMathTable {
+                        if !table.environment.isEmpty {
+                            str += "\\begin{\(table.environment)}"
+                        }
+                        
+                        for i in 0..<table.numRows {
+                            let row = table.cells[i]
+                            for j in 0..<row.count {
+                                let cell = row[j]
+                                if table.environment == "matrix" {
+                                    if cell.atoms.count >= 1 && cell.atoms[0].type == .style {
+                                        // remove first atom
+                                        cell.atoms.removeFirst()
+                                    }
+                                }
+                                if table.environment == "eqalign" || table.environment == "aligned" || table.environment == "split" {
+                                    if j == 1 && cell.atoms.count >= 1 && cell.atoms[0].type == .ordinary && cell.atoms[0].nucleus.count == 0 {
+                                        // remove empty nucleus added for spacing
+                                        cell.atoms.removeFirst()
+                                    }
+                                }
+                                str += mathListToString(cell)
+                                if j < row.count - 1 {
+                                    str += "&"
+                                }
+                            }
+                            if i < table.numRows - 1 {
+                                str += "\\\\ "
+                            }
+                        }
+                        if !table.environment.isEmpty {
+                            str += "\\end{\(table.environment)}"
+                        }
+                    }
+                } else if atom.type == .overline {
+                    if let overline = atom as? MTOverLine {
+                        str += "\\overline"
+                        str += "{\(mathListToString(overline.innerList!))}"
+                    }
+                } else if atom.type == .underline {
+                    if let underline = atom as? MTUnderLine {
+                        str += "\\underline"
+                        str += "{\(mathListToString(underline.innerList!))}"
+                    }
+                } else if atom.type == .accent {
+                    if let accent = atom as? MTAccent {
+                        str += "\\\(MTMathAtomFactory.accentName(accent)!){\(mathListToString(accent.innerList!))}"
+                    }
+                } else if atom.type == .largeOperator {
+                    let op = atom as! MTLargeOperator
+                    let command = MTMathAtomFactory.latexSymbolName(for: atom)
+                    let originalOp = MTMathAtomFactory.atom(forLatexSymbol: command!) as! MTLargeOperator
+                    str += "\\\(command!) "
+                    if originalOp.limits != op.limits {
+                        if op.limits {
+                            str += "\\limits "
+                        } else {
+                            str += "\\nolimits "
+                        }
+                    }
+                } else if atom.type == .space {
+                    if let space = atom as? MTMathSpace {
+                        if let command = Self.spaceToCommands[space.space] {
+                            str += "\\\(command) "
+                        } else {
+                            str += String(format: "\\mkern%.1fmu", space.space)
+                        }
+                    }
+                } else if atom.type == .style {
+                    if let style = atom as? MTMathStyle {
+                        if let command = Self.styleToCommands[style.style] {
+                            str += "\\\(command) "
+                        }
+                    }
+                } else if atom.nucleus.isEmpty {
+                    str += "{}"
+                } else if atom.nucleus == "\u{2236}" {
+                    // math colon
+                    str += ":"
+                } else if atom.nucleus == "\u{2212}" {
+                    // math minus
+                    str += "-"
+                } else {
+                    if let command = MTMathAtomFactory.latexSymbolName(for: atom) {
+                        str += "\\\(command) "
+                    } else {
+                        str += "\(atom.nucleus)"
+                    }
+                }
+                
+                if atom.superScript != nil {
+                    str += "^{\(mathListToString(atom.superScript!))}"
+                }
+                
+                if atom.subScript != nil {
+                    str += "_{\(mathListToString(atom.subScript!))}"
+                }
+            }
+        }
+        if currentfontStyle != .defaultStyle {
+            str += "}"
+        }
+        return str
+    }
+    
+    public static func delimToString(delim: MTMathAtom) -> String {
+        if let command = MTMathAtomFactory.getDelimiterName(of: delim) {
+            let singleChars = [ "(", ")", "[", "]", "<", ">", "|", ".", "/"]
+            if singleChars.contains(command) {
+                return command
+            } else if command == "||" {
+                return "\\|"
+            } else {
+                return "\\\(command)"
+            }
+        }
+        return ""
+    }
+    
+    mutating func atomForCommand(_ command:String) -> MTMathAtom? {
         if let atom = MTMathAtomFactory.atom(forLatexSymbol: command) {
             return atom
         }
@@ -557,7 +600,7 @@ public class MTMathListBuilder {
         }
     }
 
-    func readColor() -> String? {
+    mutating func readColor() -> String? {
         if !self.expectCharacter("{") {
             // We didn't find an opening brace, so no env found.
             self.setError(.characterNotFound, message:"Missing {")
@@ -588,7 +631,7 @@ public class MTMathListBuilder {
         return mutable;
     }
 
-    func skipSpaces() {
+    mutating func skipSpaces() {
         while self.hasCharacters {
             let ch = self.getNextCharacter().utf32Char
             if ch < 0x21 || ch > 0x7E {
@@ -611,7 +654,7 @@ public class MTMathListBuilder {
         ]
     }
     
-    func stopCommand(_ command: String, list:MTMathList, stopChar:Character?) -> MTMathList? {
+    mutating func stopCommand(_ command: String, list:MTMathList, stopChar:Character?) -> MTMathList? {
         if command == "right" {
             if currentInnerAtom == nil {
                 let errorMessage = "Missing \\left";
@@ -676,7 +719,7 @@ public class MTMathListBuilder {
     }
 
     // Applies the modifier to the atom. Returns true if modifier applied.
-    func applyModifier(_ modifier:String, atom:MTMathAtom?) -> Bool {
+    mutating func applyModifier(_ modifier:String, atom:MTMathAtom?) -> Bool {
         if modifier == "limits" {
             if atom?.type != .largeOperator {
                 let errorMessage = "Limits can only be applied to an operator."
@@ -699,14 +742,14 @@ public class MTMathListBuilder {
         return false
     }
 
-    func setError(_ code:MTParseErrors, message:String) {
+    mutating func setError(_ code:MTParseErrors, message:String) {
         // Only record the first error.
         if error == nil {
             error = NSError(domain: MTParseError, code: code.rawValue, userInfo: [ NSLocalizedDescriptionKey : message ])
         }
     }
     
-    func atom(forCommand command: String) -> MTMathAtom? {
+    mutating func atom(forCommand command: String) -> MTMathAtom? {
         if let atom = MTMathAtomFactory.atom(forLatexSymbol: command) {
             return atom
         }
@@ -786,7 +829,7 @@ public class MTMathListBuilder {
         }
     }
     
-    func readEnvironment() -> String? {
+    mutating func readEnvironment() -> String? {
         if !self.expectCharacter("{") {
             // We didn't find an opening brace, so no env found.
             self.setError(.characterNotFound, message: "Missing {")
@@ -808,24 +851,7 @@ public class MTMathListBuilder {
         assert(ch >= "\u{21}" && ch <= "\u{7E}", "Expected non-space character \(ch)")
     }
     
-    func expectCharacter(_ ch: Character) -> Bool {
-        MTAssertNotSpace(ch)
-        self.skipSpaces()
-        
-        if self.hasCharacters {
-            let nextChar = self.getNextCharacter()
-            MTAssertNotSpace(nextChar)
-            if nextChar == ch {
-                return true
-            } else {
-                self.unlookCharacter()
-                return false
-            }
-        }
-        return false
-    }
-    
-    func buildTable(env: String?, firstList: MTMathList?, isRow: Bool) -> MTMathAtom? {
+    mutating func buildTable(env: String?, firstList: MTMathList?, isRow: Bool) -> MTMathAtom? {
         // Save the current env till an new one gets built.
         let oldEnv = self.currentEnv
         
@@ -876,7 +902,7 @@ public class MTMathListBuilder {
         return table
     }
     
-    func getBoundaryAtom(_ delimiterType: String) -> MTMathAtom? {
+    mutating func getBoundaryAtom(_ delimiterType: String) -> MTMathAtom? {
         let delim = self.readDelimiter()
         if delim == nil {
             let errorMessage = "Missing delimiter for \\\(delimiterType)"
@@ -892,7 +918,7 @@ public class MTMathListBuilder {
         return boundary
     }
     
-    func readDelimiter() -> String? {
+    mutating func readDelimiter() -> String? {
         self.skipSpaces()
         while self.hasCharacters {
             let char = self.getNextCharacter()
@@ -910,7 +936,7 @@ public class MTMathListBuilder {
         return nil
     }
     
-    func readCommand() -> String {
+    mutating func readCommand() -> String {
         let singleChars = "{}$#%_| ,>;!\\"
         if self.hasCharacters {
             let char = self.getNextCharacter()
@@ -923,7 +949,7 @@ public class MTMathListBuilder {
         return self.readString()
     }
     
-    func readString() -> String {
+    mutating func readString() -> String {
         // a string of all upper and lower case characters.
         var output = ""
         while self.hasCharacters {

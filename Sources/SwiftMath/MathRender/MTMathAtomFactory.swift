@@ -1,12 +1,14 @@
 //
-//  MTMathAtomFactory.swift
-//  MathRenderSwift
-//
 //  Created by Mike Griebling on 2022-12-31.
+//  Translated from an Objective-C implementation by Kostub Deshmukh.
+//
+//  This software may be modified and distributed under the terms of the
+//  MIT license. See the LICENSE file for details.
 //
 
 import Foundation
 
+/** A factory to create commonly used MTMathAtoms. */
 public class MTMathAtomFactory {
     
     public static let aliases = [
@@ -60,11 +62,10 @@ public class MTMathAtomFactory {
         "rfloor" : "\u{230B}"
     ]
     
-    var _delimValueToName: [String: String]? = nil
-    public var delimValueToName: [String: String] {
-        if _delimValueToName == nil {
+    static var _delimValueToName = [String: String]()
+    public static var delimValueToName: [String: String] {
+        if _delimValueToName.isEmpty {
             var output = [String: String]()
-            
             for (key, value) in Self.delimiters {
                 if let existingValue = output[value] {
                     if key.count > existingValue.count {
@@ -75,12 +76,11 @@ public class MTMathAtomFactory {
                         }
                     }
                 }
-                
                 output[value] = key
             }
             _delimValueToName = output
         }
-        return _delimValueToName!
+        return _delimValueToName
     }
     
     public static let accents = [
@@ -389,8 +389,8 @@ public class MTMathAtomFactory {
         "scriptscriptstyle" : MTMathStyle(style: .scriptOfScript),
     ]
     
-    var _textToLatexSymbolName: [String: String]? = nil
-    public var textToLatexSymbolName: [String: String] {
+    static var _textToLatexSymbolName: [String: String]? = nil
+    public static var textToLatexSymbolName: [String: String] {
         get {
             if self._textToLatexSymbolName == nil {
                 var output = [String: String]()
@@ -421,7 +421,7 @@ public class MTMathAtomFactory {
         }
     }
     
-    public static let sharedInstance = MTMathAtomFactory()
+  //  public static let sharedInstance = MTMathAtomFactory()
     
     static let fontStyles : [String: MTFontStyle] = [
         "mathnormal" : .defaultStyle,
@@ -449,7 +449,7 @@ public class MTMathAtomFactory {
     ]
     
     public static func fontStyleWithName(_ fontName:String) -> MTFontStyle? {
-        return fontStyles[fontName]
+        fontStyles[fontName]
     }
     
     public static func fontNameForStyle(_ fontStyle:MTFontStyle) -> String {
@@ -467,21 +467,22 @@ public class MTMathAtomFactory {
         }
     }
     
-    // Return an atom for times sign \times or *
+    /// Returns an atom for the multiplication sign (i.e., \times or "*")
     public static func times() -> MTMathAtom {
         MTMathAtom(type: .binaryOperator, value: UnicodeSymbol.multiplication)
     }
     
-    // Return an atom for division sign \div or /
+    /// Returns an atom for the division sign (i.e., \div or "/")
     public static func divide() -> MTMathAtom {
         MTMathAtom(type: .binaryOperator, value: UnicodeSymbol.division)
     }
     
-    // Return an atom aka placeholder square
+    /// Returns an atom which is a placeholder square
     public static func placeholder() -> MTMathAtom {
         MTMathAtom(type: .placeholder, value: UnicodeSymbol.whiteSquare)
     }
     
+    /** Returns a fraction with a placeholder for the numerator and denominator */
     public static func placeholderFraction() -> MTFraction {
         let frac = MTFraction()
         frac.numerator = MTMathList()
@@ -491,6 +492,7 @@ public class MTMathAtomFactory {
         return frac
     }
     
+    /** Returns a square root with a placeholder as the radicand. */
     public static func placeholderSquareRoot() -> MTRadical {
         let rad = MTRadical()
         rad.radicand = MTMathList()
@@ -498,6 +500,7 @@ public class MTMathAtomFactory {
         return rad
     }
     
+    /** Returns a radical with a placeholder as the radicand. */
     public static func placeholderRadical() -> MTRadical {
         let rad = MTRadical()
         rad.radicand = MTMathList()
@@ -507,6 +510,7 @@ public class MTMathAtomFactory {
         return rad
     }
     
+    // MARK: -
     /** Gets the atom with the right type for the given character. If an atom
      cannot be determined for a given character this returns nil.
      This function follows latex conventions for assigning types to the atoms.
@@ -554,7 +558,7 @@ public class MTMathAtomFactory {
     }
     
     /** Returns a `MTMathList` with one atom per character in the given string. This function
-     does not do any LaTeX conversion or interpretation. It simply uses `atomForCharacter` to
+     does not do any LaTeX conversion or interpretation. It simply uses `atom(forCharacter:)` to
      convert the characters to atoms. Any character that cannot be converted is ignored. */
     public static func atomList(for string: String) -> MTMathList {
         let list = MTMathList()
@@ -583,26 +587,23 @@ public class MTMathAtomFactory {
     /** Finds the name of the LaTeX symbol name for the given atom. This function is a reverse
      of the above function. If no latex symbol name corresponds to the atom, then this returns `nil`
      If nucleus of the atom is empty, then this will return `nil`.
-     @note: This is not an exact reverse of the above in the case of aliases. If an LaTeX alias
+     Note: This is not an exact reverse of the above in the case of aliases. If an LaTeX alias
      points to a given symbol, then this function will return the original symbol name and not the
      alias.
-     @note: This function does not convert MathSpaces to latex command names either.
+     Note: This function does not convert MathSpaces to latex command names either.
      */
     public static func latexSymbolName(for atom: MTMathAtom) -> String? {
-        if atom.nucleus.count == 0 {
-            return nil
-        }
-        return sharedInstance.textToLatexSymbolName[atom.nucleus]
+        guard !atom.nucleus.isEmpty else { return nil }
+        return Self.textToLatexSymbolName[atom.nucleus]
     }
     
     /** Define a latex symbol for rendering. This function allows defining custom symbols that are
      not already present in the default set, or override existing symbols with new meaning.
      e.g. to define a symbol for "lcm" one can call:
-     `[MTMathAtomFactory addLatexSymbol:@"lcm" value:[MTMathAtomFactory operatorWithName:@"lcm" limits: false)]` */
-    
+     `MTMathAtomFactory.add(latexSymbol:"lcm", value:MTMathAtomFactory.operatorWithName("lcm", limits: false))` */
     public static func add(latexSymbol name: String, value: MTMathAtom) {
         supportedLatexSymbols[name] = value
-        sharedInstance.textToLatexSymbolName[value.nucleus] = name
+        Self.textToLatexSymbolName[value.nucleus] = name
     }
     
     /** Returns a large opertor for the given name. If limits is true, limits are set up on
@@ -647,10 +648,8 @@ public class MTMathAtomFactory {
      `<` and `langle`) and this function always returns the shorter name.
      */
     public static func getDelimiterName(of boundary: MTMathAtom) -> String? {
-        if boundary.type != .boundary {
-            return nil
-        }
-        return Self.sharedInstance.delimValueToName[boundary.nucleus]
+        guard boundary.type == .boundary else { return nil }
+        return Self.delimValueToName[boundary.nucleus]
     }
     
     /** Returns a fraction with the given numerator and denominator. */
@@ -672,21 +671,14 @@ public class MTMathAtomFactory {
     }
     
     /** Simplification of above function when numerator and denominator are simple strings.
-     This function uses `mathListForCharacters` to convert the strings to `MTMathList`s. */
+     This function converts the strings to a `MTFraction`. */
     public static func fraction(withNumeratorString numStr: String, denominatorString denomStr: String) -> MTFraction {
         let num = Self.atomList(for: numStr)
         let denom = Self.atomList(for: denomStr)
-        
         return Self.fraction(withNumerator: num, denominator: denom)
     }
     
-    /** Builds a table for a given environment with the given rows. Returns a `MTMathAtom` containing the
-     table and any other atoms necessary for the given environment. Returns nil and sets error
-     if the table could not be built.
-     @param env The environment to use to build the table. If the env is nil, then the default table is built.
-     @note The reason this function returns a `MTMathAtom` and not a `MTMathTable` is because some
-     matrix environments are have builtin delimiters added to the table and hence are returned as inner atoms.
-     */
+
     static let matrixEnvs = [
         "matrix": [],
         "pmatrix": ["(", ")"],
@@ -696,6 +688,13 @@ public class MTMathAtomFactory {
         "Vmatrix": ["Vert", "Vert"]
     ]
     
+    /** Builds a table for a given environment with the given rows. Returns a `MTMathAtom` containing the
+     table and any other atoms necessary for the given environment. Returns nil and sets error
+     if the table could not be built.
+     @param env The environment to use to build the table. If the env is nil, then the default table is built.
+     @note The reason this function returns a `MTMathAtom` and not a `MTMathTable` is because some
+     matrix environments are have builtin delimiters added to the table and hence are returned as inner atoms.
+     */
     public static func table(withEnvironment env: String?, rows: [[MTMathList]], error:inout NSError?) -> MTMathAtom? {
         let table = MTMathTable(environment: env)
         

@@ -4,20 +4,19 @@
 for displaying beautifully rendered math equations in iOS and MacOS applications. It typesets formulae written 
 using LaTeX in a `UILabel` equivalent class. It uses the same typesetting rules as LaTeX and
 so the equations are rendered exactly as LaTeX would render them. 
-`
-SwiftMath` is a Swift translation of the latest `iosMath` v0.9.5 release but includes bug fixes
+
+`SwiftMath` is similar to [MathJax](https://www.mathjax.org) or
+[KaTeX](https://github.com/Khan/KaTeX) for the web but for native iOS or MacOS
+applications without having to use a `UIWebView` and Javascript. More
+importantly, it is significantly faster than using a `UIWebView`.
+
+`SwiftMath` is a Swift translation of the latest `iosMath` v0.9.5 release but includes bug fixes
 and enhancements like a new \lbar (lambda bar) character and cyrillic alphabet support.
 The original `iosMath` test suites have also been translated to Swift and run without errors.
 Note: Error test conditions are ignored to avoid tagging everything with silly `throw`s.
 Please let me know of any bugs or bug fixes that you find. 
 
 `SwiftMath` prepackages everything needed for direct access via the Swift Package Manager.
-No need for complicated alien pods that never seem to work quite right.
-
-It is similar to [MathJax](https://www.mathjax.org) or
-[KaTeX](https://github.com/Khan/KaTeX) for the web but for native iOS or MacOS
-applications without having to use a `UIWebView` and Javascript. More
-importantly, it is significantly faster than using a `UIWebView`.
 
 ## Examples
 Here are screenshots of some formulae that were rendered with this library:
@@ -50,7 +49,7 @@ f(x) = \int\limits_{-\infty}^\infty\!\hat f(\xi)\,e^{2 \pi i \xi x}\,\mathrm{d}\
 More examples are included in [EXAMPLES](EXAMPLES.md)
  
 ## Requirements
-`SwiftMath` works on iOS 6+ or MacOS 10.8+ and requires ARC to build. It depends
+`SwiftMath` works on iOS 11+ or MacOS 11+. It depends
 on the following Apple frameworks:
 
 * Foundation.framework
@@ -97,8 +96,8 @@ import SwiftMath
 
 struct MathView: UIViewRepresentable {
 
-    @Binding var equation: String
-    @Binding var fontSize: CGFloat
+    var equation: String
+    var fontSize: CGFloat
     
     func makeUIView(context: Context) -> MTMathUILabel {
         let view = MTMathUILabel()
@@ -115,7 +114,7 @@ struct MathView: UIViewRepresentable {
 }
 ```
 
-If you need code that works with SwiftUI running natively under MacOS you'll need the following:
+For code that works with SwiftUI running natively under MacOS use the following:
 
 ```swift
 import SwiftUI
@@ -123,8 +122,8 @@ import SwiftMath
 
 struct MathView: NSViewRepresentable {
     
-    @Binding var equation: String
-    @Binding var fontSize: CGFloat
+    var equation: String
+    var fontSize: CGFloat
     
     func makeNSView(context: Context) -> MTMathUILabel {
         let view = MTMathUILabel()
@@ -168,7 +167,7 @@ This is a list of formula types that the library currently supports:
 
 ### Example
 
-The [SwiftMathDemo](https://github.com/mgriebling/SwiftMathDemo) is a Swift version
+The [SwiftMathDemo](https://github.com/mgriebling/SwiftMathDemo) is a SwiftUI version
 of the Objective-C demo included in `iosMath` that uses `SwiftMath` as a Swift package dependency.
 
 ### Advanced configuration
@@ -204,7 +203,7 @@ label.fontSize = 30
 The default font is *Latin Modern Math*. This can be changed as:
 
 ```swift
-label.font = MTFontManager().termesFont(withSize:20)
+label.font = MTFontManager.fontmanager.termesFont(withSize:20)
 ```
 
 This project has 3 fonts bundled with it, but you can use any OTF math

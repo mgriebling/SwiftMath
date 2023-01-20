@@ -1,22 +1,51 @@
 //
-//  MTMathListIndex.swift
-//  MathRenderSwift
-//
 //  Created by Mike Griebling on 2022-12-31.
+//  Translated from an Objective-C implementation by Kostub Deshmukh.
+//
+//  This software may be modified and distributed under the terms of the
+//  MIT license. See the LICENSE file for details.
 //
 
 import Foundation
 
+/**
+ * An index that points to a particular character in the MTMathList. The index is a LinkedList that represents
+ * a path from the beginning of the MTMathList to reach a particular atom in the list. The next node of the path
+ * is represented by the subIndex. The path terminates when the subIndex is nil.
+ *
+ * If there is a subIndex, the subIndexType denotes what branch the path takes (i.e. superscript, subscript,
+ * numerator, denominator etc.).
+ * e.g in the expression 25^{2/4} the index of the character 4 is represented as:
+ * (1, superscript) -> (0, denominator) -> (0, none)
+ * This can be interpreted as start at index 1 (i.e. the 5) go up to the superscript.
+ * Then look at index 0 (i.e. 2/4) and go to the denominator. Then look up index 0 (i.e. the 4) which this final
+ * index.
+ *
+ * The level of an index is the number of nodes in the LinkedList to get to the final path.
+ */
 public class MTMathListIndex {
     
+    /**
+     The type of the subindex.
+     
+     The type of the subindex denotes what branch the path to the atom that this index points to takes.
+     */
     public enum MTMathListSubIndexType: Int {
-        case none = 0
+        /// The index denotes the whole atom, subIndex is nil.
+        case none  = 0
+        /// The position in the subindex is an index into the nucleus
         case nucleus
-        case superScript
-        case subScript
+        /// The subindex indexes into the superscript.
+        case superscript
+        /// The subindex indexes into the subscript
+        case ssubscript
+        /// The subindex indexes into the numerator (only valid for fractions)
         case numerator
+        /// The subindex indexes into the denominator (only valid for fractions)
         case denominator
+        /// The subindex indexes into the radicand (only valid for radicals)
         case radicand
+        /// The subindex indexes into the degree (only valid for radicals)
         case degree
     }
     
@@ -37,6 +66,7 @@ public class MTMathListIndex {
         }
     }
     
+    /// Returns the previous index if present. Returns `nil` if there is no previous index.
     func prevIndex() -> MTMathListIndex? {
         if self.subIndexType == .none {
             if self.atomIndex > 0 {
@@ -50,6 +80,7 @@ public class MTMathListIndex {
         return nil
     }
     
+    /// Returns the next index.
     func nextIndex() -> MTMathListIndex {
         if self.subIndexType == .none {
             return MTMathListIndex(level0Index: self.atomIndex + 1)
@@ -65,9 +96,7 @@ public class MTMathListIndex {
      * e.g. a superscript or a fraction numerator. This returns true if the innermost subindex points to the beginning of a
      * line.
      */
-    func isBeginningOfLine() -> Bool {
-        return self.finalIndex == 0
-    }
+    func isBeginningOfLine() -> Bool { self.finalIndex == 0 }
     
     func isAtSameLevel(with index: MTMathListIndex?) -> Bool {
         if self.subIndexType != index?.subIndexType {

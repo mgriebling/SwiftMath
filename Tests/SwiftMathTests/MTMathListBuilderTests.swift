@@ -352,8 +352,8 @@ final class MTMathListBuilderTests: XCTestCase {
         XCTAssertEqual(frac.type, .fraction, desc)
         XCTAssertEqual(frac.nucleus, "", desc)
         XCTAssertTrue(frac.hasRule);
-        XCTAssertNil(frac.rightDelimiter);
-        XCTAssertNil(frac.leftDelimiter);
+        XCTAssertTrue(frac.rightDelimiter.isEmpty)
+        XCTAssertTrue(frac.leftDelimiter.isEmpty)
         
         var subList = frac.numerator!
         XCTAssertNotNil(subList, desc)
@@ -550,8 +550,8 @@ final class MTMathListBuilderTests: XCTestCase {
         XCTAssertEqual(frac.type, .fraction, desc);
         XCTAssertEqual(frac.nucleus, "", desc);
         XCTAssertTrue(frac.hasRule);
-        XCTAssertNil(frac.rightDelimiter);
-        XCTAssertNil(frac.leftDelimiter);
+        XCTAssertTrue(frac.rightDelimiter.isEmpty)
+        XCTAssertTrue(frac.leftDelimiter.isEmpty)
         
         var subList = frac.numerator!
         XCTAssertNotNil(subList, desc);
@@ -587,8 +587,8 @@ final class MTMathListBuilderTests: XCTestCase {
         XCTAssertEqual(frac.type, .fraction, desc);
         XCTAssertEqual(frac.nucleus, "", desc);
         XCTAssertTrue(frac.hasRule);
-        XCTAssertNil(frac.rightDelimiter);
-        XCTAssertNil(frac.leftDelimiter);
+        XCTAssertTrue(frac.rightDelimiter.isEmpty)
+        XCTAssertTrue(frac.leftDelimiter.isEmpty)
         
         var subList = frac.numerator!
         XCTAssertNotNil(subList, desc);
@@ -621,8 +621,8 @@ final class MTMathListBuilderTests: XCTestCase {
         XCTAssertEqual(frac.type, .fraction, desc);
         XCTAssertEqual(frac.nucleus, "", desc);
         XCTAssertFalse(frac.hasRule);
-        XCTAssertNil(frac.rightDelimiter);
-        XCTAssertNil(frac.leftDelimiter);
+        XCTAssertTrue(frac.rightDelimiter.isEmpty)
+        XCTAssertTrue(frac.leftDelimiter.isEmpty)
         
         var subList = frac.numerator!
         XCTAssertNotNil(subList, desc);
@@ -658,8 +658,8 @@ final class MTMathListBuilderTests: XCTestCase {
         XCTAssertEqual(frac.type, .fraction, desc);
         XCTAssertEqual(frac.nucleus, "", desc);
         XCTAssertFalse(frac.hasRule);
-        XCTAssertNil(frac.rightDelimiter);
-        XCTAssertNil(frac.leftDelimiter);
+        XCTAssertTrue(frac.rightDelimiter.isEmpty)
+        XCTAssertTrue(frac.leftDelimiter.isEmpty)
         
         var subList = frac.numerator!
         XCTAssertNotNil(subList, desc);
@@ -1020,7 +1020,7 @@ final class MTMathListBuilderTests: XCTestCase {
         let table = list.atoms[0] as! MTMathTable
         XCTAssertEqual(table.type, .table);
         XCTAssertEqual(table.nucleus, "");
-        XCTAssertNil(table.environment);
+        XCTAssertTrue(table.environment.isEmpty);
         XCTAssertEqual(table.interRowAdditionalSpacing, 1);
         XCTAssertEqual(table.interColumnSpacing, 0);
         XCTAssertEqual(table.numRows, 2);
@@ -1051,7 +1051,7 @@ final class MTMathListBuilderTests: XCTestCase {
         let table = list.atoms[0] as! MTMathTable
         XCTAssertEqual(table.type, .table);
         XCTAssertEqual(table.nucleus, "");
-        XCTAssertNil(table.environment);
+        XCTAssertTrue(table.environment.isEmpty);
         XCTAssertEqual(table.interRowAdditionalSpacing, 1);
         XCTAssertEqual(table.interColumnSpacing, 0);
         XCTAssertEqual(table.numRows, 2);
