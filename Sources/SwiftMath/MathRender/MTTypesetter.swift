@@ -502,7 +502,7 @@ class MTTypesetter {
                     }
                     let colorAtom = atom as! MTMathColor
                     let display = MTTypesetter.createLineForMathList(colorAtom.innerList, font: font, style: style)
-                    display!.localTextColor = MTColor.color(fromHexString: colorAtom.colorString)
+                    display!.localTextColor = MTColor(fromHexString: colorAtom.colorString)
                     display!.position = currentPosition
                     currentPosition.x += display!.width
                     displayAtoms.append(display!)
@@ -515,7 +515,7 @@ class MTTypesetter {
                     let colorboxAtom =  atom as! MTMathColorbox
                     let display = MTTypesetter.createLineForMathList(colorboxAtom.innerList, font:font, style:style)
                     
-                    display!.localBackgroundColor = MTColor.color(fromHexString: colorboxAtom.colorString)
+                    display!.localBackgroundColor = MTColor(fromHexString: colorboxAtom.colorString)
                     display!.position = currentPosition
                     currentPosition.x += display!.width;
                     displayAtoms.append(display!)
