@@ -40,7 +40,7 @@ public class MTFontManager {
     }
     
     public func kpMathLightFont(withSize size:CGFloat) -> MTFont? {
-        MTFontManager.fontManager.font(withName: "KpMath-Light", size: size)
+        MTFontManager.fontManager.font(withName: "kpmath-light", size: size)
     }
     
     public func xitsFont(withSize size:CGFloat) -> MTFont? {
