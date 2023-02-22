@@ -190,8 +190,8 @@ class MTFontMathTable {
     /** Returns an Array of all the vertical variants of the glyph if any. If
      there are no variants for the glyph, the array contains the given glyph. */
     func getVerticalVariantsForGlyph( _ glyph:CGGlyph) -> [NSNumber?] {
-        let variants = _mathTable[kVertVariants] as! NSDictionary
-        return self.getVariantsForGlyph(glyph, inDictionary: variants)
+        let variants = _mathTable[kVertVariants] as! NSDictionary?
+        return self.getVariantsForGlyph(glyph, inDictionary: variants!)
     }
 
     /** Returns an Array of all the horizontal variants of the glyph if any. If
@@ -201,9 +201,9 @@ class MTFontMathTable {
         return self.getVariantsForGlyph(glyph, inDictionary:variants)
     }
     
-    func getVariantsForGlyph(_ glyph: CGGlyph, inDictionary variants:NSDictionary) -> [NSNumber] {
+    func getVariantsForGlyph(_ glyph: CGGlyph, inDictionary variants:NSDictionary) -> [NSNumber?] {
         let glyphName = self.font!.get(nameForGlyph: glyph)
-        let variantGlyphs = variants[glyphName] as? NSDictionary
+        let variantGlyphs = variants[glyphName] as! NSArray?
         var glyphArray = [NSNumber]()
         if variantGlyphs == nil || variantGlyphs?.count == 0 {
             // There are no extra variants, so just add the current glyph to it.
@@ -223,9 +223,9 @@ class MTFontMathTable {
      If there is no larger version, this returns the current glyph.
      */
     func getLargerGlyph(_ glyph:CGGlyph) -> CGGlyph {
-        let variants = _mathTable[kVertVariants] as! NSDictionary
+        let variants = _mathTable[kVertVariants] as! NSDictionary?
         let glyphName = self.font?.get(nameForGlyph: glyph)
-        let variantGlyphs = variants[glyphName!] as? NSDictionary
+        let variantGlyphs = variants![glyphName!] as! NSArray?
         if variantGlyphs == nil || variantGlyphs?.count == 0 {
             // There are no extra variants, so just returnt the current glyph.
             return glyph
@@ -249,9 +249,9 @@ class MTFontMathTable {
     /** Returns the italic correction for the given glyph if any. If there
      isn't any this returns 0. */
     func getItalicCorrection(_ glyph: CGGlyph) -> CGFloat {
-        let italics = _mathTable[kItalic] as! NSDictionary
+        let italics = _mathTable[kItalic] as! NSDictionary?
         let glyphName = self.font?.get(nameForGlyph: glyph)
-        let val = italics[glyphName!] as! NSNumber?
+        let val = italics![glyphName!] as! NSNumber?
         // if val is nil, this returns 0.
         return self.fontUnitsToPt(val?.intValue ?? 0)
     }
@@ -264,9 +264,9 @@ class MTFontMathTable {
      If there isn't any this returns -1. */
     func getTopAccentAdjustment(_ glyph: CGGlyph) -> CGFloat {
         var glyph = glyph
-        let accents = _mathTable[kAccents] as! NSDictionary
+        let accents = _mathTable[kAccents] as! NSDictionary?
         let glyphName = self.font?.get(nameForGlyph: glyph)
-        let val = accents[glyphName!] as! NSNumber?
+        let val = accents![glyphName!] as! NSNumber?
         if let val = val {
             return self.fontUnitsToPt(val.intValue)
         } else {
@@ -288,20 +288,20 @@ class MTFontMathTable {
     /** Returns an array of the glyph parts to be used for constructing vertical variants
      of this glyph. If there is no glyph assembly defined, returns an empty array. */
     func getVerticalGlyphAssembly(forGlyph glyph:CGGlyph) -> [GlyphPart] {
-        let assemblyTable = _mathTable[kVertAssembly] as! NSDictionary
+        let assemblyTable = _mathTable[kVertAssembly] as! NSDictionary?
         let glyphName = self.font?.get(nameForGlyph: glyph)
-        let assemblyInfo = assemblyTable[glyphName!] as! NSDictionary
-        if assemblyInfo.count == 0 {
+        let assemblyInfo = assemblyTable![glyphName!] as! NSDictionary?
+        if assemblyInfo == nil {
             // No vertical assembly defined for glyph
             return []
         }
-        let parts = assemblyInfo[kAssemblyParts] as! [GlyphPart]
-        if parts.count == 0 {
+        let parts = assemblyInfo![kAssemblyParts] as! NSArray?
+        if parts == nil {
             // parts should always have been defined, but if it isn't return nil
             return []
         }
         var rv = [GlyphPart]()
-        for part in parts {
+        for part in parts! {
             let partInfo = part as! NSDictionary?
             var part = GlyphPart()
             let adv = partInfo!["advance"] as! NSNumber?
