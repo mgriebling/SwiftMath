@@ -39,6 +39,10 @@ public class MTFontManager {
         MTFontManager.fontManager.font(withName: "latinmodern-math", size: size)
     }
     
+    public func kpMathLightFont(withSize size:CGFloat) -> MTFont? {
+        MTFontManager.fontManager.font(withName: "KpMath-Light", size: size)
+    }
+    
     public func xitsFont(withSize size:CGFloat) -> MTFont? {
         MTFontManager.fontManager.font(withName: "xits-math", size: size)
     }
