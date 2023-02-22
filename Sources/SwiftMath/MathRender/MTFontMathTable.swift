@@ -203,7 +203,7 @@ class MTFontMathTable {
     
     func getVariantsForGlyph(_ glyph: CGGlyph, inDictionary variants:NSDictionary?) -> [NSNumber] {
         let glyphName = self.font!.get(nameForGlyph: glyph)
-        let variantGlyphs = variants![glyphName] as! NSArray
+        let variantGlyphs = variants![glyphName] as! NSDictionary
         var glyphArray = [NSNumber]()
         if variantGlyphs.count == 0 {
             // There are no extra variants, so just add the current glyph to it.
@@ -225,7 +225,7 @@ class MTFontMathTable {
     func getLargerGlyph(_ glyph:CGGlyph) -> CGGlyph {
         let variants = _mathTable[kVertVariants] as! NSDictionary?
         let glyphName = self.font?.get(nameForGlyph: glyph)
-        let variantGlyphs = variants![glyphName!] as! NSArray
+        let variantGlyphs = variants![glyphName!] as! NSDictionary
         if variantGlyphs.count == 0 {
             // There are no extra variants, so just returnt the current glyph.
             return glyph
