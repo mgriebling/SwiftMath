@@ -203,15 +203,15 @@ class MTFontMathTable {
     
     func getVariantsForGlyph(_ glyph: CGGlyph, inDictionary variants:NSDictionary) -> [NSNumber] {
         let glyphName = self.font!.get(nameForGlyph: glyph)
-        let variantGlyphs = variants[glyphName] as! NSDictionary
+        let variantGlyphs = variants[glyphName] as? NSDictionary
         var glyphArray = [NSNumber]()
-        if variantGlyphs.count == 0 {
+        if variantGlyphs == nil || variantGlyphs?.count == 0 {
             // There are no extra variants, so just add the current glyph to it.
             let glyph = self.font!.get(glyphWithName: glyphName)
             glyphArray.append(NSNumber(value:glyph))
             return glyphArray
         }
-        for gvn in variantGlyphs {
+        for gvn in variantGlyphs! {
             let glyphVariantName = gvn as! String?
             let variantGlyph = self.font?.get(glyphWithName: glyphVariantName!)
             glyphArray.append(NSNumber(value:variantGlyph!))
@@ -225,13 +225,13 @@ class MTFontMathTable {
     func getLargerGlyph(_ glyph:CGGlyph) -> CGGlyph {
         let variants = _mathTable[kVertVariants] as! NSDictionary
         let glyphName = self.font?.get(nameForGlyph: glyph)
-        let variantGlyphs = variants[glyphName!] as! NSDictionary
-        if variantGlyphs.count == 0 {
+        let variantGlyphs = variants[glyphName!] as? NSDictionary
+        if variantGlyphs == nil || variantGlyphs?.count == 0 {
             // There are no extra variants, so just returnt the current glyph.
             return glyph
         }
         // Find the first variant with a different name.
-        for gvn in variantGlyphs {
+        for gvn in variantGlyphs! {
             let glyphVariantName = gvn as! String?
             if glyphVariantName != glyphName {
                 let variantGlyph = self.font?.get(glyphWithName: glyphVariantName!)
