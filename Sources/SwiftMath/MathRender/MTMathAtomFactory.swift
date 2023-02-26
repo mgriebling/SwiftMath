@@ -372,6 +372,7 @@ public class MTMathAtomFactory {
         "triangle" : MTMathAtom(type: .ordinary, value: "\u{25B3}"),
         "imath" : MTMathAtom(type: .ordinary, value: "\u{0001D6A4}"),
         "jmath" : MTMathAtom(type: .ordinary, value: "\u{0001D6A5}"),
+        "upquote" : MTMathAtom(type: .ordinary, value: "\u{0027}"),
         "partial" : MTMathAtom(type: .ordinary, value: "\u{0001D715}"),
 
         // Spacing
