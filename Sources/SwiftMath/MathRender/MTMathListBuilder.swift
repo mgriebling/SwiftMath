@@ -226,11 +226,12 @@ public struct MTMathListBuilder {
                 continue
             } else if char == "{" {
                 // this puts us in a recursive routine, and sets oneCharOnly to false and no stop character
-                let subList = self.buildInternal(false, stopChar: "}")
-                prevAtom = subList!.atoms.last
-                list.append(subList)
-                if oneCharOnly {
-                    return list
+                if let subList = self.buildInternal(false, stopChar: "}") {
+                    prevAtom = subList.atoms.last
+                    list.append(subList)
+                    if oneCharOnly {
+                        return list
+                    }
                 }
                 continue
             } else if char == "}" {
