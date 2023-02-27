@@ -260,15 +260,16 @@ public struct MTMathListBuilder {
                     spacesAllowed = command == "text"
                     let oldFontStyle = currentFontStyle
                     currentFontStyle = fontStyle
-                    let sublist = self.buildInternal(true)!
-                    // Restore the font style.
-                    currentFontStyle = oldFontStyle
-                    spacesAllowed = oldSpacesAllowed
-
-                    prevAtom = sublist.atoms.last
-                    list.append(sublist)
-                    if oneCharOnly {
-                        return list
+                    if let sublist = self.buildInternal(true) {
+                        // Restore the font style.
+                        currentFontStyle = oldFontStyle
+                        spacesAllowed = oldSpacesAllowed
+                        
+                        prevAtom = sublist.atoms.last
+                        list.append(sublist)
+                        if oneCharOnly {
+                            return list
+                        }
                     }
                     continue
                 }
