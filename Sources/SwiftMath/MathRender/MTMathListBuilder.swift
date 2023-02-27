@@ -695,8 +695,9 @@ public struct MTMathListBuilder {
                 return list
             } else {
                 // Create a new table with the current list and a default env
-                let table = self.buildTable(env: nil, firstList:list, isRow:true)
-                return MTMathList(atom: table!)
+                if let table = self.buildTable(env: nil, firstList:list, isRow:true) {
+                    return MTMathList(atom: table)
+                }
             }
         } else if command == "end" {
             if currentEnv == nil {
