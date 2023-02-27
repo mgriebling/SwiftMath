@@ -22,6 +22,8 @@ public class MTFontManager {
         return manager!
     }
     
+    public init() { }
+    
     var nameToFontMap = [String: MTFont]()
     
     public func font(withName name:String, size:CGFloat) -> MTFont? {
