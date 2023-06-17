@@ -1,6 +1,5 @@
 
 import Foundation
-import CoreGraphics
 import CoreText
 
 //
