@@ -2,7 +2,9 @@
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
+#if !os(Linux)
 import CoreGraphics
+#endif
 
 let package = Package(
     name: "SwiftMath",
