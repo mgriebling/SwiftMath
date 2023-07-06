@@ -537,6 +537,10 @@ public struct MTMathListBuilder {
         } else if command == "sqrt" {
             // A sqrt command with one argument
             let rad = MTRadical()
+            guard self.hasCharacters else {
+                rad.radicand = self.buildInternal(true)
+                return rad
+            }
             let ch = self.getNextCharacter()
             if (ch == "[") {
                 // special handling for sqrt[degree]{radicand}

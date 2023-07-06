@@ -503,6 +503,43 @@ final class MTMathListBuilderTests: XCTestCase {
         XCTAssertEqual(latex, "\\sqrt[3]{2}");
     }
     
+    func testSqrtWithoutRadicand() throws {
+        let str = "\\sqrt"
+        let list = try XCTUnwrap(MTMathListBuilder.build(fromString: str))
+        
+        XCTAssertEqual(list.atoms.count, 1)
+        let rad = try XCTUnwrap(list.atoms.first as? MTRadical)
+        XCTAssertEqual(rad.type, .radical)
+        XCTAssertEqual(rad.nucleus, "")
+        
+        XCTAssertEqual(rad.radicand?.atoms.isEmpty, true)
+        XCTAssertNil(rad.degree)
+        
+        let latex = MTMathListBuilder.mathListToString(list)
+        XCTAssertEqual(latex, "\\sqrt{}")
+    }
+    
+    func testSqrtWithDegreeWithoutRadicand() throws {
+        let str = "\\sqrt[3]"
+        let list = try XCTUnwrap(MTMathListBuilder.build(fromString: str))
+        
+        XCTAssertEqual(list.atoms.count, 1)
+        let rad = try XCTUnwrap(list.atoms.first as? MTRadical)
+        XCTAssertEqual(rad.type, .radical)
+        XCTAssertEqual(rad.nucleus, "")
+        
+        XCTAssertEqual(rad.radicand?.atoms.isEmpty, true)
+        
+        let subList = try XCTUnwrap(rad.degree)
+        XCTAssertEqual(subList.atoms.count, 1)
+        let atom = try XCTUnwrap(subList.atoms.first)
+        XCTAssertEqual(atom.type, .number)
+        XCTAssertEqual(atom.nucleus, "3")
+        
+        let latex = MTMathListBuilder.mathListToString(list)
+        XCTAssertEqual(latex, "\\sqrt[3]{}");
+    }
+    
     func testLeftRight() throws {
         let data = getTestDataLeftRight()
         for testCase in data {
