@@ -24,16 +24,16 @@ public class MTFont {
     /// So we first load a CGFont from the file and then convert it to a CTFont.
     convenience init(fontWithName name: String, size:CGFloat) {
         self.init()
-        print("Loading font \(name)")
+        //print("Loading font \(name)")
         let bundle = MTFont.fontBundle
         let fontPath = bundle.path(forResource: name, ofType: "otf")
         let fontDataProvider = CGDataProvider(filename: fontPath!)
         self.defaultCGFont = CGFont(fontDataProvider!)!
-        print("Num glyphs: \(self.defaultCGFont.numberOfGlyphs)")
+        //print("Num glyphs: \(self.defaultCGFont.numberOfGlyphs)")
         
         self.ctFont = CTFontCreateWithGraphicsFont(self.defaultCGFont, size, nil, nil);
         
-        print("Loading associated .plist")
+        //print("Loading associated .plist")
         let mathTablePlist = bundle.url(forResource:name, withExtension:"plist")
         self.rawMathTable = NSDictionary(contentsOf: mathTablePlist!)
         self.mathTable = MTFontMathTable(withFont:self, mathTable:rawMathTable!)
