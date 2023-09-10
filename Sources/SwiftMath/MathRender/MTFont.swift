@@ -66,4 +66,9 @@ public class MTFont {
     /** The size of this font in points. */
     public var fontSize:CGFloat { CTFontGetSize(self.ctFont) }
     
+    deinit {
+        self.ctFont = nil
+        self.defaultCGFont = nil
+    }
+    
 }
