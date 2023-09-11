@@ -43,7 +43,7 @@ struct GlyphPart {
 class MTFontMathTable {
     
     // The font for this math table.
-    var font:MTFont? // @property (nonatomic, readonly, weak) MTFont* font;
+    public private(set) weak var font:MTFont? // @property (nonatomic, readonly, weak) MTFont* font;
     
     var _unitsPerEm: UInt
     var _fontSize: CGFloat
