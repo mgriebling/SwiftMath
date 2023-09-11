@@ -91,7 +91,7 @@ extension MTMathImage {
             return (nil, image)
         #endif
         #if os(macOS)
-            let image = NSImage(size: size, flipped: true) { bounds in
+            let image = NSImage(size: size, flipped: false) { bounds in
                 guard let context = NSGraphicsContext.current?.cgContext else { return false }
                 context.saveGState()
                 displayList.draw(context)
