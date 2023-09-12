@@ -28,23 +28,25 @@ internal struct MathTable {
     let font: MathFont
     private let unitsPerEm: UInt
     private let fontSize: CGFloat
+    weak var fontMathTable: NSDictionary?
     
     init(withFont font: MathFont, fontSize: CGFloat, unitsPerEm: UInt) {
         self.font = font
         self.unitsPerEm = unitsPerEm
         self.fontSize = fontSize
+        self.fontMathTable = font.mathTable()
     }
     func fontUnitsToPt(_ fontUnits: Int) -> CGFloat {
         CGFloat(fontUnits) * fontSize / CGFloat(unitsPerEm)
     }
     func constantFromTable(_ constName: String) -> CGFloat {
-        guard let consts = font.mathTable()?[kConstants] as? NSDictionary, let val = consts[constName] as? NSNumber else {
+        guard let consts = fontMathTable?[kConstants] as? NSDictionary, let val = consts[constName] as? NSNumber else {
             fatalError("\(#function) unable to extract \(constName) from plist")
         }
         return fontUnitsToPt(val.intValue)
     }
     func percentFromTable(_ percentName: String) -> CGFloat {
-        guard let consts = font.mathTable()?[kConstants] as? NSDictionary, let val = consts[percentName] as? NSNumber else {
+        guard let consts = fontMathTable?[kConstants] as? NSDictionary, let val = consts[percentName] as? NSNumber else {
             fatalError("\(#function) unable to extract \(percentName) from plist")
         }
         return CGFloat(val.floatValue) / 100
@@ -155,7 +157,7 @@ internal struct MathTable {
     /** Returns an Array of all the vertical variants of the glyph if any. If
      there are no variants for the glyph, the array contains the given glyph. */
     func getVerticalVariantsForGlyph( _ glyph: CGGlyph) -> [NSNumber?] {
-        guard let variants = font.mathTable()?[kVertVariants] as? NSDictionary else {
+        guard let variants = fontMathTable?[kVertVariants] as? NSDictionary else {
             fatalError("\(#function) unable to extract \(glyph) from plist")
         }
         return self.getVariantsForGlyph(glyph, inDictionary: variants)
@@ -164,7 +166,7 @@ internal struct MathTable {
     /** Returns an Array of all the horizontal variants of the glyph if any. If
      there are no variants for the glyph, the array contains the given glyph. */
     func getHorizontalVariantsForGlyph( _ glyph: CGGlyph) -> [NSNumber?] {
-        guard let variants = font.mathTable()?[kHorizVariants] as? NSDictionary else {
+        guard let variants = fontMathTable?[kHorizVariants] as? NSDictionary else {
             fatalError("\(#function) unable to extract \(glyph) from plist")
         }
         return self.getVariantsForGlyph(glyph, inDictionary:variants)
@@ -192,7 +194,7 @@ internal struct MathTable {
      If there is no larger version, this returns the current glyph.
      */
     func getLargerGlyph(_ glyph:CGGlyph) -> CGGlyph {
-        let variants = font.mathTable()?[kVertVariants] as? NSDictionary
+        let variants = fontMathTable?[kVertVariants] as? NSDictionary
         let glyphName = font.get(nameForGlyph: glyph)
         let variantGlyphs = variants![glyphName] as? NSArray
         if variantGlyphs == nil || variantGlyphs?.count == 0 {
@@ -218,7 +220,7 @@ internal struct MathTable {
     /** Returns the italic correction for the given glyph if any. If there
      isn't any this returns 0. */
     func getItalicCorrection(_ glyph: CGGlyph) -> CGFloat {
-        let italics = font.mathTable()?[kItalic] as? NSDictionary
+        let italics = fontMathTable?[kItalic] as? NSDictionary
         let glyphName = font.get(nameForGlyph: glyph)
         let val = italics![glyphName] as? NSNumber
         // if val is nil, this returns 0.
@@ -233,7 +235,7 @@ internal struct MathTable {
      If there isn't any this returns -1. */
     func getTopAccentAdjustment(_ glyph: CGGlyph) -> CGFloat {
         var glyph = glyph
-        let accents = font.mathTable()?[kAccents] as? NSDictionary
+        let accents = fontMathTable?[kAccents] as? NSDictionary
         let glyphName = font.get(nameForGlyph: glyph)
         let val = accents![glyphName] as? NSNumber
         if let val = val {
@@ -260,7 +262,7 @@ internal struct MathTable {
     /** Returns an array of the glyph parts to be used for constructing vertical variants
      of this glyph. If there is no glyph assembly defined, returns an empty array. */
     func getVerticalGlyphAssembly(forGlyph glyph:CGGlyph) -> [GlyphPart] {
-        let assemblyTable = font.mathTable()?[kVertAssembly] as? NSDictionary
+        let assemblyTable = fontMathTable?[kVertAssembly] as? NSDictionary
         let glyphName = font.get(nameForGlyph: glyph)
         guard let assemblyInfo = assemblyTable?[glyphName] as? NSDictionary,
                 let parts = assemblyInfo[kAssemblyParts] as? NSArray else {
@@ -276,7 +278,7 @@ internal struct MathTable {
                let end = partInfo["endConnector"] as? NSNumber,
                let start = partInfo["startConnector"] as? NSNumber,
                let ext = partInfo["extender"] as? NSNumber,
-               let glyphName = partInfo["glyph"] as? String {
+               let partInfoGlyphName = partInfo["glyph"] as? String, partInfoGlyphName == glyphName {
                 part.fullAdvance = fontUnitsToPt(adv.intValue)
                 part.endConnectorLength = fontUnitsToPt(end.intValue)
                 part.startConnectorLength = fontUnitsToPt(start.intValue)
