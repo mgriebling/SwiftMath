@@ -11,17 +11,16 @@ import Foundation
 
 public class MTFontManager {
     
-    static public private(set) var manager:MTFontManager! = nil
+    static public private(set) var manager: MTFontManager = {
+        MTFontManager()
+    }()
     
     let kDefaultFontSize = CGFloat(20)
     
     static var fontManager : MTFontManager {
-        if manager == nil {
-            manager = MTFontManager()
-        }
-        return manager!
+        return manager
     }
-    
+
     public init() { }
     
     var nameToFontMap = [String: MTFont]()
