@@ -270,18 +270,17 @@ internal struct MathTable {
         }
         var rv = [GlyphPart]()
         for part in parts {
-            let partInfo = part as? NSDictionary
-            var part = GlyphPart()
-            if let adv = partInfo?["advance"] as? NSNumber,
-               let end = partInfo?["endConnector"] as? NSNumber,
-               let start = partInfo?["startConnector"] as? NSNumber,
-               let ext = partInfo?["extender"] as? NSNumber,
-               let glyphName = partInfo?["glyph"] as? String {
+            guard let partInfo = part as? NSDictionary, let glyph = font.get(glyphWithName: glyphName) else { continue }
+            var part = GlyphPart(glyph: glyph)
+            if let adv = partInfo["advance"] as? NSNumber,
+               let end = partInfo["endConnector"] as? NSNumber,
+               let start = partInfo["startConnector"] as? NSNumber,
+               let ext = partInfo["extender"] as? NSNumber,
+               let glyphName = partInfo["glyph"] as? String {
                 part.fullAdvance = fontUnitsToPt(adv.intValue)
                 part.endConnectorLength = fontUnitsToPt(end.intValue)
                 part.startConnectorLength = fontUnitsToPt(start.intValue)
                 part.isExtender = ext.boolValue
-                part.glyph = font.get(glyphWithName: glyphName)
                 rv.append(part)
             }
         }
@@ -290,10 +289,9 @@ internal struct MathTable {
 
 }
 extension MathTable {
-    
     struct GlyphPart {
         /// The glyph that represents this part
-        var glyph: CGGlyph!
+        var glyph: CGGlyph
 
         /// Full advance width/height for this part, in the direction of the extension in points.
         var fullAdvance: CGFloat = 0
