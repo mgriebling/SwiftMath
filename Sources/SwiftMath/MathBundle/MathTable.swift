@@ -244,7 +244,7 @@ internal struct MathTable {
             // If no top accent is defined then it is the center of the advance width.
             var advances = CGSize.zero
             guard let ctFont = font.ctFont(withSize: fontSize) else {
-                fatalError("\(#function) unable to obtain ctFont \(font.rawValue) with size \(fontSize)")
+                fatalError("\(#function) unable to obtain ctFont resource name: \(font.rawValue) with size \(fontSize)")
             }
             CTFontGetAdvancesForGlyphs(ctFont, .horizontal, &glyph, &advances, 1)
             return advances.width/2

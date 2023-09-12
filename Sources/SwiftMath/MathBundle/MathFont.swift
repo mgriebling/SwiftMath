@@ -104,7 +104,7 @@ private class BundleManager {
         guard CTFontManagerRegisterGraphicsFont(defaultCGFont, &errorRef) else {
             throw FontError.registerFailed
         }
-        print("mathFonts bundle: \(mathFont.rawValue) registered.")
+        print("mathFonts bundle resource: \(mathFont.rawValue), font: \(defaultCGFont.fullName) registered.")
     }
     
     private func registerMathTable(mathFont: MathFont) throws {
@@ -119,6 +119,7 @@ private class BundleManager {
         }
         //FIXME: mathTable = MTFontMathTable(withFont:self, mathTable:rawMathTable)
         mathTables[mathFont] = rawMathTable
+        print("mathFonts bundle resource: \(mathFont.rawValue).plist registered.")
     }
     
     private func registerAllBundleResources() {
@@ -128,7 +129,7 @@ private class BundleManager {
                 try BundleManager.manager.registerCGFont(mathFont: font)
                 try BundleManager.manager.registerMathTable(mathFont: font)
             } catch {
-                fatalError("MTMathFonts:\(#function) Couldn't load math fonts \(font.rawValue), reason \(error)")
+                fatalError("MTMathFonts:\(#function) Couldn't load mathFont resource \(font.rawValue), reason \(error)")
             }
         }
         initializedOnceAlready.toggle()
