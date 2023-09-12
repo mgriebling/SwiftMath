@@ -5,8 +5,13 @@
 //  Created by Peter Tang on 10/9/2023.
 //
 
-import Foundation
-import CoreText
+#if os(iOS)
+import UIKit
+#endif
+
+#if os(macOS)
+import AppKit
+#endif
 
 public enum MathFont: String, CaseIterable {
     
@@ -16,12 +21,40 @@ public enum MathFont: String, CaseIterable {
     case xitsFont        = "xits-math"
     case termesFont      = "texgyretermes-math"
     
+    var fontFamilyName: String {
+        switch self {
+        case .latinModernFont: return "Latin Modern Math"
+        case .kpMathLightFont: return "KpMath"
+        case .kpMathSansFont:  return "KpMath"
+        case .xitsFont:        return "XITS Math"
+        case .termesFont:      return "TeX Gyre Termes Math"
+        }
+    }
+    var fontName: String {
+        switch self {
+        case .latinModernFont: return "LatinModernMath-Regular"
+        case .kpMathLightFont: return "KpMath-Light"
+        case .kpMathSansFont:  return "KpMath-Sans"
+        case .xitsFont:        return "XITSMath"
+        case .termesFont:      return "TeXGyreTermesMath-Regular"
+        }
+    }
     public func cgFont() -> CGFont? {
         BundleManager.manager.obtainCGFont(font: self)
     }
     public func ctFont(withSize size: CGFloat) -> CTFont? {
         BundleManager.manager.obtainCTFont(font: self, withSize: size)
     }
+    #if os(iOS)
+    public func uiFont(withSize size: CGFloat) -> UIFont? {
+        UIFont(name: fontName, size: size)
+    }
+    #endif
+    #if os(macOS)
+    public func nsFont(withSize size: CGFloat) -> NSFont? {
+        NSFont(name: fontName, size: size)
+    }
+    #endif
     internal func mathTable() -> NSDictionary? {
         BundleManager.manager.obtainMathTable(font: self)
     }

@@ -10,10 +10,6 @@ import XCTest
 
 final class MathFontTests: XCTestCase {
     func testMathFontScript() throws {
-        // for family in UIFont.familyNames.sorted() {
-        //     let names = UIFont.fontNames(forFamilyName: family)
-        //     print("Family: \(family) Font names: \(names)")
-        // }
         let size = Int.random(in: 20 ... 40)
         MathFont.allCases.forEach {
             // print("\(#function) cgfont \($0.cgFont())")
@@ -22,5 +18,27 @@ final class MathFontTests: XCTestCase {
             XCTAssertNotNil($0.ctFont(withSize: CGFloat(size)))
             XCTAssertEqual($0.ctFont(withSize: CGFloat(size))?.fontSize, CGFloat(size), "ctFont fontSize test")
         }
+        #if os(iOS)
+        // for family in UIFont.familyNames.sorted() {
+        //     let names = UIFont.fontNames(forFamilyName: family)
+        //     print("Family: \(family) Font names: \(names)")
+        // }
+        fontNames.forEach { name in
+            let font = UIFont(name: name, size: CGFloat(size))
+            XCTAssertNotNil(font)
+        }
+        #endif
+        #if os(macOS)
+        fontNames.forEach { name in
+            let font = NSFont(name: name, size: CGFloat(size))
+            XCTAssertNotNil(font)
+        }
+        #endif
+    }
+    var fontNames: [String] {
+        MathFont.allCases.map { $0.fontName }
+    }
+    var fontFamilyNames: [String] {
+        MathFont.allCases.map { $0.fontFamilyName }
     }
 }
