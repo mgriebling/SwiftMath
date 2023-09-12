@@ -129,6 +129,7 @@ private class BundleManager {
         cgFonts.values.forEach { cgFont in
             CTFontManagerUnregisterGraphicsFont(cgFont, &errorRef)
         }
+        cgFonts.removeAll()
     }
     public enum FontError: Error {
         case invalidFontFile
