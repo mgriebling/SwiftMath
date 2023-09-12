@@ -24,8 +24,10 @@ final class MathFontTests: XCTestCase {
         //     print("Family: \(family) Font names: \(names)")
         // }
         fontNames.forEach { name in
-            let font = UIFont(name: name, size: CGFloat(size))
-            XCTAssertNotNil(font)
+            XCTAssertNotNil(UIFont(name: name, size: CGFloat(size)))
+        }
+        fontFamilyNames.forEach { name in
+            XCTAssertNotNil(UIFont.fontNames(forFamilyName: name))
         }
         #endif
         #if os(macOS)
