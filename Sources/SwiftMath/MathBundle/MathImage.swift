@@ -1,5 +1,5 @@
 //
-//  MTMathImageV2.swift
+//  MathImage.swift
 //  
 //
 //  Created by Peter Tang on 15/9/2023.
@@ -7,13 +7,9 @@
 
 import Foundation
 
-import Foundation
-
 #if os(iOS)
     import UIKit
-#endif
-
-#if os(macOS)
+#elseif os(macOS)
     import AppKit
 #endif
 

@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  MathFont.swift
 //  
 //
 //  Created by Peter Tang on 10/9/2023.
@@ -7,9 +7,7 @@
 
 #if os(iOS)
 import UIKit
-#endif
-
-#if os(macOS)
+#elseif os(macOS)
 import AppKit
 #endif
 
