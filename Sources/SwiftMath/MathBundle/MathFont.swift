@@ -126,16 +126,28 @@ private class BundleManager {
         initializedOnceAlready.toggle()
     }
     
-    fileprivate func obtainCGFont(font: MathFont) -> CGFont {
-        if !initializedOnceAlready { registerAllBundleResources() }
-        guard let cfFont = cgFonts[font] else {
-            fatalError("\(#function) unable to locate CTFont \(font.fontName)")
+    private func onDemandRegistration(mathFont: MathFont) {
+        guard cgFonts[mathFont] == nil else { return }
+        do {
+            try BundleManager.manager.registerCGFont(mathFont: mathFont)
+            try BundleManager.manager.registerMathTable(mathFont: mathFont)
+
+        } catch {
+            fatalError("MTMathFonts:\(#function) ondemand loading failed, mathFont \(mathFont.rawValue), reason \(error)")
         }
-        return cfFont
+    }
+    fileprivate func obtainCGFont(font: MathFont) -> CGFont {
+        // if !initializedOnceAlready { registerAllBundleResources() }
+        onDemandRegistration(mathFont: font)
+        guard let cgFont = cgFonts[font] else {
+            fatalError("\(#function) unable to locate CGFont \(font.fontName)")
+        }
+        return cgFont
     }
     
     fileprivate func obtainCTFont(font: MathFont, withSize size: CGFloat) -> CTFont {
-        if !initializedOnceAlready { registerAllBundleResources() }
+        // if !initializedOnceAlready { registerAllBundleResources() }
+        onDemandRegistration(mathFont: font)
         let fontPair = CTFontPair(font: font, size: size)
         guard let ctFont = ctFonts[fontPair] else {
             if let cgFont = cgFonts[font] {
@@ -143,12 +155,13 @@ private class BundleManager {
                 ctFonts[fontPair] = ctFont
                 return ctFont
             }
-            fatalError("\(#function) unable to locate CTFont \(font.fontName)")
+            fatalError("\(#function) unable to locate CGFont \(font.fontName), nor create CTFont")
         }
         return ctFont
     }
     fileprivate func obtainMathTable(font: MathFont) -> NSDictionary {
-        if !initializedOnceAlready { registerAllBundleResources() }
+        // if !initializedOnceAlready { registerAllBundleResources() }
+        onDemandRegistration(mathFont: font)
         guard let mathTable = mathTables[font] else {
             fatalError("\(#function) unable to locate mathTable: \(font.rawValue).plist")
         }

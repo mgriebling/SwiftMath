@@ -37,6 +37,13 @@ final class MathFontTests: XCTestCase {
         }
         #endif
     }
+    func testOnDemandMathFontScript() throws {
+        let size = Int.random(in: 20 ... 40)
+        let mathFont = MathFont.allCases.randomElement()!
+        XCTAssertNotNil(mathFont.cgFont())
+        XCTAssertNotNil(mathFont.ctFont(withSize: CGFloat(size)))
+        XCTAssertEqual(mathFont.ctFont(withSize: CGFloat(size)).fontSize, CGFloat(size), "ctFont fontSize test")
+    }
     var fontNames: [String] {
         MathFont.allCases.map { $0.fontName }
     }
