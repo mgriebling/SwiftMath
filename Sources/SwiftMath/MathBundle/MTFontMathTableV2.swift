@@ -9,11 +9,6 @@ import Foundation
 import CoreGraphics
 import CoreText
 
-// extension MathTable {
-//     public func fontMathTableV2() -> MTFontMathTableV2 {
-//         MTFontMathTableV2(mathFont: font, size: fontSize)
-//     }
-// }
 internal class MTFontMathTableV2: MTFontMathTable {
     private let mathFont: MathFont
     private let fontSize: CGFloat

@@ -58,13 +58,7 @@ public enum MathFont: String, CaseIterable {
     internal func mathTable() -> NSDictionary {
         BundleManager.manager.obtainMathTable(font: self)
     }
-    // internal func get(nameForGlyph glyph: CGGlyph) -> String {
-    //     let name = cgFont().name(for: glyph) as? String
-    //     return name ?? ""
-    // }
-    // internal func get(glyphWithName name: String) -> CGGlyph {
-    //     cgFont().getGlyphWithGlyphName(name: name as CFString)
-    // }
+    
 }
 internal extension CTFont {
     /** The size of this font in points. */
