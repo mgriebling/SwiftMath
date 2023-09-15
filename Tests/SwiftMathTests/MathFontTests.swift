@@ -16,7 +16,7 @@ final class MathFontTests: XCTestCase {
             // print("\(#function) ctfont \($0.ctFont(withSize: CGFloat(size)))")
             XCTAssertNotNil($0.cgFont())
             XCTAssertNotNil($0.ctFont(withSize: CGFloat(size)))
-            XCTAssertEqual($0.ctFont(withSize: CGFloat(size))?.fontSize, CGFloat(size), "ctFont fontSize test")
+            XCTAssertEqual($0.ctFont(withSize: CGFloat(size)).fontSize, CGFloat(size), "ctFont fontSize test")
         }
         #if os(iOS)
         // for family in UIFont.familyNames.sorted() {
@@ -36,6 +36,13 @@ final class MathFontTests: XCTestCase {
             XCTAssertNotNil(font)
         }
         #endif
+    }
+    func testOnDemandMathFontScript() throws {
+        let size = Int.random(in: 20 ... 40)
+        let mathFont = MathFont.allCases.randomElement()!
+        XCTAssertNotNil(mathFont.cgFont())
+        XCTAssertNotNil(mathFont.ctFont(withSize: CGFloat(size)))
+        XCTAssertEqual(mathFont.ctFont(withSize: CGFloat(size)).fontSize, CGFloat(size), "ctFont fontSize test")
     }
     var fontNames: [String] {
         MathFont.allCases.map { $0.fontName }

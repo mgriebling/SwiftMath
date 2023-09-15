@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  MathFont.swift
 //  
 //
 //  Created by Peter Tang on 10/9/2023.
@@ -7,9 +7,7 @@
 
 #if os(iOS)
 import UIKit
-#endif
-
-#if os(macOS)
+#elseif os(macOS)
 import AppKit
 #endif
 
@@ -39,10 +37,10 @@ public enum MathFont: String, CaseIterable {
         case .termesFont:      return "TeXGyreTermesMath-Regular"
         }
     }
-    public func cgFont() -> CGFont? {
+    public func cgFont() -> CGFont {
         BundleManager.manager.obtainCGFont(font: self)
     }
-    public func ctFont(withSize size: CGFloat) -> CTFont? {
+    public func ctFont(withSize size: CGFloat) -> CTFont {
         BundleManager.manager.obtainCTFont(font: self, withSize: size)
     }
     #if os(iOS)
@@ -55,16 +53,10 @@ public enum MathFont: String, CaseIterable {
         NSFont(name: fontName, size: size)
     }
     #endif
-    internal func mathTable() -> NSDictionary? {
+    internal func mathTable() -> NSDictionary {
         BundleManager.manager.obtainMathTable(font: self)
     }
-    internal func get(nameForGlyph glyph: CGGlyph) -> String {
-        let name = cgFont()?.name(for: glyph) as? String
-        return name ?? ""
-    }
-    internal func get(glyphWithName name: String) -> CGGlyph? {
-        cgFont()?.getGlyphWithGlyphName(name: name as CFString)
-    }
+    
 }
 internal extension CTFont {
     /** The size of this font in points. */
@@ -104,7 +96,7 @@ private class BundleManager {
         guard CTFontManagerRegisterGraphicsFont(defaultCGFont, &errorRef) else {
             throw FontError.registerFailed
         }
-        print("mathFonts bundle resource: \(mathFont.rawValue), font: \(defaultCGFont.fullName!) registered.")
+        debugPrint("mathFonts bundle resource: \(mathFont.rawValue), font: \(defaultCGFont.fullName!) registered.")
     }
     
     private func registerMathTable(mathFont: MathFont) throws {
@@ -117,9 +109,8 @@ private class BundleManager {
                 version == "1.3" else {
             throw FontError.invalidMathTable
         }
-        //FIXME: mathTable = MTFontMathTable(withFont:self, mathTable:rawMathTable)
         mathTables[mathFont] = rawMathTable
-        print("mathFonts bundle resource: \(mathFont.rawValue).plist registered.")
+        debugPrint("mathFonts bundle resource: \(mathFont.rawValue).plist registered.")
     }
     
     private func registerAllBundleResources() {
@@ -135,13 +126,28 @@ private class BundleManager {
         initializedOnceAlready.toggle()
     }
     
-    fileprivate func obtainCGFont(font: MathFont) -> CGFont? {
-        if !initializedOnceAlready { registerAllBundleResources() }
-        return cgFonts[font]
+    private func onDemandRegistration(mathFont: MathFont) {
+        guard cgFonts[mathFont] == nil else { return }
+        do {
+            try BundleManager.manager.registerCGFont(mathFont: mathFont)
+            try BundleManager.manager.registerMathTable(mathFont: mathFont)
+
+        } catch {
+            fatalError("MTMathFonts:\(#function) ondemand loading failed, mathFont \(mathFont.rawValue), reason \(error)")
+        }
+    }
+    fileprivate func obtainCGFont(font: MathFont) -> CGFont {
+        // if !initializedOnceAlready { registerAllBundleResources() }
+        onDemandRegistration(mathFont: font)
+        guard let cgFont = cgFonts[font] else {
+            fatalError("\(#function) unable to locate CGFont \(font.fontName)")
+        }
+        return cgFont
     }
     
-    fileprivate func obtainCTFont(font: MathFont, withSize size: CGFloat) -> CTFont? {
-        if !initializedOnceAlready { registerAllBundleResources() }
+    fileprivate func obtainCTFont(font: MathFont, withSize size: CGFloat) -> CTFont {
+        // if !initializedOnceAlready { registerAllBundleResources() }
+        onDemandRegistration(mathFont: font)
         let fontPair = CTFontPair(font: font, size: size)
         guard let ctFont = ctFonts[fontPair] else {
             if let cgFont = cgFonts[font] {
@@ -149,13 +155,17 @@ private class BundleManager {
                 ctFonts[fontPair] = ctFont
                 return ctFont
             }
-            return nil
+            fatalError("\(#function) unable to locate CGFont \(font.fontName), nor create CTFont")
         }
         return ctFont
     }
-    fileprivate func obtainMathTable(font: MathFont) -> NSDictionary? {
-        if !initializedOnceAlready { registerAllBundleResources() }
-        return mathTables[font]
+    fileprivate func obtainMathTable(font: MathFont) -> NSDictionary {
+        // if !initializedOnceAlready { registerAllBundleResources() }
+        onDemandRegistration(mathFont: font)
+        guard let mathTable = mathTables[font] else {
+            fatalError("\(#function) unable to locate mathTable: \(font.rawValue).plist")
+        }
+        return mathTable
     }
     deinit {
         ctFonts.removeAll()
