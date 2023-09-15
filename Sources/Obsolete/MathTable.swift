@@ -26,8 +26,8 @@ internal struct MathTable {
     let kConstants = "constants"
     
     let font: MathFont
-    private let unitsPerEm: UInt
-    private let fontSize: CGFloat
+    let unitsPerEm: UInt
+    let fontSize: CGFloat
     weak var fontMathTable: NSDictionary?
     
     init(withFont font: MathFont, fontSize: CGFloat, unitsPerEm: UInt) {
@@ -176,13 +176,15 @@ internal struct MathTable {
         let glyphName = font.get(nameForGlyph: glyph)
         let variantGlyphs = variants[glyphName] as? NSArray
         var glyphArray = [NSNumber]()
-        if variantGlyphs == nil || variantGlyphs?.count == 0, let glyph = font.get(glyphWithName: glyphName) {
+        if variantGlyphs == nil || variantGlyphs?.count == 0 {
             // There are no extra variants, so just add the current glyph to it.
+            let glyph = font.get(glyphWithName: glyphName)
             glyphArray.append(NSNumber(value:glyph))
             return glyphArray
         } else if let variantGlyphs = variantGlyphs {
             for gvn in variantGlyphs {
-                if let glyphVariantName = gvn as? String, let variantGlyph = font.get(glyphWithName: glyphVariantName) {
+                if let glyphVariantName = gvn as? String {
+                    let variantGlyph = font.get(glyphWithName: glyphVariantName)
                     glyphArray.append(NSNumber(value:variantGlyph))
                 }
             }
@@ -204,9 +206,8 @@ internal struct MathTable {
         // Find the first variant with a different name.
         for gvn in variantGlyphs! {
             if let glyphVariantName = gvn as? String,
-                glyphVariantName != glyphName,
-                let variantGlyph = font.get(glyphWithName: glyphVariantName) {
-                return variantGlyph
+                glyphVariantName != glyphName {
+                return font.get(glyphWithName: glyphVariantName)
             }
         }
         // We did not find any variants of this glyph so return it.
@@ -243,9 +244,7 @@ internal struct MathTable {
         } else {
             // If no top accent is defined then it is the center of the advance width.
             var advances = CGSize.zero
-            guard let ctFont = font.ctFont(withSize: fontSize) else {
-                fatalError("\(#function) unable to obtain ctFont resource name: \(font.rawValue) with size \(fontSize)")
-            }
+            let ctFont = font.ctFont(withSize: fontSize)
             CTFontGetAdvancesForGlyphs(ctFont, .horizontal, &glyph, &advances, 1)
             return advances.width/2
         }
@@ -272,7 +271,8 @@ internal struct MathTable {
         }
         var rv = [GlyphPart]()
         for part in parts {
-            guard let partInfo = part as? NSDictionary, let glyph = font.get(glyphWithName: glyphName) else { continue }
+            guard let partInfo = part as? NSDictionary else { continue }
+            let glyph = font.get(glyphWithName: glyphName)
             var part = GlyphPart(glyph: glyph)
             if let adv = partInfo["advance"] as? NSNumber,
                let end = partInfo["endConnector"] as? NSNumber,

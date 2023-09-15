@@ -16,7 +16,7 @@ final class MathFontTests: XCTestCase {
             // print("\(#function) ctfont \($0.ctFont(withSize: CGFloat(size)))")
             XCTAssertNotNil($0.cgFont())
             XCTAssertNotNil($0.ctFont(withSize: CGFloat(size)))
-            XCTAssertEqual($0.ctFont(withSize: CGFloat(size))?.fontSize, CGFloat(size), "ctFont fontSize test")
+            XCTAssertEqual($0.ctFont(withSize: CGFloat(size)).fontSize, CGFloat(size), "ctFont fontSize test")
         }
         #if os(iOS)
         // for family in UIFont.familyNames.sorted() {
