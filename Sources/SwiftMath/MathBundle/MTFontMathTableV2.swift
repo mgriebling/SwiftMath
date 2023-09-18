@@ -1,6 +1,6 @@
 //
 //  MTFontMathTableV2.swift
-//  
+//
 //
 //  Created by Peter Tang on 15/9/2023.
 //
@@ -14,11 +14,11 @@ internal class MTFontMathTableV2: MTFontMathTable {
     private let fontSize: CGFloat
     private let unitsPerEm: UInt
     private let mTable: NSDictionary
-    init(mathFont: MathFont, size: CGFloat) {
+    init(mathFont: MathFont, size: CGFloat, unitsPerEm: UInt) {
         self.mathFont = mathFont
         self.fontSize = size
-        mTable = mathFont.mathTable()
-        unitsPerEm = mathFont.ctFont(withSize: fontSize).unitsPerEm
+        self.unitsPerEm = unitsPerEm
+        mTable = mathFont.rawMathTable()
         super.init(withFont: mathFont.mtfont(size: fontSize), mathTable: mTable)
         super._mathTable = nil
         // disable all possible access to _mathTable in superclass!
