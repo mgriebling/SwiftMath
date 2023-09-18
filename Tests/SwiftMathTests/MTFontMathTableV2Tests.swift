@@ -55,9 +55,9 @@ final class MTFontMathTableV2Tests: XCTestCase {
                 mTable?.fractionNumeratorDisplayStyleGapMin,
                 mTable?.fractionNumeratorGapMin,
             ].compactMap{$0}
-            if count % 50 == 0 {
-                print(values) // accessed these values on global thread.
-            }
+            // if count % 50 == 0 {
+            //     print(values) // accessed these values on global thread.
+            // }
             XCTAssertNotNil(mTable)
         }
         workitem.notify(queue: .main) { [weak self] in

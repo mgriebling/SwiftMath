@@ -42,8 +42,6 @@ final class MathImageTests: XCTestCase {
                     safeImage(fileName: "\(caseNumber)", pngData: imageData)
                     let fileUrl = URL(fileURLWithPath: NSTemporaryDirectory())
                     print("completed image-\(caseNumber).png")
-                } else {
-                    print("failed image-\(caseNumber).png")
                 }
             default:
                 result = SwiftMathImageResult.useMTMathImage(latex: latex, font: mathfont, fontSize: fontsize)
@@ -53,8 +51,6 @@ final class MathImageTests: XCTestCase {
                     safeImage(fileName: "\(caseNumber)", pngData: imageData)
                     let fileUrl = URL(fileURLWithPath: NSTemporaryDirectory())
                     print("completed image-\(caseNumber).png")
-                } else {
-                    print("failed image-\(caseNumber).png")
                 }
             }
         }
