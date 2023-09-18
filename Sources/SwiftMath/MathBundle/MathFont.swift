@@ -156,11 +156,15 @@ private class BundleManager {
         }
         //Note: ctfont creation and caching is now threadsafe.
         guard threadSafeQueue.sync(execute: { ctFonts[fontSizePair] }) == nil else { return ctFonts[fontSizePair]! }
-        let newCTFont = CTFontCreateWithGraphicsFont(cgFont, size, nil, nil)
-        threadSafeQueue.sync(flags: .barrier) {
-            ctFonts[fontSizePair] = newCTFont
-        }
-        return newCTFont
+        return threadSafeQueue.sync(flags: .barrier, execute: {
+            if let ctfont = ctFonts[fontSizePair] {
+                return ctfont
+            } else {
+                let result = CTFontCreateWithGraphicsFont(cgFont, size, nil, nil)
+                ctFonts[fontSizePair] = result
+                return result
+            }
+        })
     }
     fileprivate func obtainRawMathTable(font: MathFont) -> NSDictionary {
         onDemandRegistration(mathFont: font)
