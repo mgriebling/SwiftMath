@@ -42,6 +42,7 @@ final class MTFontMathTableV2Tests: XCTestCase {
             XCTAssertEqual(self.testCount, totalCases)
             print("\(self.testCount) completed =================")
         }
+        executionGroup.wait()
     }
     func helperConcurrentMTFontMathTableV2(_ count: Int, mtfont: MTFontV2, in group: DispatchGroup, on queue: DispatchQueue) {
         let workitem = DispatchWorkItem {

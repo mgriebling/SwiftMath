@@ -68,7 +68,7 @@ internal extension CTFont {
         return UInt(CTFontGetUnitsPerEm(self))
     }
 }
-internal class BundleManager {
+private class BundleManager {
     //Note: below should be lightweight and without threadsafe problem.
     static internal let manager = BundleManager()
 
@@ -77,7 +77,8 @@ internal class BundleManager {
     private var rawMathTables = [MathFont: NSDictionary]()
 
     private let threadSafeQueue = DispatchQueue(label: "com.smartmath.mathfont.threadsafequeue", attributes: .concurrent)
-    
+    private let resourceLoadingQueue = DispatchQueue(label: "com.smartmath.mathfont.resourceLoader")
+
     private func registerCGFont(mathFont: MathFont) throws {
         guard let frameworkBundleURL = Bundle.module.url(forResource: "mathFonts", withExtension: "bundle"),
               let resourceBundleURL = Bundle(url: frameworkBundleURL)?.path(forResource: mathFont.rawValue, ofType: "otf") else {
@@ -89,9 +90,8 @@ internal class BundleManager {
         guard let defaultCGFont = CGFont(dataProvider) else {
             throw FontError.initFontError
         }
-        threadSafeQueue.sync(flags: .barrier) {
-            cgFonts[mathFont] = defaultCGFont
-        }
+        
+        cgFonts[mathFont] = defaultCGFont
         
         /// This does not load the complete math font, it only has about half the glyphs of the full math font.
         /// In particular it does not have the math italic characters which breaks our variable rendering.
@@ -116,26 +116,29 @@ internal class BundleManager {
                 version == "1.3" else {
             throw FontError.invalidMathTable
         }
-        threadSafeQueue.sync(flags: .barrier) {
-            rawMathTables[mathFont] = rawMathTable
-        }
+        
+        rawMathTables[mathFont] = rawMathTable
+        
         let threadName = Thread.isMainThread ? "main" : "global"
         debugPrint("mathFonts bundle resource: \(mathFont.rawValue).plist registered on \(threadName).")
     }
     
     private func onDemandRegistration(mathFont: MathFont) {
         guard threadSafeQueue.sync(execute: { cgFonts[mathFont] }) == nil else { return }
-        //Note: font registration is now threadsafe.
-        do {
-            try BundleManager.manager.registerCGFont(mathFont: mathFont)
-            try BundleManager.manager.registerMathTable(mathFont: mathFont)
+        // Note: resourceLoading is now serialized.
+        resourceLoadingQueue.sync { [weak self] in
+            if self?.cgFonts[mathFont] == nil {
+                do {
+                    try BundleManager.manager.registerCGFont(mathFont: mathFont)
+                    try BundleManager.manager.registerMathTable(mathFont: mathFont)
 
-        } catch {
-            fatalError("MTMathFonts:\(#function) ondemand loading failed, mathFont \(mathFont.rawValue), reason \(error)")
+                } catch {
+                    fatalError("MTMathFonts:\(#function) ondemand loading failed, mathFont \(mathFont.rawValue), reason \(error)")
+                }
+            }
         }
     }
     fileprivate func obtainCGFont(font: MathFont) -> CGFont {
-        // if !initializedOnceAlready { registerAllBundleResources() }
         onDemandRegistration(mathFont: font)
         guard let cgFont = threadSafeQueue.sync(execute: { cgFonts[font] }) else {
             fatalError("\(#function) unable to locate CGFont \(font.fontName)")
@@ -144,7 +147,6 @@ internal class BundleManager {
     }
     
     fileprivate func obtainCTFont(font: MathFont, withSize size: CGFloat) -> CTFont {
-        // if !initializedOnceAlready { registerAllBundleResources() }
         onDemandRegistration(mathFont: font)
         let fontSizePair = CTFontSizePair(font: font, size: size)
         let ctFont = threadSafeQueue.sync(execute: { ctFonts[fontSizePair] })
@@ -161,7 +163,6 @@ internal class BundleManager {
         return newCTFont
     }
     fileprivate func obtainRawMathTable(font: MathFont) -> NSDictionary {
-        // if !initializedOnceAlready { registerAllBundleResources() }
         onDemandRegistration(mathFont: font)
         guard let mathTable = threadSafeQueue.sync(execute: { rawMathTables[font] } ) else {
             fatalError("\(#function) unable to locate mathTable: \(font.rawValue).plist")

@@ -78,6 +78,7 @@ final class MathFontTests: XCTestCase {
             XCTAssertEqual(self.testCount, totalCases)
             print("\(self.testCount) completed =================")
         }
+        executionGroup.wait()
     }
     // func helperConcurrentOnDemandRegistration(_ count: Int, mathFont: MathFont, in group: DispatchGroup, on queue: DispatchQueue) {
     //     let workitem = DispatchWorkItem {

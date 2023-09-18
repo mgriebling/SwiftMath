@@ -9,6 +9,11 @@ import XCTest
 @testable import SwiftMath
 
 final class MathImageTests: XCTestCase {
+    func safeImage(fileName: String, pngData: Data) {
+        let imageFileURL = URL(fileURLWithPath: NSTemporaryDirectory().appending("image-\(fileName).png"))
+        try? pngData.write(to: imageFileURL, options: [.atomicWrite])
+        //print("\(#function) \(imageFileURL.path)")
+    }
     func testMathImageScript() throws {
         let latex = Latex.samples.randomElement()!
         let mathfont = MathFont.allCases.randomElement()!
@@ -22,14 +27,44 @@ final class MathImageTests: XCTestCase {
             print("completed, check \(fileUrl.path) image-test.png =================")
         }
     }
-    func safeImage(fileName: String, pngData: Data) {
-        let imageFileURL = URL(fileURLWithPath: NSTemporaryDirectory().appending("image-\(fileName).png"))
-        try? pngData.write(to: imageFileURL, options: [.atomicWrite])
+    func testSequentialMultipleImageScript() throws {
+        var latex: String { Latex.samples.randomElement()! }
+        var mathfont: MathFont { MathFont.allCases.randomElement()! }
+        var fontsize: CGFloat { CGFloat.random(in: 20 ... 40) }
+        for caseNumber in 0 ..< 20 {
+            let result: SwiftMathImageResult
+            switch caseNumber % 2 {
+            case 0:
+                result = SwiftMathImageResult.useMathImage(latex: latex, font: mathfont, fontSize: fontsize)
+                XCTAssertNil(result.error)
+                XCTAssertNotNil(result.image)
+                if result.error == nil, let image = result.image, let imageData = image.pngData() {
+                    safeImage(fileName: "\(caseNumber)", pngData: imageData)
+                    let fileUrl = URL(fileURLWithPath: NSTemporaryDirectory())
+                    print("completed image-\(caseNumber).png")
+                } else {
+                    print("failed image-\(caseNumber).png")
+                }
+            default:
+                result = SwiftMathImageResult.useMTMathImage(latex: latex, font: mathfont, fontSize: fontsize)
+                XCTAssertNil(result.error)
+                XCTAssertNotNil(result.image)
+                if result.error == nil, let image = result.image, let imageData = image.pngData() {
+                    safeImage(fileName: "\(caseNumber)", pngData: imageData)
+                    let fileUrl = URL(fileURLWithPath: NSTemporaryDirectory())
+                    print("completed image-\(caseNumber).png")
+                } else {
+                    print("failed image-\(caseNumber).png")
+                }
+            }
+        }
+        print("check: \(URL(fileURLWithPath: NSTemporaryDirectory()).path) ==")
     }
-    private let executionQueue = DispatchQueue.main // DispatchQueue(label: "com.swiftmath.mathbundle", attributes: .concurrent)
+    
+    private let executionQueue = DispatchQueue(label: "com.swiftmath.mathbundle", attributes: .concurrent)
     private let executionGroup = DispatchGroup()
     
-    let totalCases = 50
+    let totalCases = 20
     var testCount = 0
     
     func testConcurrentMathImageScript() throws {
@@ -37,46 +72,44 @@ final class MathImageTests: XCTestCase {
         var mathfont: MathFont { MathFont.allCases.randomElement()! }
         var size: CGFloat { CGFloat.random(in: 20 ... 40) }
         for caseNumber in 0 ..< totalCases {
-            // if caseNumber % 2 == 0 {
-            //     helperConcurrentMathImage(caseNumber, latex: latex, mathfont: mathfont, fontsize: size, in: executionGroup, on: executionQueue)
-            // } else {
-            //     helperConcurrentMTMathImage(caseNumber, latex: latex, mathfont: mathfont, fontsize: size, in: executionGroup, on: executionQueue)
-            // }
-            helperConcurrentMTMathImage(caseNumber, latex: latex, mathfont: mathfont, fontsize: size, in: executionGroup, on: executionQueue)
+            switch caseNumber % 2 {
+            case 0:
+                helperConcurrentMathImage(caseNumber, latex: latex, mathfont: mathfont, fontsize: size, in: executionGroup, on: executionQueue)
+            default:
+                helperConcurrentMTMathImage(caseNumber, latex: latex, mathfont: mathfont, fontsize: size, in: executionGroup, on: executionQueue)
+            }
         }
         executionGroup.notify(queue: .main) { [weak self] in
-            guard let self = self else { return }
-            XCTAssertEqual(self.testCount, totalCases)
             let fileUrl = URL(fileURLWithPath: NSTemporaryDirectory())
-            print("\(self.testCount) completed, check \(fileUrl.path) =================")
+            print("\(self?.testCount)/\(self?.totalCases) completed, check \(fileUrl.path) ===")
+            XCTAssertEqual(self?.testCount,self?.totalCases)
         }
+        executionGroup.wait()
     }
     func helperConcurrentMathImage(_ count: Int, latex: String, mathfont: MathFont, fontsize: CGFloat, in group: DispatchGroup, on queue: DispatchQueue) {
         let workitem = DispatchWorkItem { [weak self] in
-            let result = SwiftMathImageResult.useMTMathImage(latex: latex, font: mathfont, fontSize: fontsize)
+            let result = SwiftMathImageResult.useMathImage(latex: latex, font: mathfont, fontSize: fontsize)
             XCTAssertNil(result.error)
             XCTAssertNotNil(result.image)
             if result.error == nil, let image = result.image, let imageData = image.pngData() {
-                self?.safeImage(fileName: "test-\(count)", pngData: imageData)
+                self?.safeImage(fileName: "\(count)", pngData: imageData)
             }
         }
         workitem.notify(queue: .main) { [weak self] in
-            // print("\(Thread.isMainThread ? "main" : "global") completed .....")
             self?.testCount += 1
         }
         queue.async(group: group, execute: workitem)
     }
     func helperConcurrentMTMathImage(_ count: Int, latex: String, mathfont: MathFont, fontsize: CGFloat, in group: DispatchGroup, on queue: DispatchQueue) {
         let workitem = DispatchWorkItem { [weak self] in
-            let result = SwiftMathImageResult.useMathImage(latex: latex, font: mathfont, fontSize: fontsize)
+            let result = SwiftMathImageResult.useMTMathImage(latex: latex, font: mathfont, fontSize: fontsize)
             XCTAssertNil(result.error)
             XCTAssertNotNil(result.image)
             if result.error == nil, let image = result.image, let imageData = image.pngData() {
-                self?.safeImage(fileName: "test-\(count)", pngData: imageData)
+                self?.safeImage(fileName: "\(count)", pngData: imageData)
             }
         }
         workitem.notify(queue: .main) { [weak self] in
-            // print("\(Thread.isMainThread ? "main" : "global") completed .....")
             self?.testCount += 1
         }
         queue.async(group: group, execute: workitem)
