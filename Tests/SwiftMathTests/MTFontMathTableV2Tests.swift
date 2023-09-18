@@ -72,7 +72,9 @@ final class MTFontMathTableV2Tests: XCTestCase {
                     mTable?.fractionNumeratorDisplayStyleGapMin,
                     mTable?.fractionNumeratorGapMin,
                 ].compactMap{$0}
-                print(values) // accessed these values on main thread.
+                // if count % 50 == 0 {
+                //     print(values)
+                // }
             }
             self?.testCount += 1
         }
