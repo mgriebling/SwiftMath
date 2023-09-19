@@ -77,7 +77,6 @@ private class BundleManager {
     private var rawMathTables = [MathFont: NSDictionary]()
 
     private let threadSafeQueue = DispatchQueue(label: "com.smartmath.mathfont.threadsafequeue", attributes: .concurrent)
-    private let resourceLoadingQueue = DispatchQueue(label: "com.smartmath.mathfont.resourceLoader")
 
     private func registerCGFont(mathFont: MathFont) throws {
         guard let frameworkBundleURL = Bundle.module.url(forResource: "mathFonts", withExtension: "bundle"),
@@ -126,7 +125,7 @@ private class BundleManager {
     private func onDemandRegistration(mathFont: MathFont) {
         guard threadSafeQueue.sync(execute: { cgFonts[mathFont] }) == nil else { return }
         // Note: resourceLoading is now serialized.
-        resourceLoadingQueue.sync { [weak self] in
+        threadSafeQueue.sync(flags: .barrier, execute: { [weak self] in
             if self?.cgFonts[mathFont] == nil {
                 do {
                     try BundleManager.manager.registerCGFont(mathFont: mathFont)
@@ -136,7 +135,7 @@ private class BundleManager {
                     fatalError("MTMathFonts:\(#function) ondemand loading failed, mathFont \(mathFont.rawValue), reason \(error)")
                 }
             }
-        }
+        })
     }
     fileprivate func obtainCGFont(font: MathFont) -> CGFont {
         onDemandRegistration(mathFont: font)
