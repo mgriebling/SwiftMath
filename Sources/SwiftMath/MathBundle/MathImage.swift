@@ -66,14 +66,15 @@ extension MathImage {
         }
         var error: NSError?
         let mtfont: MTFont? = font.mtfont(size: fontSize)
+
         guard let mathList = MTMathListBuilder.build(fromString: latex, error: &error), error == nil,
               let displayList = MTTypesetter.createLineForMathList(mathList, font: mtfont, style: currentStyle) else {
             return (error, nil)
         }
-         
+
         intrinsicContentSize = intrinsicContentSize(displayList)
         displayList.textColor = textColor
-        
+
         let size = intrinsicContentSize
         layoutImage(size: size, displayList: displayList)
         
