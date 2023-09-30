@@ -75,7 +75,7 @@ extension MathImage {
         intrinsicContentSize = intrinsicContentSize(displayList)
         displayList.textColor = textColor
 
-        let size = intrinsicContentSize
+        let size = intrinsicContentSize.integral
         layoutImage(size: size, displayList: displayList)
         
         #if os(iOS)
@@ -105,5 +105,14 @@ private extension CGAffineTransform {
         var transform = CGAffineTransform(scaleX: 1, y: -1)
         transform = transform.translatedBy(x: 0, y: -height)
         return transform
+    }
+}
+extension CGSize: Hashable {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(width)
+        hasher.combine(height)
+    }
+    var integral: CGSize {
+        CGSize(width: ceil(width), height: ceil(height))
     }
 }
