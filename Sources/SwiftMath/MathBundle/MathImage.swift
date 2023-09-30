@@ -107,12 +107,8 @@ private extension CGAffineTransform {
         return transform
     }
 }
-extension CGSize: Hashable {
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(width)
-        hasher.combine(height)
-    }
-    var integral: CGSize {
+extension CGSize {
+    fileprivate var integral: CGSize {
         CGSize(width: ceil(width), height: ceil(height))
     }
 }
