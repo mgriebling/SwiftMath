@@ -76,7 +76,9 @@ private class BundleManager {
     private var ctFonts = [CTFontSizePair: CTFont]()
     private var rawMathTables = [MathFont: NSDictionary]()
 
-    private let threadSafeQueue = DispatchQueue(label: "com.smartmath.mathfont.threadsafequeue", attributes: .concurrent)
+    private let threadSafeQueue = DispatchQueue(label: "com.smartmath.mathfont.threadsafequeue",
+                                                qos: .userInitiated,
+                                                attributes: .concurrent)
 
     private func registerCGFont(mathFont: MathFont) throws {
         guard let frameworkBundleURL = Bundle.module.url(forResource: "mathFonts", withExtension: "bundle"),

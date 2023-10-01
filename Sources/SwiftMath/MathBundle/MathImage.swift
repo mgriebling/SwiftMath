@@ -75,7 +75,7 @@ extension MathImage {
         intrinsicContentSize = intrinsicContentSize(displayList)
         displayList.textColor = textColor
 
-        let size = intrinsicContentSize
+        let size = intrinsicContentSize.regularized
         layoutImage(size: size, displayList: displayList)
         
         #if os(iOS)
@@ -105,5 +105,10 @@ private extension CGAffineTransform {
         var transform = CGAffineTransform(scaleX: 1, y: -1)
         transform = transform.translatedBy(x: 0, y: -height)
         return transform
+    }
+}
+extension CGSize {
+    fileprivate var regularized: CGSize {
+        CGSize(width: ceil(width), height: ceil(height))
     }
 }

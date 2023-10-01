@@ -21,9 +21,15 @@ enum InterElementSpaceType : Int {
 }
 
 var interElementSpaceArray = [[InterElementSpaceType]]()
+private let interElementLock = NSLock()
 
 func getInterElementSpaces() -> [[InterElementSpaceType]] {
     if interElementSpaceArray.isEmpty {
+        
+        interElementLock.lock()
+        defer { interElementLock.unlock() }
+        guard interElementSpaceArray.isEmpty else { return interElementSpaceArray }
+        
         interElementSpaceArray =
         //   ordinary   operator   binary     relation  open       close     punct     fraction
         [  [.none,     .thin,     .nsMedium, .nsThick, .none,     .none,    .none,    .nsThin],    // ordinary
