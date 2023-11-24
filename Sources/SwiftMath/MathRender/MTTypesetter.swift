@@ -49,7 +49,7 @@ func getInterElementSpaces() -> [[InterElementSpaceType]] {
 // Get's the index for the given type. If row is true, the index is for the row (i.e. left element) otherwise it is for the column (right element)
 func getInterElementSpaceArrayIndexForType(_ type:MTMathAtomType, row:Bool) -> Int {
     switch type {
-        case .color, .colorBox, .ordinary, .placeholder:   // A placeholder is treated as ordinary
+        case .color, .textcolor, .colorBox, .ordinary, .placeholder:   // A placeholder is treated as ordinary
             return 0
         case .largeOperator:
             return 1
@@ -511,7 +511,37 @@ class MTTypesetter {
                     display!.position = currentPosition
                     currentPosition.x += display!.width
                     displayAtoms.append(display!)
-                    
+
+                case .textcolor:
+                    // stash the existing layout
+                    if currentLine.length > 0 {
+                        self.addDisplayLine()
+                    }
+                    let colorAtom = atom as! MTMathTextColor
+                    let display = MTTypesetter.createLineForMathList(colorAtom.innerList, font: font, style: style)
+                    display!.localTextColor = MTColor(fromHexString: colorAtom.colorString)
+
+                    if prevNode != nil {
+                        let subDisplay: MTDisplay = display!.subDisplays[0]
+                        let subDisplayAtom = (subDisplay as? MTCTLineDisplay)!.atoms[0]
+                        let interElementSpace = self.getInterElementSpace(prevNode!.type, right:subDisplayAtom.type)
+                        if currentLine.length > 0 {
+                            if interElementSpace > 0 {
+                                // add a kerning of that space to the previous character
+                                currentLine.addAttribute(kCTKernAttributeName as NSAttributedString.Key,
+                                                         value:NSNumber(floatLiteral: interElementSpace),
+                                                         range:currentLine.mutableString.rangeOfComposedCharacterSequence(at: currentLine.length-1))
+                            }
+                        } else {
+                            // increase the space
+                            currentPosition.x += interElementSpace
+                        }
+                    }
+
+                    display!.position = currentPosition
+                    currentPosition.x += display!.width
+                    displayAtoms.append(display!)
+
                 case .colorBox:
                     // stash the existing layout
                     if currentLine.length > 0 {
