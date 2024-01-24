@@ -66,8 +66,8 @@ let MTParseError = "ParseError"
  can be rendered and processed mathematically.
  */
 public struct MTMathListBuilder {
-    var string: String
-    var currentCharIndex: String.Index
+    var string: [Character]
+    var currentCharIndex: Int
     var currentInnerAtom: MTInner?
     var currentEnv: MTEnvProperties?
     var currentFontStyle:MTFontStyle
@@ -78,8 +78,8 @@ public struct MTMathListBuilder {
     
     // MARK: - Character-handling routines
     
-    var hasCharacters: Bool { currentCharIndex < string.endIndex }
-    
+    var hasCharacters: Bool { currentCharIndex < string.count }
+
     // gets the next character and increments the index
     mutating func getNextCharacter() -> Character {
         assert(self.hasCharacters, "Retrieving character at index \(self.currentCharIndex) beyond length \(self.string.count)")
@@ -130,8 +130,8 @@ public struct MTMathListBuilder {
     
     init(string: String) {
         self.error = nil
-        self.string = string
-        self.currentCharIndex = string.startIndex
+        self.string = Array(string)
+        self.currentCharIndex = 0
         self.currentFontStyle = .defaultStyle
         self.spacesAllowed = false
     }
@@ -551,6 +551,32 @@ public struct MTMathListBuilder {
                 rad.radicand = self.buildInternal(true)
             }
             return rad;
+        } else if command == "operatorname" {
+            // get operator name in { } curly brackets and return it as atom
+            guard hasCharacters else {
+                let message = "command 'operatorname' should have operator in curly brackets"
+                setError(.invalidCommand, message: message)
+                return nil
+            }
+            let ch = getNextCharacter()
+            guard ch == "{" else {
+                let message = "command 'operatorname' should have operator in curly brackets"
+                setError(.invalidCommand, message: message)
+                return nil
+            }
+            guard let closingBracketIndex = string[currentCharIndex...].firstIndex(of: "}") else {
+                let message = "command 'operatorname' should have operator in curly brackets"
+                setError(.invalidCommand, message: message)
+                return nil
+            }
+            let operatorName = String(string[currentCharIndex..<closingBracketIndex])
+            guard let atom = MTMathAtomFactory.atom(forLatexSymbol: operatorName) else {
+                let message = "command 'operatorname' should have operator in curly brackets"
+                setError(.invalidCommand, message: message)
+                return nil
+            }
+            currentCharIndex = closingBracketIndex + 1
+            return atom
         } else if command == "left" {
             // Save the current inner while a new one gets built.
             let oldInner = currentInnerAtom
@@ -863,13 +889,71 @@ public struct MTMathListBuilder {
     func MTAssertNotSpace(_ ch: Character) {
         assert(ch >= "\u{21}" && ch <= "\u{7E}", "Expected non-space character \(ch)")
     }
-    
+
+    mutating func readEnvColumnDefinition(for env: String) -> [MTColumnAlignment]? {
+
+        // Check that currently string starts with {
+
+        guard hasCharacters else {
+            setError(.invalidCommand, message: "\(env) should have column definition surrounded by curly brackets { }")
+            return nil
+        }
+        let char = getNextCharacter()
+
+        guard char == "{" else {
+            setError(.invalidCommand, message: "\(env) should have column definition surrounded by curly brackets { }")
+            return nil
+        }
+
+        // Check that there is a closing } bracket
+
+        guard hasCharacters, let closingBracketIndex = string[currentCharIndex...].firstIndex(of: "}") else {
+            setError(.invalidCommand, message: "\(env) should have column definition surrounded by curly brackets { }")
+            return nil
+        }
+
+        // Iterate from { to } and get column definitions
+
+        var definitions: [MTColumnAlignment] = []
+
+        while currentCharIndex < closingBracketIndex {
+            let char = getNextCharacter()
+            // Symbol for vertical bars, currently not supported, ignoring
+            if char == "|" {
+                continue
+            } else if char == "l" {
+                definitions.append(.left)
+            } else if char == "c" {
+                definitions.append(.center)
+            } else if char == "r" {
+                definitions.append(.right)
+            } else {
+                setError(.invalidCommand, message: "Column definition for \(env) should only contain lcr symbols | vertical bar. Unrecognized symbol \(char)")
+                return nil
+            }
+        }
+
+        // Skip } closing bracket character
+
+        _ = getNextCharacter()
+
+        return definitions
+    }
+
     mutating func buildTable(env: String?, firstList: MTMathList?, isRow: Bool) -> MTMathAtom? {
         // Save the current env till an new one gets built.
         let oldEnv = self.currentEnv
-        
+
         currentEnv = MTEnvProperties(name: env)
-        
+
+        let columnDefinitions: [MTColumnAlignment]? = if env == "array" {
+            readEnvColumnDefinition(for: env!)
+        } else { nil }
+
+        if error != nil {
+            return nil
+        }
+
         var currentRow = 0
         var currentCol = 0
         
@@ -906,11 +990,17 @@ public struct MTMathListBuilder {
         }
         
         var error:NSError? = self.error
-        let table = MTMathAtomFactory.table(withEnvironment: currentEnv?.envName, rows: rows, error: &error)
+        let table = MTMathAtomFactory.table(
+            withEnvironment: currentEnv?.envName,
+            rows: rows, 
+            columnDefinitions: columnDefinitions,
+            error: &error
+        )
         if table == nil && self.error == nil {
             self.error = error
             return nil
         }
+
         self.currentEnv = oldEnv
         return table
     }

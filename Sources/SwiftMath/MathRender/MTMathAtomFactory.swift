@@ -296,6 +296,7 @@ public class MTMathAtomFactory {
         "cosh" : MTMathAtomFactory.operatorWithName( "cosh", limits: false),
         "tan" : MTMathAtomFactory.operatorWithName( "tan", limits: false),
         "arctan" : MTMathAtomFactory.operatorWithName( "arctan", limits: false),
+        "arctg": MTMathAtomFactory.operatorWithName( "arctg", limits: false),
         "tanh" : MTMathAtomFactory.operatorWithName( "tanh", limits: false),
         "cot" : MTMathAtomFactory.operatorWithName( "cot", limits: false),
         "coth" : MTMathAtomFactory.operatorWithName( "coth", limits: false),
@@ -716,13 +717,32 @@ public class MTMathAtomFactory {
      @note The reason this function returns a `MTMathAtom` and not a `MTMathTable` is because some
      matrix environments are have builtin delimiters added to the table and hence are returned as inner atoms.
      */
-    public static func table(withEnvironment env: String?, rows: [[MTMathList]], error:inout NSError?) -> MTMathAtom? {
+    public static func table(
+        withEnvironment env: String?,
+        rows: [[MTMathList]],
+        columnDefinitions: [MTColumnAlignment]?,
+        error: inout NSError?
+    ) -> MTMathAtom? {
         let table = MTMathTable(environment: env)
 
         for i in 0..<rows.count {
             let row = rows[i]
             for j in 0..<row.count {
                 table.set(cell: row[j], forRow: i, column: j)
+            }
+        }
+
+        if let columnDefinitions {
+            guard columnDefinitions.count == table.numColumns else {
+                let message = "column definitions count (\(columnDefinitions.count)) does not equal columns count (\(table.numColumns)"
+                if error == nil {
+                    error = NSError(domain: MTParseError, code: MTParseErrors.invalidNumColumns.rawValue, userInfo: [NSLocalizedDescriptionKey:message])
+                }
+                return nil
+            }
+
+            columnDefinitions.enumerated().forEach { column, definition in
+                table.set(alignment: definition, forColumn: column)
             }
         }
 
@@ -846,8 +866,6 @@ public class MTMathAtomFactory {
 
                 table.interRowAdditionalSpacing = 0
                 table.interColumnSpacing = 18
-
-                table.set(alignment: .left, forColumn: 0)
 
                 let inner = MTInner()
                 inner.leftBoundary = Self.boundary(forDelimiter: ".")
