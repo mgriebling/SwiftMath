@@ -718,14 +718,14 @@ public class MTMathAtomFactory {
      */
     public static func table(withEnvironment env: String?, rows: [[MTMathList]], error:inout NSError?) -> MTMathAtom? {
         let table = MTMathTable(environment: env)
-        
+
         for i in 0..<rows.count {
             let row = rows[i]
             for j in 0..<row.count {
                 table.set(cell: row[j], forRow: i, column: j)
             }
         }
-        
+
         if env == nil {
             table.interColumnSpacing = 0
             table.interRowAdditionalSpacing = 1
@@ -738,15 +738,15 @@ public class MTMathAtomFactory {
                 table.environment = "matrix"
                 table.interRowAdditionalSpacing = 0
                 table.interColumnSpacing = 18
-                
+
                 let style = MTMathStyle(style: .text)
-                
+
                 for i in 0..<table.cells.count {
                     for j in 0..<table.cells[i].count {
                         table.cells[i][j].insert(style, at: 0)
                     }
                 }
-                
+
                 if delims.count == 2 {
                     let inner = MTInner()
                     inner.leftBoundary = Self.boundary(forDelimiter: delims[0])
@@ -764,21 +764,21 @@ public class MTMathAtomFactory {
                     }
                     return nil
                 }
-                
+
                 let spacer = MTMathAtom(type: .ordinary, value: "")
-                
+
                 for i in 0..<table.cells.count {
                     if table.cells[i].count >= 1 {
                         table.cells[i][1].insert(spacer, at: 0)
                     }
                 }
-                
+
                 table.interRowAdditionalSpacing = 1
                 table.interColumnSpacing = 0
-                
+
                 table.set(alignment: .right, forColumn: 0)
                 table.set(alignment: .left, forColumn: 1)
-                
+
                 return table
             } else if env == "displaylines" || env == "gather" {
                 if table.numColumns != 1 {
@@ -788,12 +788,12 @@ public class MTMathAtomFactory {
                     }
                     return nil
                 }
-                
+
                 table.interRowAdditionalSpacing = 1
                 table.interColumnSpacing = 0
-                
+
                 table.set(alignment: .center, forColumn: 0)
-                
+
                 return table
             } else if env == "eqnarray" {
                 if table.numColumns != 3 {
@@ -803,16 +803,16 @@ public class MTMathAtomFactory {
                     }
                     return nil
                 }
-                
+
                 table.interRowAdditionalSpacing = 1
                 table.interColumnSpacing = 18
-                
+
                 table.set(alignment: .right, forColumn: 0)
                 table.set(alignment: .center, forColumn: 1)
                 table.set(alignment: .left, forColumn: 2)
-                
+
                 return table
-            } else if env == "cases" {
+            } else if env == "cases"  {
                 if table.numColumns != 2 {
                     let message = "cases environment can only have 2 columns"
                     if error == nil {
@@ -820,29 +820,45 @@ public class MTMathAtomFactory {
                     }
                     return nil
                 }
-                
+
                 table.interRowAdditionalSpacing = 0
                 table.interColumnSpacing = 18
-                
+
                 table.set(alignment: .left, forColumn: 0)
                 table.set(alignment: .left, forColumn: 1)
-                
+
                 let style = MTMathStyle(style: .text)
                 for i in 0..<table.cells.count {
                     for j in 0..<table.cells[i].count {
                         table.cells[i][j].insert(style, at: 0)
                     }
                 }
-                
+
                 let inner = MTInner()
                 inner.leftBoundary = Self.boundary(forDelimiter: "{")
                 inner.rightBoundary = Self.boundary(forDelimiter: ".")
                 let space = Self.atom(forLatexSymbol: ",")!
-                
+
                 inner.innerList = MTMathList(atoms: [space, table])
-                
+
                 return inner
-            } else {
+            }  else if env == "array" {
+
+                table.interRowAdditionalSpacing = 0
+                table.interColumnSpacing = 18
+
+                table.set(alignment: .left, forColumn: 0)
+
+                let inner = MTInner()
+                inner.leftBoundary = Self.boundary(forDelimiter: ".")
+                inner.rightBoundary = Self.boundary(forDelimiter: ".")
+                let space = Self.atom(forLatexSymbol: ",")!
+
+                inner.innerList = MTMathList(atoms: [space, table])
+
+                return inner
+            }
+            else {
                 let message = "Unknown environment \(env)"
                 error = NSError(domain: MTParseError, code: MTParseErrors.invalidEnv.rawValue, userInfo: [NSLocalizedDescriptionKey:message])
                 return nil
