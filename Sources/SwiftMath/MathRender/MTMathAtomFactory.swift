@@ -380,6 +380,7 @@ public class MTMathAtomFactory {
         "cdots" : MTMathAtom(type: .ordinary, value: "\u{22EF}"),
         "ddots" : MTMathAtom(type: .ordinary, value: "\u{22F1}"),
         "triangle" : MTMathAtom(type: .ordinary, value: "\u{25B3}"),
+        "diamond" : MTMathAtom(type: .ordinary, value: "\u{2662}"),
         "imath" : MTMathAtom(type: .ordinary, value: "\u{0001D6A4}"),
         "jmath" : MTMathAtom(type: .ordinary, value: "\u{0001D6A5}"),
         "upquote" : MTMathAtom(type: .ordinary, value: "\u{0027}"),
