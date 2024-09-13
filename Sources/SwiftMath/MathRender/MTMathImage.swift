@@ -16,8 +16,16 @@ import Foundation
 #endif
 
 public class MTMathImage {
-    public var font: MTFont? = nil
-    public let fontSize: CGFloat
+    public var font: MTFont? = MTFontManager.fontManager.defaultFont
+    public var fontSize:CGFloat {
+        set {
+            _fontSize = newValue
+            let font = font?.copy(withSize: newValue)
+            self.font = font  // also forces an update
+        }
+        get { _fontSize }
+    }
+    private var _fontSize:CGFloat = 0
     public let textColor: MTColor
 
     public let labelMode: MTMathUILabelMode
@@ -30,10 +38,10 @@ public class MTMathImage {
 
     public init(latex: String, fontSize: CGFloat, textColor: MTColor, labelMode: MTMathUILabelMode = .display, textAlignment: MTTextAlignment = .center) {
         self.latex = latex
-        self.fontSize = fontSize
         self.textColor = textColor
         self.labelMode = labelMode
         self.textAlignment = textAlignment
+        self.fontSize = fontSize
     }
 }
 extension MTMathImage {
