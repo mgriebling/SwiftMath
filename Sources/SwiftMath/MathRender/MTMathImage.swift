@@ -73,9 +73,7 @@ extension MTMathImage {
             let textY = (availableHeight - height) / 2 + displayList.descent + contentInsets.bottom
             displayList.position = CGPoint(x: textX, y: textY)
         }
-        if font == nil {
-            self.font = MTFontManager.fontManager.defaultFont
-        }
+
         var error: NSError?
         guard let mathList = MTMathListBuilder.build(fromString: latex, error: &error), error == nil,
               let displayList = MTTypesetter.createLineForMathList(mathList, font: font, style: currentStyle) else {
