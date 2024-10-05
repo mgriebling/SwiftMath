@@ -13,7 +13,7 @@ final class ConcurrencyThreadsafeTests: XCTestCase {
     private let executionQueue = DispatchQueue(label: "com.swiftmath.concurrencytests", attributes: .concurrent)
     private let executionGroup = DispatchGroup()
     
-    let totalCases = 20
+    let totalCases =  20
     var testCount = 0
     
     func testSwiftMathConcurrentScript() throws {
