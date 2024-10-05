@@ -528,11 +528,6 @@ public class MTMathAtomFactory {
             case "\u{0410}"..."\u{044F}":
                 return MTMathAtom(type: .ordinary, value: chStr)
             case _ where ch.utf32Char < 0x0021 || ch.utf32Char > 0x007E:
-//                // allow Chinese characters for testing
-//                if ((ch.utf32Char >= 0x4E00) && (ch.utf32Char <= 0x9FFF)) {
-//                    // CJK support. But xits-math-cn font only has Chinese characters support.
-//                    return MTMathAtom(type:.ordinary, value:chStr)
-//                }
                 return nil
             case "$", "%", "#", "&", "~", "\'", "^", "_", "{", "}", "\\":
                 return nil

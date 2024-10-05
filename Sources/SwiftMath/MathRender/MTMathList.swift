@@ -235,10 +235,10 @@ public class MTMathAtom: NSObject {
                 return MTAccent(self as? MTAccent)
             case .space:
                 return MTMathSpace(self as? MTMathSpace)
-            case .color, .textcolor:
+            case .color:
                 return MTMathColor(self as? MTMathColor)
-//            case .textcolor:
-//                return MTMathTextColor(self as? MTMathTextColor)
+            case .textcolor:
+                return MTMathTextColor(self as? MTMathTextColor)
             case .colorBox:
                 return MTMathColorbox(self as? MTMathColorbox)
             case .table:
@@ -684,33 +684,32 @@ public class MTMathColor: MTMathAtom {
  Note: None of the usual fields of the `MTMathAtom` apply even though this
  class inherits from `MTMathAtom`. i.e. it is meaningless to have a value
  in the nucleus, subscript or superscript fields. */
-// FIXME: Removed due to crash
-//public class MTMathTextColor: MTMathAtom {
-//    public var colorString:String=""
-//    public var innerList:MTMathList?
-//
-//    init(_ color: MTMathTextColor?) {
-//        super.init(color)
-//        self.type = .textcolor
-//        self.colorString = color?.colorString ?? ""
-//        self.innerList = MTMathList(color?.innerList)
-//    }
-//
-//    override init() {
-//        super.init()
-//        self.type = .textcolor
-//    }
-//
-//    public override var string: String {
-//        "\\textcolor{\(self.colorString)}{\(self.innerList!.string)}"
-//    }
-//
-//    override public var finalized: MTMathAtom {
-//        let newColor = super.finalized as! MTMathTextColor
-//        newColor.innerList = newColor.innerList?.finalized
-//        return newColor
-//    }
-//}
+public class MTMathTextColor: MTMathAtom {
+    public var colorString:String=""
+    public var innerList:MTMathList?
+
+    init(_ color: MTMathTextColor?) {
+        super.init(color)
+        self.type = .textcolor
+        self.colorString = color?.colorString ?? ""
+        self.innerList = MTMathList(color?.innerList)
+    }
+
+    override init() {
+        super.init()
+        self.type = .textcolor
+    }
+
+    public override var string: String {
+        "\\textcolor{\(self.colorString)}{\(self.innerList!.string)}"
+    }
+
+    override public var finalized: MTMathAtom {
+        let newColor = super.finalized as! MTMathTextColor
+        newColor.innerList = newColor.innerList?.finalized
+        return newColor
+    }
+}
 
 // MARK: - MTMathColorbox
 /** An atom representing an colorbox element.
