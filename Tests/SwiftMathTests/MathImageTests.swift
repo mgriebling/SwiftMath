@@ -40,7 +40,7 @@ final class MathImageTests: XCTestCase {
                 XCTAssertNotNil(result.image)
                 if result.error == nil, let image = result.image, let imageData = image.pngData() {
                     safeImage(fileName: "\(caseNumber)", pngData: imageData)
-                    let fileUrl = URL(fileURLWithPath: NSTemporaryDirectory())
+                    //let fileUrl = URL(fileURLWithPath: NSTemporaryDirectory())
                     print("completed image-\(caseNumber).png")
                 }
             default:
@@ -49,7 +49,7 @@ final class MathImageTests: XCTestCase {
                 XCTAssertNotNil(result.image)
                 if result.error == nil, let image = result.image, let imageData = image.pngData() {
                     safeImage(fileName: "\(caseNumber)", pngData: imageData)
-                    let fileUrl = URL(fileURLWithPath: NSTemporaryDirectory())
+                    //let fileUrl = URL(fileURLWithPath: NSTemporaryDirectory())
                     print("completed image-\(caseNumber).png")
                 }
             }
@@ -77,7 +77,7 @@ final class MathImageTests: XCTestCase {
         }
         executionGroup.notify(queue: .main) { [weak self] in
             let fileUrl = URL(fileURLWithPath: NSTemporaryDirectory())
-            print("\(self?.testCount)/\(self?.totalCases) completed, check \(fileUrl.path) ===")
+            print("\(self!.testCount)/\(self!.totalCases) completed, check \(fileUrl.path) ===")
             XCTAssertEqual(self?.testCount,self?.totalCases)
         }
         executionGroup.wait()

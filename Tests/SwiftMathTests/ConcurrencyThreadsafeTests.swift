@@ -29,9 +29,9 @@ final class ConcurrencyThreadsafeTests: XCTestCase {
                 XCTAssertNotNil(result4)
             }
         }
-        executionGroup.notify(queue: .main) { [weak self] in
-            // print("All test cases completed: \(self?.testCount ?? 0)")
-        }
+//        executionGroup.notify(queue: .main) { [weak self] in
+//            // print("All test cases completed: \(self?.testCount ?? 0)")
+//        }
         executionGroup.wait()
     }
     func helperConcurrency(_ count: Int, in group: DispatchGroup, on queue: DispatchQueue, _ testClosure: @escaping () -> (Void)) {
