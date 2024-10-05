@@ -62,7 +62,6 @@ public class MTMathAtomFactory {
         "rfloor" : "\u{230B}"
     ]
     
-    private static let delimValueLock = NSLock()
     static var _delimValueToName = [String: String]()
     public static var delimValueToName: [String: String] {
         if _delimValueToName.isEmpty {
@@ -79,11 +78,7 @@ public class MTMathAtomFactory {
                 }
                 output[value] = key
             }
-            delimValueLock.lock()
-            defer { delimValueLock.unlock() }
-            if _delimValueToName.isEmpty {
-                _delimValueToName = output
-            }
+            _delimValueToName = output
         }
         return _delimValueToName
     }
@@ -103,7 +98,6 @@ public class MTMathAtomFactory {
         "widetilde" :  "\u{0303}"
     ]
     
-    private static let accentValueLock = NSLock()
     static var _accentValueToName: [String: String]? = nil
     public static var accentValueToName: [String: String] {
         if _accentValueToName == nil {
@@ -121,11 +115,7 @@ public class MTMathAtomFactory {
                 }
                 output[value] = key
             }
-            accentValueLock.lock()
-            defer { accentValueLock.unlock() }
-            if _accentValueToName == nil {
-                _accentValueToName = output
-            }
+            _accentValueToName = output
         }
         return _accentValueToName!
     }
@@ -380,7 +370,6 @@ public class MTMathAtomFactory {
         "cdots" : MTMathAtom(type: .ordinary, value: "\u{22EF}"),
         "ddots" : MTMathAtom(type: .ordinary, value: "\u{22F1}"),
         "triangle" : MTMathAtom(type: .ordinary, value: "\u{25B3}"),
-        "diamond" : MTMathAtom(type: .ordinary, value: "\u{2662}"),
         "imath" : MTMathAtom(type: .ordinary, value: "\u{0001D6A4}"),
         "jmath" : MTMathAtom(type: .ordinary, value: "\u{0001D6A5}"),
         "upquote" : MTMathAtom(type: .ordinary, value: "\u{0027}"),
@@ -401,7 +390,6 @@ public class MTMathAtomFactory {
         "scriptscriptstyle" : MTMathStyle(style: .scriptOfScript),
     ]
     
-    private static let textToLatexLock = NSLock()
     static var _textToLatexSymbolName: [String: String]? = nil
     public static var textToLatexSymbolName: [String: String] {
         get {
@@ -425,17 +413,13 @@ public class MTMathAtomFactory {
                     }
                     output[atom.nucleus] = key
                 }
-                textToLatexLock.lock()
-                defer { textToLatexLock.unlock() }
-                if self._textToLatexSymbolName == nil {
-                    self._textToLatexSymbolName = output
-                }
+                self._textToLatexSymbolName = output
             }
             return self._textToLatexSymbolName!
         }
-        // set {
-        //     self._textToLatexSymbolName = newValue
-        // }
+        set {
+            self._textToLatexSymbolName = newValue
+        }
     }
     
   //  public static let sharedInstance = MTMathAtomFactory()
@@ -540,10 +524,15 @@ public class MTMathAtomFactory {
      */
     public static func atom(forCharacter ch: Character) -> MTMathAtom? {
         let chStr = String(ch)
-        switch chStr {      
+        switch chStr {
             case "\u{0410}"..."\u{044F}":
                 return MTMathAtom(type: .ordinary, value: chStr)
             case _ where ch.utf32Char < 0x0021 || ch.utf32Char > 0x007E:
+                // allow Chinese characters for testing
+                if ((ch.utf32Char >= 0x4E00) && (ch.utf32Char <= 0x9FFF)) {
+                    // CJK support. But xits-math-cn font only has Chinese characters support.
+                    return MTMathAtom(type:.ordinary, value:chStr)
+                }
                 return nil
             case "$", "%", "#", "&", "~", "\'", "^", "_", "{", "}", "\\":
                 return nil
@@ -619,13 +608,8 @@ public class MTMathAtomFactory {
      e.g. to define a symbol for "lcm" one can call:
      `MTMathAtomFactory.add(latexSymbol:"lcm", value:MTMathAtomFactory.operatorWithName("lcm", limits: false))` */
     public static func add(latexSymbol name: String, value: MTMathAtom) {
-        let _ = Self.textToLatexSymbolName
-        // above force textToLatexSymbolName to instantiate first, _textToLatexSymbolName also initialized.
-        textToLatexLock.lock()
-        defer { textToLatexLock.unlock() }
         supportedLatexSymbols[name] = value
-        // below update the underlying dictionary entry.
-        Self._textToLatexSymbolName?[value.nucleus] = name
+        Self.textToLatexSymbolName[value.nucleus] = name
     }
     
     /** Returns a large opertor for the given name. If limits is true, limits are set up on
