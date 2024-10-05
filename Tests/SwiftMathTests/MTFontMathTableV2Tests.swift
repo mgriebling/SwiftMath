@@ -62,7 +62,7 @@ final class MTFontMathTableV2Tests: XCTestCase {
         }
         workitem.notify(queue: .main) { [weak self] in
             // print("\(Thread.isMainThread ? "main" : "global") completed .....")
-            let mTable = mtfont.mathTable
+//            let mTable = mtfont.mathTable
             if count % 70 == 0 {
 //                let values = [
 //                    mTable?.fractionNumeratorDisplayStyleShiftUp,

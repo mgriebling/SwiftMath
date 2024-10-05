@@ -587,18 +587,18 @@ public struct MTMathListBuilder {
             }
             let table = self.buildTable(env: env, firstList:nil, isRow:false)
             return table
-        } else if command == "color" {
+        } else if command == "color" || command == "textcolor" {
             // A color command has 2 arguments
             let mathColor = MTMathColor()
             mathColor.colorString = self.readColor()!
             mathColor.innerList = self.buildInternal(true)
             return mathColor
-        } else if command == "textcolor" {
-            // A textcolor command has 2 arguments
-            let mathColor = MTMathTextColor()
-            mathColor.colorString = self.readColor()!
-            mathColor.innerList = self.buildInternal(true)
-            return mathColor
+//        } else if command == "textcolor" {
+//            // A textcolor command has 2 arguments
+//            let mathColor = MTMathTextColor()
+//            mathColor.colorString = self.readColor()!
+//            mathColor.innerList = self.buildInternal(true)
+//            return mathColor
         } else if command == "colorbox" {
             // A color command has 2 arguments
             let mathColorbox = MTMathColorbox()
