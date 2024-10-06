@@ -231,9 +231,9 @@ required for an `.otf` font to work with `SwiftMath`.  If you generate
 (and test) any other fonts please contribute them back to this project for
 others to benefit.
 
-Note: The `KpMath-Light` and `KpMath-Sans` fonts current do not correctly
-render very large radicals correctly. It appears that the font files do
-not correctly define the offsets required to typeset these glyphs.  If
+Note: The `KpMath-Light` and `KpMath-Sans` fonts currently incorrectly
+render very large radicals. It appears that the font files do
+not properly define the offsets required to typeset these glyphs.  If
 anyone can fix this, it would be greatly appreciated.
 
 ##### Text Color
@@ -246,7 +246,7 @@ label.textColor = .red
 
 It is also possible to set different colors for different parts of the
 equation. Just access the `displayList` field and set the `textColor`
-on the underlying displays that you want to change the color of. 
+of the underlying displays of which you want to change the color. 
 
 ##### Custom Commands
 You can define your own commands that are not already predefined. This is

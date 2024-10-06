@@ -2506,8 +2506,22 @@
 		<integer>276</integer>
 		<key>ocirc</key>
 		<integer>-220</integer>
+		<key>overleftarrow</key>
+		<integer>-268</integer>
+		<key>overleftharpoon</key>
+		<integer>-268</integer>
+		<key>overleftrightarrow</key>
+		<integer>-335</integer>
+		<key>overrightarc</key>
+		<integer>-275</integer>
+		<key>overrightarrow</key>
+		<integer>-268</integer>
+		<key>overrightharpoon</key>
+		<integer>-268</integer>
 		<key>widebreve</key>
 		<integer>-220</integer>
+		<key>widebreve.h0</key>
+		<integer>-120</integer>
 		<key>widecheck</key>
 		<integer>-220</integer>
 		<key>widecheck.h0</key>
@@ -2534,7 +2548,7 @@
 		<key>DisplayOperatorMinHeight</key>
 		<integer>1500</integer>
 		<key>FlattenedAccentBaseHeight</key>
-		<integer>670</integer>
+		<integer>650</integer>
 		<key>FractionDenomDisplayStyleGapMin</key>
 		<integer>150</integer>
 		<key>FractionDenominatorDisplayStyleShiftDown</key>
@@ -2568,15 +2582,15 @@
 		<key>OverbarVerticalGap</key>
 		<integer>150</integer>
 		<key>RadicalDegreeBottomRaisePercent</key>
-		<integer>55</integer>
+		<integer>60</integer>
 		<key>RadicalDisplayStyleVerticalGap</key>
 		<integer>170</integer>
 		<key>RadicalExtraAscender</key>
 		<integer>50</integer>
 		<key>RadicalKernAfterDegree</key>
-		<integer>-560</integer>
+		<integer>-600</integer>
 		<key>RadicalKernBeforeDegree</key>
-		<integer>280</integer>
+		<integer>300</integer>
 		<key>RadicalRuleThickness</key>
 		<integer>50</integer>
 		<key>RadicalVerticalGap</key>
@@ -2642,7 +2656,72 @@
 	</dict>
 	<key>h_variants</key>
 	<dict>
+		<key>Leftarrow</key>
+		<array>
+			<string>Leftarrow</string>
+			<string>Longleftarrow</string>
+		</array>
+		<key>Leftrightarrow</key>
+		<array>
+			<string>Leftrightarrow</string>
+			<string>Longleftrightarrow</string>
+		</array>
+		<key>Mapsfrom</key>
+		<array>
+			<string>Mapsfrom</string>
+			<string>Longmapsfrom</string>
+		</array>
+		<key>Mapsto</key>
+		<array>
+			<string>Mapsto</string>
+			<string>Longmapsto</string>
+		</array>
+		<key>Rightarrow</key>
+		<array>
+			<string>Rightarrow</string>
+			<string>Longrightarrow</string>
+		</array>
+		<key>equal</key>
+		<array/>
+		<key>equiv</key>
+		<array/>
+		<key>hookleftarrow</key>
+		<array/>
+		<key>hookrightarrow</key>
+		<array/>
+		<key>leftarrow</key>
+		<array>
+			<string>leftarrow</string>
+			<string>longleftarrow</string>
+		</array>
+		<key>leftarrowtail</key>
+		<array/>
+		<key>leftharpoondown</key>
+		<array/>
+		<key>leftharpoonup</key>
+		<array/>
+		<key>leftrightarrow</key>
+		<array>
+			<string>leftrightarrow</string>
+			<string>longleftrightarrow</string>
+		</array>
+		<key>leftrightarrows</key>
+		<array/>
+		<key>leftrightharpoons</key>
+		<array/>
+		<key>mapsfrom</key>
+		<array>
+			<string>mapsfrom</string>
+			<string>longmapsfrom</string>
+		</array>
+		<key>mapsto</key>
+		<array>
+			<string>mapsto</string>
+			<string>longmapsto</string>
+		</array>
 		<key>mathunderbar</key>
+		<array/>
+		<key>minus</key>
 		<array/>
 		<key>overbrace</key>
 		<array>
@@ -2663,6 +2742,10 @@
 		<array/>
 		<key>overleftharpoon</key>
 		<array/>
+		<key>overleftrightarrow</key>
+		<array>
+			<string>overleftrightarrow.h1</string>
+		</array>
 		<key>overparen</key>
 		<array>
 			<string>overparen</string>
@@ -2685,6 +2768,25 @@
 		<key>overrightarrow</key>
 		<array/>
 		<key>overrightharpoon</key>
+		<array/>
+		<key>rightarrow</key>
+		<array>
+			<string>rightarrow</string>
+			<string>longrightarrow</string>
+		</array>
+		<key>rightarrowtail</key>
+		<array/>
+		<key>rightharpoondown</key>
+		<array/>
+		<key>rightharpoonup</key>
+		<array/>
+		<key>rightleftarrows</key>
+		<array/>
+		<key>rightleftharpoons</key>
+		<array/>
+		<key>twoheadleftarrow</key>
+		<array/>
+		<key>twoheadrightarrow</key>
 		<array/>
 		<key>underbrace</key>
 		<array>
@@ -2737,6 +2839,7 @@
 		<key>widebreve</key>
 		<array>
 			<string>widebreve</string>
+			<string>widebreve.h0</string>
 			<string>widebreve.h1</string>
 			<string>widebreve.h2</string>
 			<string>widebreve.h3</string>
@@ -4909,27 +5012,27 @@
 			<array>
 				<dict>
 					<key>advance</key>
-					<integer>1200</integer>
+					<integer>2700</integer>
 					<key>endConnector</key>
-					<integer>400</integer>
+					<integer>133</integer>
 					<key>extender</key>
 					<false/>
 					<key>glyph</key>
-					<string>Vert.v2</string>
+					<string>Vert.v4</string>
 					<key>startConnector</key>
-					<integer>400</integer>
+					<integer>133</integer>
 				</dict>
 				<dict>
 					<key>advance</key>
-					<integer>472</integer>
+					<integer>400</integer>
 					<key>endConnector</key>
-					<integer>157</integer>
+					<integer>133</integer>
 					<key>extender</key>
 					<true/>
 					<key>glyph</key>
 					<string>Vert.ex</string>
 					<key>startConnector</key>
-					<integer>157</integer>
+					<integer>133</integer>
 				</dict>
 			</array>
 		</dict>
@@ -4941,27 +5044,27 @@
 			<array>
 				<dict>
 					<key>advance</key>
-					<integer>1200</integer>
+					<integer>2700</integer>
 					<key>endConnector</key>
-					<integer>400</integer>
+					<integer>133</integer>
 					<key>extender</key>
 					<false/>
 					<key>glyph</key>
-					<string>Vvert.v2</string>
+					<string>Vvert.v4</string>
 					<key>startConnector</key>
-					<integer>400</integer>
+					<integer>133</integer>
 				</dict>
 				<dict>
 					<key>advance</key>
-					<integer>472</integer>
+					<integer>400</integer>
 					<key>endConnector</key>
-					<integer>157</integer>
+					<integer>133</integer>
 					<key>extender</key>
 					<true/>
 					<key>glyph</key>
 					<string>Vvert.ex</string>
 					<key>startConnector</key>
-					<integer>157</integer>
+					<integer>133</integer>
 				</dict>
 			</array>
 		</dict>
@@ -5049,39 +5152,39 @@
 			<array>
 				<dict>
 					<key>advance</key>
-					<integer>895</integer>
+					<integer>1550</integer>
 					<key>endConnector</key>
-					<integer>298</integer>
+					<integer>133</integer>
 					<key>extender</key>
 					<false/>
 					<key>glyph</key>
 					<string>lBrack.bt</string>
 					<key>startConnector</key>
-					<integer>298</integer>
+					<integer>133</integer>
 				</dict>
 				<dict>
 					<key>advance</key>
-					<integer>346</integer>
+					<integer>400</integer>
 					<key>endConnector</key>
-					<integer>115</integer>
+					<integer>133</integer>
 					<key>extender</key>
 					<true/>
 					<key>glyph</key>
 					<string>lBrack.ex</string>
 					<key>startConnector</key>
-					<integer>115</integer>
+					<integer>133</integer>
 				</dict>
 				<dict>
 					<key>advance</key>
-					<integer>895</integer>
+					<integer>1550</integer>
 					<key>endConnector</key>
-					<integer>298</integer>
+					<integer>133</integer>
 					<key>extender</key>
 					<false/>
 					<key>glyph</key>
 					<string>lBrack.tp</string>
 					<key>startConnector</key>
-					<integer>298</integer>
+					<integer>133</integer>
 				</dict>
 			</array>
 		</dict>
@@ -5093,63 +5196,63 @@
 			<array>
 				<dict>
 					<key>advance</key>
-					<integer>737</integer>
+					<integer>800</integer>
 					<key>endConnector</key>
-					<integer>246</integer>
+					<integer>70</integer>
 					<key>extender</key>
 					<false/>
 					<key>glyph</key>
 					<string>lbrace.bt</string>
 					<key>startConnector</key>
-					<integer>246</integer>
+					<integer>70</integer>
 				</dict>
 				<dict>
 					<key>advance</key>
-					<integer>326</integer>
+					<integer>200</integer>
 					<key>endConnector</key>
-					<integer>109</integer>
+					<integer>70</integer>
 					<key>extender</key>
 					<true/>
 					<key>glyph</key>
 					<string>vbrace.ex</string>
 					<key>startConnector</key>
-					<integer>109</integer>
+					<integer>70</integer>
 				</dict>
 				<dict>
 					<key>advance</key>
-					<integer>777</integer>
+					<integer>1500</integer>
 					<key>endConnector</key>
-					<integer>259</integer>
+					<integer>70</integer>
 					<key>extender</key>
 					<false/>
 					<key>glyph</key>
 					<string>lbracemid</string>
 					<key>startConnector</key>
-					<integer>259</integer>
+					<integer>70</integer>
 				</dict>
 				<dict>
 					<key>advance</key>
-					<integer>326</integer>
+					<integer>200</integer>
 					<key>endConnector</key>
-					<integer>109</integer>
+					<integer>70</integer>
 					<key>extender</key>
 					<true/>
 					<key>glyph</key>
 					<string>vbrace.ex</string>
 					<key>startConnector</key>
-					<integer>109</integer>
+					<integer>70</integer>
 				</dict>
 				<dict>
 					<key>advance</key>
-					<integer>737</integer>
+					<integer>800</integer>
 					<key>endConnector</key>
-					<integer>246</integer>
+					<integer>70</integer>
 					<key>extender</key>
 					<false/>
 					<key>glyph</key>
 					<string>lbrace.tp</string>
 					<key>startConnector</key>
-					<integer>246</integer>
+					<integer>70</integer>
 				</dict>
 			</array>
 		</dict>
@@ -5161,39 +5264,39 @@
 			<array>
 				<dict>
 					<key>advance</key>
-					<integer>895</integer>
+					<integer>1550</integer>
 					<key>endConnector</key>
-					<integer>298</integer>
+					<integer>133</integer>
 					<key>extender</key>
 					<false/>
 					<key>glyph</key>
 					<string>lbrack.bt</string>
 					<key>startConnector</key>
-					<integer>298</integer>
+					<integer>133</integer>
 				</dict>
 				<dict>
 					<key>advance</key>
-					<integer>326</integer>
+					<integer>400</integer>
 					<key>endConnector</key>
-					<integer>109</integer>
+					<integer>133</integer>
 					<key>extender</key>
 					<true/>
 					<key>glyph</key>
 					<string>lbrack.ex</string>
 					<key>startConnector</key>
-					<integer>109</integer>
+					<integer>133</integer>
 				</dict>
 				<dict>
 					<key>advance</key>
-					<integer>895</integer>
+					<integer>1550</integer>
 					<key>endConnector</key>
-					<integer>298</integer>
+					<integer>133</integer>
 					<key>extender</key>
 					<false/>
 					<key>glyph</key>
 					<string>lbrack.tp</string>
 					<key>startConnector</key>
-					<integer>298</integer>
+					<integer>133</integer>
 				</dict>
 			</array>
 		</dict>
@@ -5205,27 +5308,27 @@
 			<array>
 				<dict>
 					<key>advance</key>
-					<integer>480</integer>
+					<integer>400</integer>
 					<key>endConnector</key>
-					<integer>160</integer>
+					<integer>133</integer>
 					<key>extender</key>
 					<true/>
 					<key>glyph</key>
 					<string>lceil.ex</string>
 					<key>startConnector</key>
-					<integer>160</integer>
+					<integer>133</integer>
 				</dict>
 				<dict>
 					<key>advance</key>
-					<integer>1531</integer>
+					<integer>2700</integer>
 					<key>endConnector</key>
-					<integer>510</integer>
+					<integer>133</integer>
 					<key>extender</key>
 					<false/>
 					<key>glyph</key>
-					<string>lceil.tp</string>
+					<string>lceil.v4</string>
 					<key>startConnector</key>
-					<integer>510</integer>
+					<integer>133</integer>
 				</dict>
 			</array>
 		</dict>
@@ -5237,27 +5340,27 @@
 			<array>
 				<dict>
 					<key>advance</key>
-					<integer>1531</integer>
+					<integer>2700</integer>
 					<key>endConnector</key>
-					<integer>510</integer>
+					<integer>133</integer>
 					<key>extender</key>
 					<false/>
 					<key>glyph</key>
-					<string>lfloor.bt</string>
+					<string>lfloor.v4</string>
 					<key>startConnector</key>
-					<integer>510</integer>
+					<integer>133</integer>
 				</dict>
 				<dict>
 					<key>advance</key>
-					<integer>480</integer>
+					<integer>400</integer>
 					<key>endConnector</key>
-					<integer>160</integer>
+					<integer>133</integer>
 					<key>extender</key>
 					<true/>
 					<key>glyph</key>
 					<string>lceil.ex</string>
 					<key>startConnector</key>
-					<integer>160</integer>
+					<integer>133</integer>
 				</dict>
 			</array>
 		</dict>
@@ -5269,39 +5372,103 @@
 			<array>
 				<dict>
 					<key>advance</key>
-					<integer>897</integer>
+					<integer>1700</integer>
 					<key>endConnector</key>
-					<integer>299</integer>
+					<integer>133</integer>
 					<key>extender</key>
 					<false/>
 					<key>glyph</key>
 					<string>lparen.bt</string>
 					<key>startConnector</key>
-					<integer>299</integer>
+					<integer>133</integer>
 				</dict>
 				<dict>
 					<key>advance</key>
-					<integer>326</integer>
+					<integer>400</integer>
 					<key>endConnector</key>
-					<integer>109</integer>
+					<integer>133</integer>
 					<key>extender</key>
 					<true/>
 					<key>glyph</key>
 					<string>lparen.ex</string>
 					<key>startConnector</key>
-					<integer>109</integer>
+					<integer>133</integer>
 				</dict>
 				<dict>
 					<key>advance</key>
-					<integer>897</integer>
+					<integer>1700</integer>
 					<key>endConnector</key>
-					<integer>299</integer>
+					<integer>133</integer>
 					<key>extender</key>
 					<false/>
 					<key>glyph</key>
 					<string>lparen.tp</string>
 					<key>startConnector</key>
-					<integer>299</integer>
+					<integer>133</integer>
+				</dict>
+			</array>
+		</dict>
+		<key>mid</key>
+		<dict>
+			<key>italic</key>
+			<integer>0</integer>
+			<key>parts</key>
+			<array>
+				<dict>
+					<key>advance</key>
+					<integer>925</integer>
+					<key>endConnector</key>
+					<integer>308</integer>
+					<key>extender</key>
+					<false/>
+					<key>glyph</key>
+					<string>mid</string>
+					<key>startConnector</key>
+					<integer>308</integer>
+				</dict>
+				<dict>
+					<key>advance</key>
+					<integer>925</integer>
+					<key>endConnector</key>
+					<integer>308</integer>
+					<key>extender</key>
+					<true/>
+					<key>glyph</key>
+					<string>mid</string>
+					<key>startConnector</key>
+					<integer>308</integer>
+				</dict>
+			</array>
+		</dict>
+		<key>parallel</key>
+		<dict>
+			<key>italic</key>
+			<integer>0</integer>
+			<key>parts</key>
+			<array>
+				<dict>
+					<key>advance</key>
+					<integer>925</integer>
+					<key>endConnector</key>
+					<integer>308</integer>
+					<key>extender</key>
+					<false/>
+					<key>glyph</key>
+					<string>parallel</string>
+					<key>startConnector</key>
+					<integer>308</integer>
+				</dict>
+				<dict>
+					<key>advance</key>
+					<integer>925</integer>
+					<key>endConnector</key>
+					<integer>308</integer>
+					<key>extender</key>
+					<true/>
+					<key>glyph</key>
+					<string>parallel</string>
+					<key>startConnector</key>
+					<integer>308</integer>
 				</dict>
 			</array>
 		</dict>
@@ -5313,39 +5480,39 @@
 			<array>
 				<dict>
 					<key>advance</key>
-					<integer>895</integer>
+					<integer>1550</integer>
 					<key>endConnector</key>
-					<integer>298</integer>
+					<integer>133</integer>
 					<key>extender</key>
 					<false/>
 					<key>glyph</key>
 					<string>rBrack.bt</string>
 					<key>startConnector</key>
-					<integer>298</integer>
+					<integer>133</integer>
 				</dict>
 				<dict>
 					<key>advance</key>
-					<integer>326</integer>
+					<integer>400</integer>
 					<key>endConnector</key>
-					<integer>109</integer>
+					<integer>133</integer>
 					<key>extender</key>
 					<true/>
 					<key>glyph</key>
 					<string>rBrack.ex</string>
 					<key>startConnector</key>
-					<integer>109</integer>
+					<integer>133</integer>
 				</dict>
 				<dict>
 					<key>advance</key>
-					<integer>895</integer>
+					<integer>1550</integer>
 					<key>endConnector</key>
-					<integer>298</integer>
+					<integer>133</integer>
 					<key>extender</key>
 					<false/>
 					<key>glyph</key>
 					<string>rBrack.tp</string>
 					<key>startConnector</key>
-					<integer>298</integer>
+					<integer>133</integer>
 				</dict>
 			</array>
 		</dict>
@@ -5357,63 +5524,63 @@
 			<array>
 				<dict>
 					<key>advance</key>
-					<integer>737</integer>
+					<integer>800</integer>
 					<key>endConnector</key>
-					<integer>246</integer>
+					<integer>70</integer>
 					<key>extender</key>
 					<false/>
 					<key>glyph</key>
 					<string>rbrace.bt</string>
 					<key>startConnector</key>
-					<integer>246</integer>
+					<integer>70</integer>
 				</dict>
 				<dict>
 					<key>advance</key>
-					<integer>326</integer>
+					<integer>200</integer>
 					<key>endConnector</key>
-					<integer>109</integer>
+					<integer>70</integer>
 					<key>extender</key>
 					<true/>
 					<key>glyph</key>
 					<string>vbrace.ex</string>
 					<key>startConnector</key>
-					<integer>109</integer>
+					<integer>70</integer>
 				</dict>
 				<dict>
 					<key>advance</key>
-					<integer>777</integer>
+					<integer>1500</integer>
 					<key>endConnector</key>
-					<integer>259</integer>
+					<integer>70</integer>
 					<key>extender</key>
 					<false/>
 					<key>glyph</key>
 					<string>rbracemid</string>
 					<key>startConnector</key>
-					<integer>259</integer>
+					<integer>70</integer>
 				</dict>
 				<dict>
 					<key>advance</key>
-					<integer>326</integer>
+					<integer>200</integer>
 					<key>endConnector</key>
-					<integer>109</integer>
+					<integer>70</integer>
 					<key>extender</key>
 					<true/>
 					<key>glyph</key>
 					<string>vbrace.ex</string>
 					<key>startConnector</key>
-					<integer>109</integer>
+					<integer>70</integer>
 				</dict>
 				<dict>
 					<key>advance</key>
-					<integer>737</integer>
+					<integer>800</integer>
 					<key>endConnector</key>
-					<integer>246</integer>
+					<integer>70</integer>
 					<key>extender</key>
 					<false/>
 					<key>glyph</key>
 					<string>rbrace.tp</string>
 					<key>startConnector</key>
-					<integer>246</integer>
+					<integer>70</integer>
 				</dict>
 			</array>
 		</dict>
@@ -5425,39 +5592,39 @@
 			<array>
 				<dict>
 					<key>advance</key>
-					<integer>895</integer>
+					<integer>1550</integer>
 					<key>endConnector</key>
-					<integer>298</integer>
+					<integer>133</integer>
 					<key>extender</key>
 					<false/>
 					<key>glyph</key>
 					<string>rbrack.bt</string>
 					<key>startConnector</key>
-					<integer>298</integer>
+					<integer>133</integer>
 				</dict>
 				<dict>
 					<key>advance</key>
-					<integer>326</integer>
+					<integer>400</integer>
 					<key>endConnector</key>
-					<integer>109</integer>
+					<integer>133</integer>
 					<key>extender</key>
 					<true/>
 					<key>glyph</key>
 					<string>rbrack.ex</string>
 					<key>startConnector</key>
-					<integer>109</integer>
+					<integer>133</integer>
 				</dict>
 				<dict>
 					<key>advance</key>
-					<integer>895</integer>
+					<integer>1550</integer>
 					<key>endConnector</key>
-					<integer>298</integer>
+					<integer>133</integer>
 					<key>extender</key>
 					<false/>
 					<key>glyph</key>
 					<string>rbrack.tp</string>
 					<key>startConnector</key>
-					<integer>298</integer>
+					<integer>133</integer>
 				</dict>
 			</array>
 		</dict>
@@ -5469,27 +5636,27 @@
 			<array>
 				<dict>
 					<key>advance</key>
-					<integer>480</integer>
+					<integer>400</integer>
 					<key>endConnector</key>
-					<integer>160</integer>
+					<integer>133</integer>
 					<key>extender</key>
 					<true/>
 					<key>glyph</key>
 					<string>rceil.ex</string>
 					<key>startConnector</key>
-					<integer>160</integer>
+					<integer>133</integer>
 				</dict>
 				<dict>
 					<key>advance</key>
-					<integer>1531</integer>
+					<integer>2700</integer>
 					<key>endConnector</key>
-					<integer>510</integer>
+					<integer>133</integer>
 					<key>extender</key>
 					<false/>
 					<key>glyph</key>
-					<string>rceil.tp</string>
+					<string>rceil.v4</string>
 					<key>startConnector</key>
-					<integer>510</integer>
+					<integer>133</integer>
 				</dict>
 			</array>
 		</dict>
@@ -5501,27 +5668,27 @@
 			<array>
 				<dict>
 					<key>advance</key>
-					<integer>1531</integer>
+					<integer>2700</integer>
 					<key>endConnector</key>
-					<integer>510</integer>
+					<integer>133</integer>
 					<key>extender</key>
 					<false/>
 					<key>glyph</key>
-					<string>rfloor.bt</string>
+					<string>rfloor.v4</string>
 					<key>startConnector</key>
-					<integer>510</integer>
+					<integer>133</integer>
 				</dict>
 				<dict>
 					<key>advance</key>
-					<integer>480</integer>
+					<integer>400</integer>
 					<key>endConnector</key>
-					<integer>160</integer>
+					<integer>133</integer>
 					<key>extender</key>
 					<true/>
 					<key>glyph</key>
 					<string>rceil.ex</string>
 					<key>startConnector</key>
-					<integer>160</integer>
+					<integer>133</integer>
 				</dict>
 			</array>
 		</dict>
@@ -5533,39 +5700,39 @@
 			<array>
 				<dict>
 					<key>advance</key>
-					<integer>897</integer>
+					<integer>1700</integer>
 					<key>endConnector</key>
-					<integer>299</integer>
+					<integer>133</integer>
 					<key>extender</key>
 					<false/>
 					<key>glyph</key>
 					<string>rparen.bt</string>
 					<key>startConnector</key>
-					<integer>299</integer>
+					<integer>133</integer>
 				</dict>
 				<dict>
 					<key>advance</key>
-					<integer>326</integer>
+					<integer>400</integer>
 					<key>endConnector</key>
-					<integer>109</integer>
+					<integer>133</integer>
 					<key>extender</key>
 					<true/>
 					<key>glyph</key>
 					<string>rparen.ex</string>
 					<key>startConnector</key>
-					<integer>109</integer>
+					<integer>133</integer>
 				</dict>
 				<dict>
 					<key>advance</key>
-					<integer>897</integer>
+					<integer>1700</integer>
 					<key>endConnector</key>
-					<integer>299</integer>
+					<integer>133</integer>
 					<key>extender</key>
 					<false/>
 					<key>glyph</key>
 					<string>rparen.tp</string>
 					<key>startConnector</key>
-					<integer>299</integer>
+					<integer>133</integer>
 				</dict>
 			</array>
 		</dict>
@@ -5697,27 +5864,27 @@
 			<array>
 				<dict>
 					<key>advance</key>
-					<integer>1200</integer>
+					<integer>2700</integer>
 					<key>endConnector</key>
-					<integer>400</integer>
+					<integer>133</integer>
 					<key>extender</key>
 					<false/>
 					<key>glyph</key>
-					<string>vert.v2</string>
+					<string>vert.v4</string>
 					<key>startConnector</key>
-					<integer>400</integer>
+					<integer>133</integer>
 				</dict>
 				<dict>
 					<key>advance</key>
-					<integer>472</integer>
+					<integer>400</integer>
 					<key>endConnector</key>
-					<integer>157</integer>
+					<integer>133</integer>
 					<key>extender</key>
 					<true/>
 					<key>glyph</key>
 					<string>vert.ex</string>
 					<key>startConnector</key>
-					<integer>157</integer>
+					<integer>133</integer>
 				</dict>
 			</array>
 		</dict>
@@ -5730,9 +5897,13 @@
 			<string>Bbbsum.v1</string>
 		</array>
 		<key>Downarrow</key>
-		<array/>
+		<array>
+			<string>Downarrow</string>
+		</array>
 		<key>Uparrow</key>
-		<array/>
+		<array>
+			<string>Uparrow</string>
+		</array>
 		<key>Updownarrow</key>
 		<array/>
 		<key>Vert</key>
@@ -5740,12 +5911,16 @@
 			<string>Vert</string>
 			<string>Vert.v1</string>
 			<string>Vert.v2</string>
+			<string>Vert.v3</string>
+			<string>Vert.v4</string>
 		</array>
 		<key>Vvert</key>
 		<array>
 			<string>Vvert</string>
 			<string>Vvert.v1</string>
 			<string>Vvert.v2</string>
+			<string>Vvert.v3</string>
+			<string>Vvert.v4</string>
 		</array>
 		<key>awint</key>
 		<array>
@@ -5846,7 +6021,9 @@
 			<string>coprodsans.v1</string>
 		</array>
 		<key>downarrow</key>
-		<array/>
+		<array>
+			<string>downarrow</string>
+		</array>
 		<key>fint</key>
 		<array>
 			<string>fint</string>
@@ -5991,6 +6168,10 @@
 			<string>slash.v3</string>
 			<string>slash.v4</string>
 		</array>
+		<key>mid</key>
+		<array>
+			<string>mid</string>
+		</array>
 		<key>oiiint</key>
 		<array>
 			<string>oiiint</string>
@@ -6065,6 +6246,10 @@
 		<array>
 			<string>ointcw</string>
 			<string>ointcw.v1</string>
+		</array>
+		<key>parallel</key>
+		<array>
+			<string>parallel</string>
 		</array>
 		<key>prod</key>
 		<array>
@@ -6201,7 +6386,9 @@
 			<string>sumsans.v1</string>
 		</array>
 		<key>uparrow</key>
-		<array/>
+		<array>
+			<string>uparrow</string>
+		</array>
 		<key>updownarrow</key>
 		<array/>
 		<key>varidotsint</key>
@@ -6304,6 +6491,8 @@
 			<string>vert</string>
 			<string>vert.v1</string>
 			<string>vert.v2</string>
+			<string>vert.v3</string>
+			<string>vert.v4</string>
 		</array>
 	</dict>
 	<key>version</key>
