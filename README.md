@@ -3,7 +3,10 @@
 `SwiftMath` provides a full Swift implementation of [iosMath](https://travis-ci.org/kostub/iosMath) 
 for displaying beautifully rendered math equations in iOS and MacOS applications. It typesets formulae written 
 using LaTeX in a `UILabel` equivalent class. It uses the same typesetting rules as LaTeX and
-so the equations are rendered exactly as LaTeX would render them. 
+so the equations are rendered exactly as LaTeX would render them.
+
+Please also check out [SwiftMathDemo](https://github.com/mgriebling/SwiftMathDemo.git) for examples of how to use `SwiftMath`
+from SwiftUI.  
 
 `SwiftMath` is similar to [MathJax](https://www.mathjax.org) or
 [KaTeX](https://github.com/Khan/KaTeX) for the web but for native iOS or MacOS
@@ -25,31 +28,35 @@ Here are screenshots of some formulae that were rendered with this library:
 x = \frac{-b \pm \sqrt{b^2-4ac}}{2a}
 ```
 
-![Quadratic Formula](img/quadratic.png) 
+![Quadratic Formula](img/quadratic-light.png#gh-light-mode-only) 
+![Quadratic Formula](img/quadratic-dark.png#gh-dark-mode-only) 
 
 ```LaTeX
 f(x) = \int\limits_{-\infty}^\infty\!\hat f(\xi)\,e^{2 \pi i \xi x}\,\mathrm{d}\xi
 ```
 
-![Calculus](img/calculus.png)
+![Calculus](img/calculus-light.png#gh-light-mode-only) 
+![Calculus](img/calculus-dark.png#gh-dark-mode-only) 
 
 ```LaTeX
 \frac{1}{n}\sum_{i=1}^{n}x_i \geq \sqrt[n]{\prod_{i=1}^{n}x_i}
 ```
 
-![AM-GM](img/amgm.png)
+![AM-GM](img/amgm-light.png#gh-light-mode-only) 
+![AM-GM](img/amgm-dark.png#gh-dark-mode-only) 
 
 ```LaTex
 \frac{1}{\left(\sqrt{\phi \sqrt{5}}-\phi\\right) e^{\frac25 \pi}}
 = 1+\frac{e^{-2\pi}} {1 +\frac{e^{-4\pi}} {1+\frac{e^{-6\pi}} {1+\frac{e^{-8\pi}} {1+\cdots} } } }
 ```
 
-![Ramanujan Identity](img/ramanujan.png)
+![Ramanujan Identity](img/ramanujan-light.png#gh-light-mode-only) 
+![Ramanujan Identity](img/ramanujan-dark.png#gh-dark-mode-only) 
 
 More examples are included in [EXAMPLES](EXAMPLES.md)
  
 ## Requirements
-`SwiftMath` works on iOS 11+ or MacOS 11+. It depends
+`SwiftMath` works on iOS 11+ or MacOS 12+. It depends
 on the following Apple frameworks:
 
 * Foundation.framework
@@ -155,7 +162,7 @@ This is a list of formula types that the library currently supports:
 * Greek alphabet
 * Combinatorics (\\binom, \\choose etc.)
 * Geometry symbols (e.g. angle, congruence etc.)
-* Ratios, proportions, percents
+* Ratios, proportions, percentages
 * Math spacing
 * Overline and underline
 * Math accents
@@ -164,6 +171,18 @@ This is a list of formula types that the library currently supports:
 * Change bold, roman, caligraphic and other font styles (\\bf, \\text, etc.)
 * Most commonly used math symbols
 * Colors
+
+Note: SwiftMath only supports the commands in LaTeX's math mode. There is
+also no language support for other than west European langugages and some
+Cyrillic characters. There would be two ways to support more languages:
+
+1) Find a math font compatible with `SwiftMath` that contains all the glyphs
+for that language.
+2) Add support to `SwiftMath` for standard Unicode fonts that contain all
+langauge glyphs.
+
+Of these two, the first is much easier.  However, if you want a challenge,
+try to tackle the second option.
 
 ### Example
 
@@ -194,10 +213,10 @@ label.textAlignment = .center
 ```
 
 ##### Font size
-The default font-size is 25pt. You can change it as follows:
+The default font-size is 30pt. You can change it as follows:
 
 ```swift
-label.fontSize = 30
+label.fontSize = 25
 ```
 ##### Font
 The default font is *Latin Modern Math*. This can be changed as:
@@ -206,11 +225,18 @@ The default font is *Latin Modern Math*. This can be changed as:
 label.font = MTFontManager.fontmanager.termesFont(withSize:20)
 ```
 
-This project has 3 fonts bundled with it, but you can use any OTF math
-font.  Note: I couldn't get the `iosMath` Python script to work.  If
-you do manage to get it working, please let me know.
+This project has five fonts bundled with it, but you can use any OTF math
+font. A python script is included that generates the `.plist` files 
+required for an `.otf` font to work with `SwiftMath`.  If you generate
+(and test) any other fonts please contribute them back to this project for
+others to benefit.
 
-##### Color
+Note: The `KpMath-Light` and `KpMath-Sans` fonts current do not correctly
+render very large radicals correctly. It appears that the font files do
+not correctly define the offsets required to typeset these glyphs.  If
+anyone can fix this, it would be greatly appreciated.
+
+##### Text Color
 The default color of the rendered equation is black. You can change
 it to any other color as follows:
 
@@ -278,3 +304,5 @@ licensed as follows:
     [GUST Font License](GUST-FONT-LICENSE.txt)
 * [XITS Math](https://github.com/khaledhosny/xits-math):
     [Open Font License](OFL.txt)
+* [KpMath Light/KpMath Sans](http://scripts.sil.org/OFL):
+    [SIL Open Font License](OFL.txt)

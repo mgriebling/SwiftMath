@@ -5,91 +5,104 @@
 (a_1 + a_2)^2 = a_1^2 + 2a_1a_2 + a_2^2
 ```
 
-![Square Formula](img/square.png)
+![Square Formula](img/square-light.png#gh-light-mode-only)
+![Square Formula](img/square-dark.png#gh-dark-mode-only)
 
 ## Quadratic Formula 
 ```LaTeX
 x = \frac{-b \pm \sqrt{b^2-4ac}}{2a}
 ```
 
-![Quadratic Formula](img/quadratic.png)
+![Quadratic Formula](img/quadratic-light.png#gh-light-mode-only)
+![Quadratic Formula](img/quadratic-dark.png#gh-dark-mode-only)
 
 ## Standard Deviation
 ```LaTeX
 \sigma = \sqrt{\frac{1}{N}\sum_{i=1}^N (x_i - \mu)^2}
 ```
 
-![Standard Deviation](img/standard.png)
+![Standard Deviation](img/standard-light.png#gh-light-mode-only)
+![Standard Deviation](img/standard-dark.png#gh-dark-mode-only)
 
 ## De Morgan's laws
 ```LaTeX
 \neg(P\land Q) \iff (\neg P)\lor(\neg Q)
 ```
 
-![De Morgan](img/demorgan.png)
+![De Morgan](img/demorgan-light.png#gh-light-mode-only)
+![De Morgan](img/demorgan-dark.png#gh-dark-mode-only)
 
 ## Log Change of Base
 ```LaTeX
 \log_b(x) = \frac{\log_a(x)}{\log_a(b)}
 ```
 
-![Log Base Change](img/log.png)
+![Log Base Change](img/log-light.png#gh-light-mode-only)
+![Log Base Change](img/log-dark.png#gh-dark-mode-only)
 
 ## Cosine addition
 ```LaTeX
 \cos(\theta + \varphi) = \cos(\theta)\cos(\varphi) - \sin(\theta)\sin(\varphi)
 ```
 
-![Cos Sum](img/trig.png)
+![Cos Sum](img/trig-light.png#gh-light-mode-only)
+![Cos Sum](img/trig-dark.png#gh-dark-mode-only)
 
 ## Limit e^k
 ```LaTeX
 \lim_{x\to\infty}\left(1 + \frac{k}{x}\right)^x = e^k
 ```
 
-![Limit](img/limit.png)
+![Limit](img/limit-light.png#gh-light-mode-only)
+![Limit](img/limit-dark.png#gh-dark-mode-only)
 
 ## Calculus
 ```LaTeX
 f(x) = \int\limits_{-\infty}^\infty\hat f(\xi)\,e^{2 \pi i \xi x}\,\mathrm{d}\xi
 ```
 
-![Calculus](img/calculus.png)
+![Calculus](img/calculus-light.png#gh-light-mode-only)
+![Calculus](img/calculus-dark.png#gh-dark-mode-only)
 
 ## Stirling Numbers of the Second Kind
 ```LaTeX
 {n \brace k} = \frac{1}{k!}\sum_{j=0}^k (-1)^{k-j}\binom{k}{j}(k-j)^n
 ```
 
-![Stirling Numbers](img/stirling.png)
+![Stirling Numbers](img/stirling-light.png#gh-light-mode-only)
+![Stirling Numbers](img/stirling-dark.png#gh-dark-mode-only)
 
 ## Gaussian Integral
 ```LaTeX
 \int_{-\infty}^{\infty} \! e^{-x^2} dx = \sqrt{\pi}
 ```
 
-![Gauss Integral](img/gaussintegral.png)
+![Gauss Integral](img/gaussintegral-light.png#gh-light-mode-only)
+![Gauss Integral](img/gaussintegral-dark.png#gh-dark-mode-only)
 
 ## Arithmetic mean, geometric mean inequality
 ```LaTeX
 \frac{1}{n}\sum_{i=1}^{n}x_i \geq \sqrt[n]{\prod_{i=1}^{n}x_i}
 ```
 
-![AM-GM](img/amgm.png)
+![AM-GM](img/amgm-light.png#gh-light-mode-only)
+![AM-GM](img/amgm-dark.png#gh-dark-mode-only)
 
 ## Cauchy-Schwarz inequality
 ```LaTeX
 \left(\sum_{k=1}^n a_k b_k \right)^2 \le \left(\sum_{k=1}^n a_k^2\right)\left(\sum_{k=1}^n b_k^2\right)
 ```
 
-![Cauchy Schwarz](img/cauchyschwarz.png)
+![Cauchy Schwarz](img/cauchyschwarz-light.png#gh-light-mode-only)
+![Cauchy Schwarz](img/cauchyschwarz-dark.png#gh-dark-mode-only)
 
 ## Cauchy integral formula
 ```LaTeX
 f^{(n)}(z_0) = \frac{n!}{2\pi i}\oint_\gamma\frac{f(z)}{(z-z_0)^{n+1}}dz
 ```
 
-![Cauchy Integral](img/cauchyintegral.png)
+![Cauchy Integral](img/cauchyintegral-light.png#gh-light-mode-only)
+![Cauchy Integral](img/cauchyintegral-dark.png#gh-dark-mode-only)
 
 ## Schroedinger's Equation
 ```LaTeX
@@ -97,7 +110,8 @@ i\hbar\frac{\partial}{\partial t}\mathbf\Psi(\mathbf{x},t) = -\frac{\hbar}{2m}\n
 + V(\mathbf{x})\mathbf\Psi(\mathbf{x},t)
 ```
 
-![Schroedinger](img/schroedinger.png)
+![Schroedinger](img/schroedinger-light.png#gh-light-mode-only)
+![Schroedinger](img/schroedinger-dark.png#gh-dark-mode-only)
 
 ## Lorentz Equations
 Use the `gather` or `displaylines` environments to center multiple
@@ -110,7 +124,8 @@ equations.
 \end{gather}
 ```
 
-![Lorentz](img/lorentz.png)
+![Lorentz](img/lorentz-light.png#gh-light-mode-only)
+![Lorentz](img/lorentz-dark.png#gh-dark-mode-only)
 
 ## Cross product
 ```LaTeX
@@ -121,7 +136,8 @@ equations.
 \end{vmatrix}
 ```
 
-![Cross Product](img/cross.png)
+![Cross Product](img/cross-light.png#gh-light-mode-only)
+![Cross Product](img/cross-dark.png#gh-dark-mode-only)
 
 ## Maxwell's Equations
 Use the `aligned`, `eqalign` or `split` environments to align
@@ -135,7 +151,8 @@ multiple equations.
 \end{eqalign}
 ```
 
-![Maxwell's Equations](img/maxwell.png)
+![Maxwell's Equations](img/maxwell-light.png#gh-light-mode-only)
+![Maxwell's Equations](img/maxwell-dark.png#gh-dark-mode-only)
 
 ## Matrix multiplication
 Supported matrix environments: `matrix`, `pmatrix`, `bmatrix`, `Bmatrix`,
@@ -153,7 +170,8 @@ c\alpha + d\gamma & c\beta + d \delta
 \end{pmatrix}
 ```
 
-![Matrix Multiplication](img/matrixmult.png)
+![Matrix Multiplication](img/matrixmult-light.png#gh-light-mode-only)
+![Matrix Multiplication](img/matrixmult-dark.png#gh-dark-mode-only)
 
 ## Cases
 ```LaTeX
@@ -163,7 +181,8 @@ f(x) = \begin{cases}
 \end{cases}
 ```
 
-![Cases](img/cases.png)
+![Cases](img/cases-light.png#gh-light-mode-only)
+![Cases](img/cases-dark.png#gh-dark-mode-only)
 
 ## Splitting long equations
 ```LaTeX
@@ -173,4 +192,5 @@ f(x) = \begin{cases}
 \left( o_t - \hat{\mu}_m^{(s)} \right) ^T \cal C_m^{(s)-1} \right) 
 ```
 
-![Long equation](img/long.png)
+![Long equation](img/long-light.png#gh-light-mode-only)
+![Long equation](img/long-dark.png#gh-dark-mode-only)
