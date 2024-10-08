@@ -108,21 +108,24 @@ import SwiftUI
 import SwiftMath
 
 struct MathView: UIViewRepresentable {
-
     var equation: String
-    var fontSize: CGFloat
+    var font: MathFont = .latinModernFont
+    var textAlignment: MTTextAlignment = .center
+    var fontSize: CGFloat = 30
+    var labelMode: MTMathUILabelMode = .text
+    var insets: MTEdgeInsets = MTEdgeInsets()
     
     func makeUIView(context: Context) -> MTMathUILabel {
         let view = MTMathUILabel()
         return view
     }
-    
-    func updateUIView(_ uiView: MTMathUILabel, context: Context) {
-        uiView.latex = equation
-        uiView.fontSize = fontSize
-        uiView.font = MTFontManager().termesFont(withSize: fontSize)
-        uiView.textAlignment = .right
-        uiView.labelMode = .text
+    func updateUIView(_ view: MTMathUILabel, context: Context) {
+        view.latex = equation
+        view.font = MTFontManager().font(withName: font.rawValue, size: fontSize)
+        view.textAlignment = textAlignment
+        view.labelMode = labelMode
+        view.textColor = MTColor(Color.primary)
+        view.contentInsets = insets
     }
 }
 ```
@@ -134,9 +137,12 @@ import SwiftUI
 import SwiftMath
 
 struct MathView: NSViewRepresentable {
-    
     var equation: String
-    var fontSize: CGFloat
+    var font: MathFont = .latinModernFont
+    var textAlignment: MTTextAlignment = .center
+    var fontSize: CGFloat = 30
+    var labelMode: MTMathUILabelMode = .text
+    var insets: MTEdgeInsets = MTEdgeInsets()
     
     func makeNSView(context: Context) -> MTMathUILabel {
         let view = MTMathUILabel()
@@ -145,11 +151,11 @@ struct MathView: NSViewRepresentable {
     
     func updateNSView(_ view: MTMathUILabel, context: Context) {
         view.latex = equation
-        view.fontSize = fontSize
-        view.font = MTFontManager().termesFont(withSize: fontSize)
-        view.textColor = .textColor
-        view.textAlignment = .center
-        view.labelMode = .display
+        view.font = MTFontManager().font(withName: font.rawValue, size: fontSize)
+        view.textAlignment = textAlignment
+        view.labelMode = labelMode
+        view.textColor = MTColor(Color.primary)
+        view.contentInsets = insets
     }
 }
 ```

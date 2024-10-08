@@ -11,6 +11,7 @@ import UIKit
 import AppKit
 #endif
 
+/// Now available for everyone to use
 public enum MathFont: String, CaseIterable, Identifiable {
     
     public var id: Self { self }  // Makes things simpler for SwiftUI
