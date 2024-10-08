@@ -54,6 +54,12 @@ f(x) = \int\limits_{-\infty}^\infty\!\hat f(\xi)\,e^{2 \pi i \xi x}\,\mathrm{d}\
 ![Ramanujan Identity](img/ramanujan-dark.png#gh-dark-mode-only) 
 
 More examples are included in [EXAMPLES](EXAMPLES.md)
+
+## Fonts
+Here are previews of the included fonts:
+
+![](img/FontsPreview.png#gh-dark-mode-only) 
+![](img/FontsPreviewLight.png#gh-light-mode-only) 
  
 ## Requirements
 `SwiftMath` works on iOS 11+ or MacOS 12+. It depends
@@ -170,7 +176,7 @@ This is a list of formula types that the library currently supports:
 * Equation alignment
 * Change bold, roman, caligraphic and other font styles (\\bf, \\text, etc.)
 * Most commonly used math symbols
-* Colors
+* Colors for both text and background
 
 Note: SwiftMath only supports the commands in LaTeX's math mode. There is
 also no language support for other than west European langugages and some
@@ -225,13 +231,15 @@ The default font is *Latin Modern Math*. This can be changed as:
 label.font = MTFontManager.fontmanager.termesFont(withSize:20)
 ```
 
-This project has five fonts bundled with it, but you can use any OTF math
+This project has 12 fonts bundled with it, but you can use any OTF math
 font. A python script is included that generates the `.plist` files 
 required for an `.otf` font to work with `SwiftMath`.  If you generate
 (and test) any other fonts please contribute them back to this project for
 others to benefit.
 
-Note: The `KpMath-Light` and `KpMath-Sans` fonts currently incorrectly
+
+
+Note: The `KpMath-Light`, `KpMath-Sans`, `Asana` fonts currently incorrectly
 render very large radicals. It appears that the font files do
 not properly define the offsets required to typeset these glyphs.  If
 anyone can fix this, it would be greatly appreciated.

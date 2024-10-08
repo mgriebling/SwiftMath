@@ -11,30 +11,53 @@ import UIKit
 import AppKit
 #endif
 
-public enum MathFont: String, CaseIterable {
+public enum MathFont: String, CaseIterable, Identifiable {
     
+    public var id: Self { self }  // Makes things simpler for SwiftUI
+
     case latinModernFont = "latinmodern-math"
     case kpMathLightFont = "KpMath-Light"
     case kpMathSansFont  = "KpMath-Sans"
     case xitsFont        = "xits-math"
     case termesFont      = "texgyretermes-math"
+    case asanaFont       = "Asana-Math"
+    case eulerFont       = "Euler-Math"
+    case firaFont        = "FiraMath-Regular"
+    case notoSansFont    = "NotoSansMath-Regular"
+    case libertinusFont  = "LibertinusMath-Regular"
+    case garamondFont    = "Garamond-Math"
+    case leteSansFont    = "LeteSansMath"
     
     var fontFamilyName: String {
         switch self {
-        case .latinModernFont: return "Latin Modern Math"
-        case .kpMathLightFont: return "KpMath"
-        case .kpMathSansFont:  return "KpMath"
-        case .xitsFont:        return "XITS Math"
-        case .termesFont:      return "TeX Gyre Termes Math"
+            case .latinModernFont:  "Latin Modern Math"
+            case .kpMathLightFont:  "KpMath"
+            case .kpMathSansFont:   "KpMath"
+            case .xitsFont:         "XITS Math"
+            case .termesFont:       "TeX Gyre Termes Math"
+            case .asanaFont:        "Asana Math"
+            case .eulerFont:        "Euler Math"
+            case .firaFont:         "Fira Math"
+            case .notoSansFont:     "Noto Sans Math"
+            case .libertinusFont:   "Libertinus Math"
+            case .garamondFont:     "Garamond Math"
+            case .leteSansFont:     "Lete Sans Math"
         }
     }
     var fontName: String {
         switch self {
-        case .latinModernFont: return "LatinModernMath-Regular"
-        case .kpMathLightFont: return "KpMath-Light"
-        case .kpMathSansFont:  return "KpMath-Sans"
-        case .xitsFont:        return "XITSMath"
-        case .termesFont:      return "TeXGyreTermesMath-Regular"
+            case .latinModernFont: "LatinModernMath-Regular"
+            case .kpMathLightFont: "KpMath-Light"
+            case .kpMathSansFont:  "KpMath-Sans"
+            case .xitsFont:         "XITSMath"
+            case .termesFont:       "TeXGyreTermesMath-Regular"
+            case .asanaFont:        "Asana Math"
+            case .eulerFont:        "Euler Math"
+            case .firaFont:         "Fira Math"
+            case .notoSansFont:     "Noto Sans Math"
+            case .libertinusFont:   "Libertinus Math"
+            case .garamondFont:     "Garamond Math"
+            case .leteSansFont:     "Lete Sans Math"
         }
     }
     public func cgFont() -> CGFont {
