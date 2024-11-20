@@ -22,9 +22,10 @@ public class MTFontManager {
     }
 
     public init() { }
-    
+
+    @RWLocked
     var nameToFontMap = [String: MTFont]()
-    
+
     public func font(withName name:String, size:CGFloat) -> MTFont? {
         var f = self.nameToFontMap[name]
         if f == nil {
