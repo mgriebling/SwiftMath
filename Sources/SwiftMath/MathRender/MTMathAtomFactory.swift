@@ -358,6 +358,7 @@ public class MTMathAtomFactory {
         "degree" : MTMathAtom(type: .ordinary, value: "\u{00B0}"),
         "neg" : MTMathAtom(type: .ordinary, value: "\u{00AC}"),
         "angstrom" : MTMathAtom(type: .ordinary, value: "\u{00C5}"),
+		"aa" : MTMathAtom(type: .ordinary, value: "\u{00E5}"),
         "|" : MTMathAtom(type: .ordinary, value: "\u{2016}"),
         "vert" : MTMathAtom(type: .ordinary, value: "|"),
         "ldots" : MTMathAtom(type: .ordinary, value: "\u{2026}"),
