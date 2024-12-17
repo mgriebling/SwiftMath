@@ -101,7 +101,8 @@ public class MTMathAtomFactory {
         "check" :  "\u{030C}",
         "vec" :  "\u{20D7}",
         "widehat" :  "\u{0302}",
-        "widetilde" :  "\u{0303}"
+        "widetilde" :  "\u{0303}",
+		"c" : "\u{0327}"
     ]
     
     private static let accentValueLock = NSLock()
@@ -359,6 +360,13 @@ public class MTMathAtomFactory {
         "neg" : MTMathAtom(type: .ordinary, value: "\u{00AC}"),
         "angstrom" : MTMathAtom(type: .ordinary, value: "\u{00C5}"),
 		"aa" : MTMathAtom(type: .ordinary, value: "\u{00E5}"),
+		"ae" : MTMathAtom(type: .ordinary, value: "\u{00E6}"),
+		"o"  : MTMathAtom(type: .ordinary, value: "\u{00F8}"),
+		"oe" : MTMathAtom(type: .ordinary, value: "\u{0153}"),
+		"ss" : MTMathAtom(type: .ordinary, value: "\u{00DF}"),
+		"O"  : MTMathAtom(type: .ordinary, value: "\u{00DB}"),
+		"AE" : MTMathAtom(type: .ordinary, value: "\u{00C6}"),
+		"OE" : MTMathAtom(type: .ordinary, value: "\u{0152}"),
         "|" : MTMathAtom(type: .ordinary, value: "\u{2016}"),
         "vert" : MTMathAtom(type: .ordinary, value: "|"),
         "ldots" : MTMathAtom(type: .ordinary, value: "\u{2026}"),
