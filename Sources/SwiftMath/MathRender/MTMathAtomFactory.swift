@@ -414,19 +414,19 @@ public class MTMathAtomFactory {
 	
 	static var supportedAccentedCharacters: [Character: (String, String)] = [
 		// Acute accents
-		"á": ("acute", "a"), "é": ("acute", "e"), "í": ("acute", "ı"),
+		"á": ("acute", "a"), "é": ("acute", "e"), "í": ("acute", "i"),
 		"ó": ("acute", "o"), "ú": ("acute", "u"), "ý": ("acute", "y"),
 		
 		// Grave accents
-		"à": ("grave", "a"), "è": ("grave", "e"), "ì": ("grave", "ı"),
+		"à": ("grave", "a"), "è": ("grave", "e"), "ì": ("grave", "i"),
 		"ò": ("grave", "o"), "ù": ("grave", "u"),
 		
 		// Circumflex
-		"â": ("hat", "a"), "ê": ("hat", "e"), "î": ("hat", "ı"),
+		"â": ("hat", "a"), "ê": ("hat", "e"), "î": ("hat", "i"),
 		"ô": ("hat", "o"), "û": ("hat", "u"),
 		
 		// Umlaut/dieresis
-		"ä": ("ddot", "a"), "ë": ("ddot", "e"), "ï": ("ddot", "ı"),
+		"ä": ("ddot", "a"), "ë": ("ddot", "e"), "ï": ("ddot", "i"),
 		"ö": ("ddot", "o"), "ü": ("ddot", "u"), "ÿ": ("ddot", "y"),
 		
 		// Tilde
