@@ -922,6 +922,29 @@ final class MTMathListBuilderTests: XCTestCase {
         let latex = MTMathListBuilder.mathListToString(list)
         XCTAssertEqual(latex, "\\bar{x}", desc);
     }
+	
+	func testAccentedCharacter() throws {
+		let str = "á"
+		let list = MTMathListBuilder.build(fromString: str)!
+		let desc = "Error for string:\(str)"
+		
+		XCTAssertNotNil(list, desc)
+		XCTAssertEqual((list.atoms.count), 1, desc)
+		let accent = list.atoms[0] as! MTAccent
+		XCTAssertEqual(accent.type, .accent, desc)
+		XCTAssertEqual(accent.nucleus, "\u{0301}", desc)
+		
+		let subList = accent.innerList!
+		XCTAssertNotNil(subList, desc)
+		XCTAssertEqual((subList.atoms.count), 1, desc)
+		let atom = subList.atoms[0]
+		XCTAssertEqual(atom.type, .variable, desc)
+		XCTAssertEqual(atom.nucleus, "a", desc)
+		
+		// convert it back to latex
+		let latex = MTMathListBuilder.mathListToString(list)
+		XCTAssertEqual(latex, "\\acute{a}", desc)
+	}
 
     func testMathSpace() throws {
         let str = "\\!";

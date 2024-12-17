@@ -402,6 +402,52 @@ public class MTMathAtomFactory {
         "scriptstyle" : MTMathStyle(style: .script),
         "scriptscriptstyle" : MTMathStyle(style: .scriptOfScript),
     ]
+	
+	static var supportedAccentedCharacters: [Character: (String, String)] = [
+		// Acute accents
+		"á": ("acute", "a"), "é": ("acute", "e"), "í": ("acute", "i"),
+		"ó": ("acute", "o"), "ú": ("acute", "u"), "ý": ("acute", "y"),
+		
+		// Grave accents
+		"à": ("grave", "a"), "è": ("grave", "e"), "ì": ("grave", "i"),
+		"ò": ("grave", "o"), "ù": ("grave", "u"),
+		
+		// Circumflex
+		"â": ("hat", "a"), "ê": ("hat", "e"), "î": ("hat", "i"),
+		"ô": ("hat", "o"), "û": ("hat", "u"),
+		
+		// Umlaut/dieresis
+		"ä": ("ddot", "a"), "ë": ("ddot", "e"), "ï": ("ddot", "i"),
+		"ö": ("ddot", "o"), "ü": ("ddot", "u"), "ÿ": ("ddot", "y"),
+		
+		// Tilde
+		"ã": ("tilde", "a"), "ñ": ("tilde", "n"), "õ": ("tilde", "o"),
+		
+		// Special characters
+		"ç": ("c", "c"),
+		"ø": ("o", ""),
+		"å": ("aa", ""),
+		"æ": ("ae", ""),
+		"œ": ("oe", ""),
+		"ß": ("ss", ""),
+		"'": ("upquote", ""),
+		
+		// Upper case variants
+		"Á": ("acute", "A"), "É": ("acute", "E"), "Í": ("acute", "I"),
+		"Ó": ("acute", "O"), "Ú": ("acute", "U"), "Ý": ("acute", "Y"),
+		"À": ("grave", "A"), "È": ("grave", "E"), "Ì": ("grave", "I"),
+		"Ò": ("grave", "O"), "Ù": ("grave", "U"),
+		"Â": ("hat", "A"), "Ê": ("hat", "E"), "Î": ("hat", "I"),
+		"Ô": ("hat", "O"), "Û": ("hat", "U"),
+		"Ä": ("ddot", "A"), "Ë": ("ddot", "E"), "Ï": ("ddot", "I"),
+		"Ö": ("ddot", "O"), "Ü": ("ddot", "U"),
+		"Ã": ("tilde", "A"), "Ñ": ("tilde", "N"), "Õ": ("tilde", "O"),
+		"Ç": ("c", "C"),
+		"Ø": ("O", ""),
+		"Å": ("AA", ""),
+		"Æ": ("AE", ""),
+		"Œ": ("OE", ""),
+	]
     
     private static let textToLatexLock = NSLock()
     static var _textToLatexSymbolName: [String: String]? = nil
@@ -531,6 +577,25 @@ public class MTMathAtomFactory {
         rad.degree?.add(placeholder())
         return rad
     }
+	
+	public static func atom(fromAccentedCharacter ch: Character) -> MTMathAtom? {
+		if let symbol = supportedAccentedCharacters[ch] {
+			// first handle any special characters
+			if let atom = atom(forLatexSymbol: symbol.0) {
+				return atom
+			}
+			
+			if let accent = MTMathAtomFactory.accent(withName: symbol.0) {
+				// The command is an accent
+				let list = MTMathList()
+				let ch = Array(symbol.1)[0]
+				list.add(atom(forCharacter: ch))
+				accent.innerList = list
+				return accent
+			}
+		}
+		return nil
+	}
     
     // MARK: -
     /** Gets the atom with the right type for the given character. If an atom
@@ -541,13 +606,17 @@ public class MTMathAtomFactory {
      - Any control character or spaces (< 0x21)
      - Latex control chars: $ % # & ~ '
      - Chars with special meaning in latex: ^ _ { } \
-     All other characters will have a non-nil atom returned.
+     All other characters, including those with accents, will have a non-nil atom returned.
      */
     public static func atom(forCharacter ch: Character) -> MTMathAtom? {
         let chStr = String(ch)
         switch chStr {
             case "\u{0410}"..."\u{044F}":
+				// Cyrillic alphabet
                 return MTMathAtom(type: .ordinary, value: chStr)
+			case _ where supportedAccentedCharacters.keys.contains(ch):
+				// support for áéíóúýàèìòùâêîôûäëïöüÿãñõçøåæœß'ÁÉÍÓÚÝÀÈÌÒÙÂÊÎÔÛÄËÏÖÜÃÑÕÇØÅÆŒ
+				return atom(fromAccentedCharacter: ch)
             case _ where ch.utf32Char < 0x0021 || ch.utf32Char > 0x007E:
                 return nil
             case "$", "%", "#", "&", "~", "\'", "^", "_", "{", "}", "\\":
