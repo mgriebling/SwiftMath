@@ -101,8 +101,7 @@ public class MTMathAtomFactory {
         "check" :  "\u{030C}",
         "vec" :  "\u{20D7}",
         "widehat" :  "\u{0302}",
-        "widetilde" :  "\u{0303}",
-		"c" : "\u{0327}"
+        "widetilde" :  "\u{0303}"
     ]
     
     private static let accentValueLock = NSLock()
@@ -364,6 +363,8 @@ public class MTMathAtomFactory {
 		"o"  : MTMathAtom(type: .ordinary, value: "\u{00F8}"),
 		"oe" : MTMathAtom(type: .ordinary, value: "\u{0153}"),
 		"ss" : MTMathAtom(type: .ordinary, value: "\u{00DF}"),
+		"cc" : MTMathAtom(type: .ordinary, value: "ç"),
+		"CC" : MTMathAtom(type: .ordinary, value: "Ç"),
 		"O"  : MTMathAtom(type: .ordinary, value: "\u{00DB}"),
 		"AE" : MTMathAtom(type: .ordinary, value: "\u{00C6}"),
 		"OE" : MTMathAtom(type: .ordinary, value: "\u{0152}"),
@@ -432,13 +433,13 @@ public class MTMathAtomFactory {
 		"ã": ("tilde", "a"), "ñ": ("tilde", "n"), "õ": ("tilde", "o"),
 		
 		// Special characters
-		"ç": ("c", "c"),
+		"ç": ("cc", ""),
 		"ø": ("o", ""),
 		"å": ("aa", ""),
 		"æ": ("ae", ""),
 		"œ": ("oe", ""),
 		"ß": ("ss", ""),
-		"'": ("upquote", ""),
+		"'": ("upquote", ""),  // this may be dangerous in math mode
 		
 		// Upper case variants
 		"Á": ("acute", "A"), "É": ("acute", "E"), "Í": ("acute", "I"),
@@ -450,7 +451,7 @@ public class MTMathAtomFactory {
 		"Ä": ("ddot", "A"), "Ë": ("ddot", "E"), "Ï": ("ddot", "I"),
 		"Ö": ("ddot", "O"), "Ü": ("ddot", "U"),
 		"Ã": ("tilde", "A"), "Ñ": ("tilde", "N"), "Õ": ("tilde", "O"),
-		"Ç": ("c", "C"),
+		"Ç": ("CC", ""),
 		"Ø": ("O", ""),
 		"Å": ("AA", ""),
 		"Æ": ("AE", ""),
