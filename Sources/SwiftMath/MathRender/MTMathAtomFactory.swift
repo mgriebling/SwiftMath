@@ -365,7 +365,7 @@ public class MTMathAtomFactory {
 		"ss" : MTMathAtom(type: .ordinary, value: "\u{00DF}"),	// NEW ß
 		"cc" : MTMathAtom(type: .ordinary, value: "\u{00E7}"),	// NEW ç
 		"CC" : MTMathAtom(type: .ordinary, value: "\u{00C7}"),	// NEW Ç
-		"O"  : MTMathAtom(type: .ordinary, value: "\u{00DB}"),	// NEW Ø
+		"O"  : MTMathAtom(type: .ordinary, value: "\u{00D8}"),	// NEW Ø
 		"AE" : MTMathAtom(type: .ordinary, value: "\u{00C6}"),	// NEW Æ
 		"OE" : MTMathAtom(type: .ordinary, value: "\u{0152}"),	// NEW Œ
         "|" : MTMathAtom(type: .ordinary, value: "\u{2016}"),
