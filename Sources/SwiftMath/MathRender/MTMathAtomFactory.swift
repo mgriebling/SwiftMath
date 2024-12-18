@@ -358,16 +358,16 @@ public class MTMathAtomFactory {
         "degree" : MTMathAtom(type: .ordinary, value: "\u{00B0}"),
         "neg" : MTMathAtom(type: .ordinary, value: "\u{00AC}"),
         "angstrom" : MTMathAtom(type: .ordinary, value: "\u{00C5}"),
-		"aa" : MTMathAtom(type: .ordinary, value: "\u{00E5}"),
-		"ae" : MTMathAtom(type: .ordinary, value: "\u{00E6}"),
-		"o"  : MTMathAtom(type: .ordinary, value: "\u{00F8}"),
-		"oe" : MTMathAtom(type: .ordinary, value: "\u{0153}"),
-		"ss" : MTMathAtom(type: .ordinary, value: "\u{00DF}"),
-		"cc" : MTMathAtom(type: .ordinary, value: "\u{00E7}"),
-		"CC" : MTMathAtom(type: .ordinary, value: "\u{00C7}"),
-		"O"  : MTMathAtom(type: .ordinary, value: "\u{00DB}"),
-		"AE" : MTMathAtom(type: .ordinary, value: "\u{00C6}"),
-		"OE" : MTMathAtom(type: .ordinary, value: "\u{0152}"),
+		"aa" : MTMathAtom(type: .ordinary, value: "\u{00E5}"),	// NEW å
+		"ae" : MTMathAtom(type: .ordinary, value: "\u{00E6}"),	// NEW æ
+		"o"  : MTMathAtom(type: .ordinary, value: "\u{00F8}"),	// NEW ø
+		"oe" : MTMathAtom(type: .ordinary, value: "\u{0153}"),	// NEW œ
+		"ss" : MTMathAtom(type: .ordinary, value: "\u{00DF}"),	// NEW ß
+		"cc" : MTMathAtom(type: .ordinary, value: "\u{00E7}"),	// NEW ç
+		"CC" : MTMathAtom(type: .ordinary, value: "\u{00C7}"),	// NEW Ç
+		"O"  : MTMathAtom(type: .ordinary, value: "\u{00DB}"),	// NEW Ø
+		"AE" : MTMathAtom(type: .ordinary, value: "\u{00C6}"),	// NEW Æ
+		"OE" : MTMathAtom(type: .ordinary, value: "\u{0152}"),	// NEW Œ
         "|" : MTMathAtom(type: .ordinary, value: "\u{2016}"),
         "vert" : MTMathAtom(type: .ordinary, value: "|"),
         "ldots" : MTMathAtom(type: .ordinary, value: "\u{2026}"),
@@ -433,12 +433,8 @@ public class MTMathAtomFactory {
 		"ã": ("tilde", "a"), "ñ": ("tilde", "n"), "õ": ("tilde", "o"),
 		
 		// Special characters
-		"ç": ("cc", ""),
-		"ø": ("o", ""),
-		"å": ("aa", ""),
-		"æ": ("ae", ""),
-		"œ": ("oe", ""),
-		"ß": ("ss", ""),
+		"ç": ("cc", ""), "ø": ("o", ""), "å": ("aa", ""), "æ": ("ae", ""),
+		"œ": ("oe", ""), "ß": ("ss", ""),
 		"'": ("upquote", ""),  // this may be dangerous in math mode
 		
 		// Upper case variants
