@@ -7,7 +7,7 @@
 
 import Foundation
 
-#if os(iOS)
+#if os(iOS) || os(visionOS)
     import UIKit
 #endif
 
@@ -86,7 +86,7 @@ extension MTMathImage {
         let size = intrinsicContentSize
         layoutImage(size: size, displayList: displayList)
         
-        #if os(iOS)
+        #if os(iOS) || os(visionOS)
             let renderer = UIGraphicsImageRenderer(size: size)
             let image = renderer.image { rendererContext in
                 rendererContext.cgContext.saveGState()

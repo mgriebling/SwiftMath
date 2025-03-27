@@ -5,7 +5,7 @@
 //  Created by Peter Tang on 10/9/2023.
 //
 
-#if os(iOS)
+#if os(iOS) || os(visionOS)
 import UIKit
 #elseif os(macOS)
 import AppKit
@@ -59,7 +59,7 @@ public enum MathFont: String, CaseIterable, Identifiable {
     }
     
     //Note: Below code are no longer supported, unable to tell if UIFont/NSFont is threadsafe, not used in SwiftMath.
-    // #if os(iOS)
+    // #if os(iOS) || os(visionOS)
     // public func uiFont(withSize size: CGFloat) -> UIFont? {
     //     UIFont(name: fontName, size: size)
     // }

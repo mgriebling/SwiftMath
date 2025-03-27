@@ -13,7 +13,7 @@ import SwiftUI
 
 func isIos6Supported() -> Bool {
     if !MTDisplay.initialized {
-#if os(iOS)
+#if os(iOS) || os(visionOS)
         let reqSysVer = "6.0"
         let currSysVer = UIDevice.current.systemVersion
         if currSysVer.compare(reqSysVer, options: .numeric) != .orderedAscending {
@@ -58,7 +58,7 @@ public class MTDisplay:NSObject {
     }
     
     /// For debugging. Shows the object in quick look in Xcode.
-#if os(iOS)
+#if os(iOS) || os(visionOS)
     func debugQuickLookObject() -> Any {
         let size = CGSizeMake(self.width, self.ascent + self.descent);
         UIGraphicsBeginImageContext(size);

@@ -21,7 +21,7 @@ final class MathFontTests: XCTestCase {
             // XCTAssertEqual($0.uiFont(withSize: CGFloat(size))?.familyName, $0.fontFamilyName, "uifont familyName != familyName.")
             XCTAssertEqual(CTFontCopyFamilyName($0.ctFont(withSize: CGFloat(size))) as String, $0.fontFamilyName, "ctfont.family != familyName")
         }
-        #if os(iOS)
+        #if os(iOS) || os(visionOS)
         // for family in UIFont.familyNames.sorted() {
         //     let names = UIFont.fontNames(forFamilyName: family)
         //     print("Family: \(family) Font names: \(names)")
