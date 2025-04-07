@@ -8,7 +8,7 @@ import Foundation
 //  MIT license. See the LICENSE file for details.
 //
 
-#if os(iOS)
+#if os(iOS) || os(visionOS)
 
 import UIKit
 
