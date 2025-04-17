@@ -187,7 +187,9 @@ final class MTMathListBuilderTests: XCTestCase {
                   ("\\begin{displaylines} x & y \\end{displaylines}", .invalidNumColumns),
                   ("\\begin{eqalign} x \\end{eqalign}", .invalidNumColumns),
                   ("\\nolimits", .invalidLimits),
-                  ("\\frac\\limits{1}{2}", .invalidLimits)
+                  ("\\frac\\limits{1}{2}", .invalidLimits),
+                  ("&\\begin", .characterNotFound),
+                  ("x & y \\\\ z & w \\end{matrix}", .invalidEnv)
             ]
     }
     

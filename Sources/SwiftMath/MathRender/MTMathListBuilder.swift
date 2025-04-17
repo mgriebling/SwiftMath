@@ -289,8 +289,11 @@ public struct MTMathListBuilder {
                     return list
                 } else {
                     // Create a new table with the current list and a default env
-                    let table = self.buildTable(env: nil, firstList: list, isRow: false)
-                    return MTMathList(atom: table!)
+                    if let table = self.buildTable(env: nil, firstList: list, isRow: false) {
+                        return MTMathList(atom: table)
+                    } else {
+                        return nil
+                    }
                 }
             } else if spacesAllowed && char == " " {
                 // If spaces are allowed then spaces do not need escaping with a \ before being used.
@@ -720,7 +723,7 @@ public struct MTMathListBuilder {
                 return nil
             }
             if env! != currentEnv!.envName {
-                let errorMessage = "Begin environment name \(currentEnv!.envName!) does not match end name: \(env!)"
+                let errorMessage = "Begin environment name \(currentEnv!.envName ?? "(none)") does not match end name: \(env!)"
                 self.setError(.invalidEnv, message:errorMessage)
                 return nil
             }
