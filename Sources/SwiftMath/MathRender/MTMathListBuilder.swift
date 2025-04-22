@@ -629,7 +629,7 @@ public struct MTMathListBuilder {
         var mutable = ""
         while self.hasCharacters {
             let ch = self.getNextCharacter()
-            if ch == "#" || (ch >= "A" && ch <= "F") || (ch >= "a" && ch <= "f") || (ch >= "0" && ch <= "9") {
+            if ch == "#" || (ch >= "A" && ch <= "Z") || (ch >= "a" && ch <= "z") || (ch >= "0" && ch <= "9") {
                 mutable.append(ch)  // appendString:[NSString stringWithCharacters:&ch length:1]];
             } else {
                 // we went too far
