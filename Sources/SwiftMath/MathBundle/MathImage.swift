@@ -46,7 +46,16 @@ extension MathImage {
         CGSize(width: displayList.width + contentInsets.left + contentInsets.right,
                height: displayList.ascent + displayList.descent + contentInsets.top + contentInsets.bottom)
     }
-    public mutating func asImage() -> (NSError?, MTImage?) {
+    public struct LayoutInfo {
+        public var ascent: CGFloat = 0
+        public var descent: CGFloat = 0
+
+        public init(ascent: CGFloat, descent: CGFloat) {
+            self.ascent = ascent
+            self.descent = descent
+        }
+    }
+    public mutating func asImage() -> (NSError?, MTImage?, LayoutInfo?) {
         func layoutImage(size: CGSize, displayList: MTMathListDisplay) {
             var textX = CGFloat(0)
             switch self.textAlignment {
@@ -69,7 +78,7 @@ extension MathImage {
 
         guard let mathList = MTMathListBuilder.build(fromString: latex, error: &error), error == nil,
               let displayList = MTTypesetter.createLineForMathList(mathList, font: mtfont, style: currentStyle) else {
-            return (error, nil)
+            return (error, nil, nil)
         }
 
         intrinsicContentSize = intrinsicContentSize(displayList)
@@ -86,7 +95,7 @@ extension MathImage {
                 displayList.draw(rendererContext.cgContext)
                 rendererContext.cgContext.restoreGState()
             }
-            return (nil, image)
+            return (nil, image, LayoutInfo(ascent: displayList.ascent, descent: displayList.descent))
         #endif
         #if os(macOS)
             let image = NSImage(size: size, flipped: false) { bounds in
@@ -96,7 +105,7 @@ extension MathImage {
                 context.restoreGState()
                 return true
             }
-            return (nil, image)
+            return (nil, image, LayoutInfo(ascent: displayList.ascent, descent: displayList.descent))
         #endif
     }
 }

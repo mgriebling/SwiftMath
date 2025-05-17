@@ -21,6 +21,7 @@ final class MathImageTests: XCTestCase {
         let result = SwiftMathImageResult.useMathImage(latex: latex, font: mathfont, fontSize: fontsize)
         XCTAssertNil(result.error)
         XCTAssertNotNil(result.image)
+        XCTAssertNotNil(result.layoutInfo)
         if result.error == nil, let image = result.image, let imageData = image.pngData() {
             safeImage(fileName: "test", pngData: imageData)
             let fileUrl = URL(fileURLWithPath: NSTemporaryDirectory())
@@ -38,6 +39,7 @@ final class MathImageTests: XCTestCase {
                 result = SwiftMathImageResult.useMathImage(latex: latex, font: mathfont, fontSize: fontsize)
                 XCTAssertNil(result.error)
                 XCTAssertNotNil(result.image)
+                XCTAssertNotNil(result.layoutInfo)
                 if result.error == nil, let image = result.image, let imageData = image.pngData() {
                     safeImage(fileName: "\(caseNumber)", pngData: imageData)
                     //let fileUrl = URL(fileURLWithPath: NSTemporaryDirectory())
@@ -87,6 +89,7 @@ final class MathImageTests: XCTestCase {
             let result = SwiftMathImageResult.useMathImage(latex: latex, font: mathfont, fontSize: fontsize)
             XCTAssertNil(result.error)
             XCTAssertNotNil(result.image)
+            XCTAssertNotNil(result.layoutInfo)
             if result.error == nil, let image = result.image, let imageData = image.pngData() {
                 self?.safeImage(fileName: "\(count)", pngData: imageData)
             }
@@ -114,6 +117,7 @@ final class MathImageTests: XCTestCase {
 public struct SwiftMathImageResult {
     let error: NSError?
     let image: MTImage?
+    let layoutInfo: MathImage.LayoutInfo?
 }
 extension SwiftMathImageResult {
     public static func useMTMathImage(latex: String, font: MathFont, fontSize: CGFloat, textColor: MTColor = MTColor.black) -> SwiftMathImageResult {
@@ -123,7 +127,7 @@ extension SwiftMathImageResult {
                                     labelMode: .text, textAlignment: alignment)
         formatter.font = font.mtfont(size: fontSize)
         let (error, image) = formatter.asImage()
-        return SwiftMathImageResult(error: error, image: image)
+        return SwiftMathImageResult(error: error, image: image, layoutInfo: nil)
     }
     public static func useMathImage(latex: String, font: MathFont, fontSize: CGFloat, textColor: MTColor = MTColor.black) -> SwiftMathImageResult {
         let alignment = MTTextAlignment.left
@@ -131,8 +135,8 @@ extension SwiftMathImageResult {
                                   textColor: textColor,
                                   labelMode: .text, textAlignment: alignment)
         formatter.font = font
-        let (error, image) = formatter.asImage()
-        return SwiftMathImageResult(error: error, image: image)
+        let (error, image, layoutInfo) = formatter.asImage()
+        return SwiftMathImageResult(error: error, image: image, layoutInfo: layoutInfo)
     }
 }
 #if os(macOS)
