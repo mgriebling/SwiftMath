@@ -593,19 +593,31 @@ public struct MTMathListBuilder {
         } else if command == "color" {
             // A color command has 2 arguments
             let mathColor = MTMathColor()
-            mathColor.colorString = self.readColor()!
+            let color = self.readColor()
+            if color == nil {
+                return nil;
+            }
+            mathColor.colorString = color!
             mathColor.innerList = self.buildInternal(true)
             return mathColor
         } else if command == "textcolor" {
             // A textcolor command has 2 arguments
             let mathColor = MTMathTextColor()
-            mathColor.colorString = self.readColor()!
+            let color = self.readColor()
+            if color == nil {
+                return nil;
+            }
+            mathColor.colorString = color!
             mathColor.innerList = self.buildInternal(true)
             return mathColor
         } else if command == "colorbox" {
             // A color command has 2 arguments
             let mathColorbox = MTMathColorbox()
-            mathColorbox.colorString = self.readColor()!
+            let color = self.readColor()
+            if color == nil {
+                return nil;
+            }
+            mathColor.colorString = color!
             mathColorbox.innerList = self.buildInternal(true)
             return mathColorbox
         } else {
