@@ -848,7 +848,7 @@ public class MTMathAtomFactory {
                 let spacer = MTMathAtom(type: .ordinary, value: "")
                 
                 for i in 0..<table.cells.count {
-                    if table.cells[i].count >= 1 {
+                    if table.cells[i].count >= 2 {
                         table.cells[i][1].insert(spacer, at: 0)
                     }
                 }
