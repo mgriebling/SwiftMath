@@ -617,7 +617,7 @@ public struct MTMathListBuilder {
             if color == nil {
                 return nil;
             }
-            mathColor.colorString = color!
+            mathColorbox.colorString = color!
             mathColorbox.innerList = self.buildInternal(true)
             return mathColorbox
         } else {
