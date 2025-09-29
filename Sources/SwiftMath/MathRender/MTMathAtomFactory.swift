@@ -257,6 +257,7 @@ public class MTMathAtomFactory {
         "sqsupseteq" : MTMathAtom(type: .relation, value: "\u{2292}"),
         "models" : MTMathAtom(type: .relation, value: "\u{22A7}"),
         "perp" : MTMathAtom(type: .relation, value: "\u{27C2}"),
+        "implies" : MTMathAtom(type: .relation, value: "\u{27F9}"),
 
         // operators
         "times" : MTMathAtomFactory.times(),
@@ -327,6 +328,8 @@ public class MTMathAtomFactory {
         "coprod" : MTMathAtomFactory.operatorWithName( "\u{2210}", limits: true),
         "sum" : MTMathAtomFactory.operatorWithName( "\u{2211}", limits: true),
         "int" : MTMathAtomFactory.operatorWithName( "\u{222B}", limits: false),
+        "iint" : MTMathAtomFactory.operatorWithName( "\u{222C}", limits: false),
+        "iiint" : MTMathAtomFactory.operatorWithName( "\u{222D}", limits: false),
         "oint" : MTMathAtomFactory.operatorWithName( "\u{222E}", limits: false),
         "bigwedge" : MTMathAtomFactory.operatorWithName( "\u{22C0}", limits: true),
         "bigvee" : MTMathAtomFactory.operatorWithName( "\u{22C1}", limits: true),
@@ -382,6 +385,7 @@ public class MTMathAtomFactory {
         "aleph" : MTMathAtom(type: .ordinary, value: "\u{2135}"),
         "forall" : MTMathAtom(type: .ordinary, value: "\u{2200}"),
         "exists" : MTMathAtom(type: .ordinary, value: "\u{2203}"),
+        "nexists" : MTMathAtom(type: .ordinary, value: "\u{2204}"),
         "emptyset" : MTMathAtom(type: .ordinary, value: "\u{2205}"),
         "nabla" : MTMathAtom(type: .ordinary, value: "\u{2207}"),
         "infty" : MTMathAtom(type: .ordinary, value: "\u{221E}"),
