@@ -898,19 +898,21 @@ public class MTMathAtomFactory {
                 
                 return table
             } else if env == "cases" {
-                if table.numColumns != 2 {
-                    let message = "cases environment can only have 2 columns"
+                if table.numColumns != 1 && table.numColumns != 2 {
+                    let message = "cases environment can have 1 or 2 columns"
                     if error == nil {
                         error = NSError(domain: MTParseError, code: MTParseErrors.invalidNumColumns.rawValue, userInfo: [NSLocalizedDescriptionKey:message])
                     }
                     return nil
                 }
-                
+
                 table.interRowAdditionalSpacing = 0
                 table.interColumnSpacing = 18
-                
+
                 table.set(alignment: .left, forColumn: 0)
-                table.set(alignment: .left, forColumn: 1)
+                if table.numColumns == 2 {
+                    table.set(alignment: .left, forColumn: 1)
+                }
                 
                 let style = MTMathStyle(style: .text)
                 for i in 0..<table.cells.count {
