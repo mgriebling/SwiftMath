@@ -1867,6 +1867,266 @@ final class MTMathListBuilderTests: XCTestCase {
         XCTAssertTrue(hasCdot, "Should have \\cdot operator")
     }
 
+    // MARK: - Comprehensive Command Coverage Tests
+
+    func testGreekLettersLowercase() throws {
+        let commands = ["alpha", "beta", "gamma", "delta", "epsilon", "zeta", "eta", "theta",
+                        "iota", "kappa", "lambda", "mu", "nu", "xi", "omicron", "pi",
+                        "rho", "sigma", "tau", "upsilon", "phi", "chi", "psi", "omega"]
+
+        for cmd in commands {
+            var error: NSError? = nil
+            let str = "$\\\(cmd)$"
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse \\\(cmd)")
+            XCTAssertNil(error, "Should not error on \\\(cmd): \(error?.localizedDescription ?? "")")
+            XCTAssertTrue(unwrappedList.atoms.count >= 1, "\\\(cmd) should have at least one atom")
+        }
+    }
+
+    func testGreekLettersUppercase() throws {
+        let commands = ["Gamma", "Delta", "Theta", "Lambda", "Xi", "Pi", "Sigma", "Upsilon", "Phi", "Psi", "Omega"]
+
+        for cmd in commands {
+            var error: NSError? = nil
+            let str = "$\\\(cmd)$"
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse \\\(cmd)")
+            XCTAssertNil(error, "Should not error on \\\(cmd): \(error?.localizedDescription ?? "")")
+            XCTAssertTrue(unwrappedList.atoms.count >= 1, "\\\(cmd) should have at least one atom")
+        }
+    }
+
+    func testBinaryOperators() throws {
+        let operators = ["times", "div", "pm", "mp", "ast", "star", "circ", "bullet",
+                         "cdot", "cap", "cup", "uplus", "sqcap", "sqcup",
+                         "oplus", "ominus", "otimes", "oslash", "odot", "wedge", "vee"]
+
+        for op in operators {
+            var error: NSError? = nil
+            let str = "$a \\\(op) b$"
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse \\\(op)")
+            XCTAssertNil(error, "Should not error on \\\(op): \(error?.localizedDescription ?? "")")
+
+            // Should find the operator
+            var foundOp = false
+            for atom in unwrappedList.atoms {
+                if atom.type == .binaryOperator {
+                    foundOp = true
+                    break
+                }
+            }
+            XCTAssertTrue(foundOp, "Should find binary operator for \\\(op)")
+        }
+    }
+
+    func testRelations() throws {
+        let relations = ["leq", "geq", "neq", "equiv", "approx", "sim", "simeq", "cong",
+                         "prec", "succ", "subset", "supset", "subseteq", "supseteq",
+                         "in", "notin", "ni", "propto", "perp", "parallel"]
+
+        for rel in relations {
+            var error: NSError? = nil
+            let str = "$a \\\(rel) b$"
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse \\\(rel)")
+            XCTAssertNil(error, "Should not error on \\\(rel): \(error?.localizedDescription ?? "")")
+
+            // Should find the relation
+            var foundRel = false
+            for atom in unwrappedList.atoms {
+                if atom.type == .relation {
+                    foundRel = true
+                    break
+                }
+            }
+            XCTAssertTrue(foundRel, "Should find relation for \\\(rel)")
+        }
+    }
+
+    func testAllAccents() throws {
+        let accents = ["hat", "tilde", "bar", "dot", "ddot", "check", "grave", "acute", "breve", "vec"]
+
+        for acc in accents {
+            var error: NSError? = nil
+            let str = "$\\\(acc){x}$"
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse \\\(acc)")
+            XCTAssertNil(error, "Should not error on \\\(acc): \(error?.localizedDescription ?? "")")
+
+            // Should find the accent
+            var foundAccent = false
+            for atom in unwrappedList.atoms {
+                if atom.type == .accent {
+                    foundAccent = true
+                    break
+                }
+            }
+            XCTAssertTrue(foundAccent, "Should find accent for \\\(acc)")
+        }
+    }
+
+    func testDelimiterPairs() throws {
+        let delimiterPairs = [
+            ("langle", "rangle"),
+            ("lfloor", "rfloor"),
+            ("lceil", "rceil"),
+            ("lgroup", "rgroup"),
+            ("{", "}")
+        ]
+
+        for (left, right) in delimiterPairs {
+            var error: NSError? = nil
+            let str = "$\\left\\\(left) x \\right\\\(right)$"
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse \\left\\\(left) ... \\right\\\(right)")
+            XCTAssertNil(error, "Should not error on delimiters \\\(left)/\\\(right): \(error?.localizedDescription ?? "")")
+
+            // Should have an inner atom
+            var foundInner = false
+            for atom in unwrappedList.atoms {
+                if atom.type == .inner {
+                    foundInner = true
+                    break
+                }
+            }
+            XCTAssertTrue(foundInner, "Should create inner atom for \\left\\\(left)...\\right\\\(right)")
+        }
+    }
+
+    func testLargeOperators() throws {
+        let operators = ["sum", "prod", "coprod", "int", "iint", "iiint", "oint",
+                         "bigcap", "bigcup", "bigvee", "bigwedge", "bigodot", "bigoplus", "bigotimes"]
+
+        for op in operators {
+            var error: NSError? = nil
+            let str = "$\\\(op)_{i=1}^{n} x_i$"
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse \\\(op)")
+            XCTAssertNil(error, "Should not error on \\\(op): \(error?.localizedDescription ?? "")")
+
+            // Should find large operator
+            var foundOp = false
+            for atom in unwrappedList.atoms {
+                if atom.type == .largeOperator {
+                    foundOp = true
+                    break
+                }
+            }
+            XCTAssertTrue(foundOp, "Should find large operator for \\\(op)")
+        }
+    }
+
+    func testArrows() throws {
+        let arrows = ["leftarrow", "rightarrow", "uparrow", "downarrow", "leftrightarrow",
+                      "Leftarrow", "Rightarrow", "Uparrow", "Downarrow", "Leftrightarrow",
+                      "longleftarrow", "longrightarrow", "Longleftarrow", "Longrightarrow",
+                      "mapsto", "nearrow", "searrow", "swarrow", "nwarrow"]
+
+        for arrow in arrows {
+            var error: NSError? = nil
+            let str = "$a \\\(arrow) b$"
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse \\\(arrow)")
+            XCTAssertNil(error, "Should not error on \\\(arrow): \(error?.localizedDescription ?? "")")
+
+            // Arrows are typically relations
+            var foundArrow = false
+            for atom in unwrappedList.atoms {
+                if atom.type == .relation {
+                    foundArrow = true
+                    break
+                }
+            }
+            XCTAssertTrue(foundArrow, "Should find arrow relation for \\\(arrow)")
+        }
+    }
+
+    func testTrigonometricFunctions() throws {
+        let functions = ["sin", "cos", "tan", "cot", "sec", "csc",
+                         "arcsin", "arccos", "arctan", "sinh", "cosh", "tanh", "coth"]
+
+        for funcName in functions {
+            var error: NSError? = nil
+            let str = "$\\\(funcName) x$"
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse \\\(funcName)")
+            XCTAssertNil(error, "Should not error on \\\(funcName): \(error?.localizedDescription ?? "")")
+
+            // Should find the function operator
+            var foundFunc = false
+            for atom in unwrappedList.atoms {
+                if atom.type == .largeOperator {
+                    foundFunc = true
+                    break
+                }
+            }
+            XCTAssertTrue(foundFunc, "Should find function operator for \\\(funcName)")
+        }
+    }
+
+    func testLimitOperators() throws {
+        let operators = ["lim", "limsup", "liminf", "max", "min", "sup", "inf", "det", "gcd"]
+
+        for op in operators {
+            var error: NSError? = nil
+            let str = "$\\\(op)_{x \\to 0} f(x)$"
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse \\\(op)")
+            XCTAssertNil(error, "Should not error on \\\(op): \(error?.localizedDescription ?? "")")
+
+            // Should find the operator
+            var foundOp = false
+            for atom in unwrappedList.atoms {
+                if atom.type == .largeOperator {
+                    foundOp = true
+                    break
+                }
+            }
+            XCTAssertTrue(foundOp, "Should find limit operator for \\\(op)")
+        }
+    }
+
+    func testSpecialSymbols() throws {
+        let symbols = ["infty", "partial", "nabla", "prime", "hbar", "ell", "wp",
+                       "Re", "Im", "top", "bot", "emptyset", "exists", "forall",
+                       "neg", "angle", "triangle", "ldots", "cdots", "vdots", "ddots"]
+
+        for sym in symbols {
+            var error: NSError? = nil
+            let str = "$\\\(sym)$"
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse \\\(sym)")
+            XCTAssertNil(error, "Should not error on \\\(sym): \(error?.localizedDescription ?? "")")
+            XCTAssertTrue(unwrappedList.atoms.count >= 1, "\\\(sym) should have at least one atom")
+        }
+    }
+
+    func testLogFunctions() throws {
+        let logFuncs = ["log", "ln", "lg"]
+
+        for funcName in logFuncs {
+            var error: NSError? = nil
+            let str = "$\\\(funcName) x$"
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+            XCTAssertNotNil(list, "Should parse \\\(funcName)")
+            XCTAssertNil(error, "Should not error on \\\(funcName): \(error?.localizedDescription ?? "")")
+        }
+    }
+
 //    func testPerformanceExample() throws {
 //        // This is an example of a performance test case.
 //        measure {
