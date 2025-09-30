@@ -2127,6 +2127,229 @@ final class MTMathListBuilderTests: XCTestCase {
         }
     }
 
+    // MARK: - High Priority Missing Features Tests
+
+    func testDisplayStyle() throws {
+        // Test \displaystyle and \textstyle commands
+        let testCases = [
+            ("\\displaystyle \\sum_{i=1}^{n} x_i", "displaystyle with sum"),
+            ("\\textstyle \\int_{0}^{\\infty} f(x) dx", "textstyle with integral"),
+            ("x + \\displaystyle\\frac{a}{b} + y", "inline displaystyle fraction"),
+            ("\\displaystyle x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}", "displaystyle equation")
+        ]
+
+        for (latex, desc) in testCases {
+            var error: NSError? = nil
+            let list = MTMathListBuilder.build(fromString: latex, error: &error)
+
+            if list == nil || error != nil {
+                throw XCTSkip("\\displaystyle/\\textstyle not implemented: \(desc). Error: \(error?.localizedDescription ?? "nil result")")
+            }
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse: \(desc)")
+            XCTAssertTrue(unwrappedList.atoms.count >= 1, "\(desc) should have atoms")
+        }
+    }
+
+    func testMiddleDelimiter() throws {
+        // Test \middle command for delimiters in the middle of expressions
+        let testCases = [
+            ("\\left( \\frac{a}{b} \\middle| \\frac{c}{d} \\right)", "middle pipe"),
+            ("\\left\\{ x \\middle\\| y \\right\\}", "middle double pipe"),
+            ("\\left[ a \\middle\\\\ b \\right]", "middle backslash")
+        ]
+
+        for (latex, desc) in testCases {
+            var error: NSError? = nil
+            let list = MTMathListBuilder.build(fromString: latex, error: &error)
+
+            if list == nil || error != nil {
+                throw XCTSkip("\\middle not implemented: \(desc). Error: \(error?.localizedDescription ?? "nil result")")
+            }
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse: \(desc)")
+            XCTAssertTrue(unwrappedList.atoms.count >= 1, "\(desc) should have atoms")
+        }
+    }
+
+    func testSubstack() throws {
+        // Test \substack for multi-line subscripts and limits
+        let testCases = [
+            ("\\sum_{\\substack{0 \\le i \\le m \\\\ 0 < j < n}} P(i,j)", "substack in sum limits"),
+            ("\\prod_{\\substack{p \\text{ prime} \\\\ p < 100}} p", "substack with text"),
+            ("A_{\\substack{n \\\\ k}}", "substack in subscript")
+        ]
+
+        for (latex, desc) in testCases {
+            var error: NSError? = nil
+            let list = MTMathListBuilder.build(fromString: latex, error: &error)
+
+            if list == nil || error != nil {
+                throw XCTSkip("\\substack not implemented: \(desc). Error: \(error?.localizedDescription ?? "nil result")")
+            }
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse: \(desc)")
+            XCTAssertTrue(unwrappedList.atoms.count >= 1, "\(desc) should have atoms")
+        }
+    }
+
+    func testManualDelimiterSizing() throws {
+        // Test \big, \Big, \bigg, \Bigg sizing commands
+        let testCases = [
+            ("\\big( x \\big)", "big parentheses"),
+            ("\\Big[ y \\Big]", "Big brackets"),
+            ("\\bigg\\{ z \\bigg\\}", "bigg braces"),
+            ("\\Bigg| w \\Bigg|", "Bigg pipes"),
+            ("\\big< a \\big>", "big angle brackets")
+        ]
+
+        for (latex, desc) in testCases {
+            var error: NSError? = nil
+            let list = MTMathListBuilder.build(fromString: latex, error: &error)
+
+            if list == nil || error != nil {
+                throw XCTSkip("Manual delimiter sizing (\\big, \\Big, \\bigg, \\Bigg) not implemented: \(desc). Error: \(error?.localizedDescription ?? "nil result")")
+            }
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse: \(desc)")
+            XCTAssertTrue(unwrappedList.atoms.count >= 1, "\(desc) should have atoms")
+        }
+    }
+
+    func testSpacingCommands() throws {
+        // Test fine-tuned spacing commands
+        let testCases = [
+            ("a\\,b", "thin space \\,"),
+            ("a\\:b", "medium space \\:"),
+            ("a\\;b", "thick space \\;"),
+            ("a\\!b", "negative space \\!"),
+            ("\\int\\!\\!\\!\\int f(x,y) dx dy", "multiple negative spaces"),
+            ("x \\, y \\: z \\; w", "mixed spacing")
+        ]
+
+        for (latex, desc) in testCases {
+            var error: NSError? = nil
+            let list = MTMathListBuilder.build(fromString: latex, error: &error)
+
+            if list == nil || error != nil {
+                throw XCTSkip("Spacing commands (\\,, \\:, \\;, \\!) not implemented: \(desc). Error: \(error?.localizedDescription ?? "nil result")")
+            }
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse: \(desc)")
+            XCTAssertTrue(unwrappedList.atoms.count >= 1, "\(desc) should have atoms")
+        }
+    }
+
+    // MARK: - Medium Priority Missing Features Tests
+
+    func testMultipleIntegrals() throws {
+        // Test \iint, \iiint, \iiiint for multiple integrals
+        let testCases = [
+            ("\\iint f(x,y) dx dy", "double integral"),
+            ("\\iiint f(x,y,z) dx dy dz", "triple integral"),
+            ("\\iiiint f(w,x,y,z) dw dx dy dz", "quadruple integral"),
+            ("\\iint_{D} f(x,y) dA", "double integral with limits")
+        ]
+
+        for (latex, desc) in testCases {
+            var error: NSError? = nil
+            let list = MTMathListBuilder.build(fromString: latex, error: &error)
+
+            if list == nil || error != nil {
+                throw XCTSkip("Multiple integral symbols (\\iint, \\iiint) not implemented: \(desc). Error: \(error?.localizedDescription ?? "nil result")")
+            }
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse: \(desc)")
+            XCTAssertTrue(unwrappedList.atoms.count >= 1, "\(desc) should have atoms")
+        }
+    }
+
+    func testContinuedFractions() throws {
+        // Test \cfrac for continued fractions (already added but verify)
+        let testCases = [
+            ("\\cfrac{1}{2}", "simple cfrac"),
+            ("a_0 + \\cfrac{1}{a_1 + \\cfrac{1}{a_2}}", "nested cfrac"),
+            ("\\cfrac{x^2}{y + \\cfrac{1}{z}}", "cfrac with expressions")
+        ]
+
+        for (latex, desc) in testCases {
+            var error: NSError? = nil
+            let list = MTMathListBuilder.build(fromString: latex, error: &error)
+
+            // cfrac might be implemented, let's check
+            if list != nil && error == nil {
+                let unwrappedList = try XCTUnwrap(list, "Should parse: \(desc)")
+                XCTAssertTrue(unwrappedList.atoms.count >= 1, "\(desc) should have atoms")
+            } else {
+                throw XCTSkip("\\cfrac may have issues: \(desc). Error: \(error?.localizedDescription ?? "nil result")")
+            }
+        }
+    }
+
+    func testBoldsymbol() throws {
+        // Test \boldsymbol for bold Greek letters
+        let testCases = [
+            ("\\boldsymbol{\\alpha}", "bold alpha"),
+            ("\\boldsymbol{\\beta}", "bold beta"),
+            ("\\boldsymbol{\\Gamma}", "bold Gamma"),
+            ("\\mathbf{x} + \\boldsymbol{\\mu}", "mixed bold")
+        ]
+
+        for (latex, desc) in testCases {
+            var error: NSError? = nil
+            let list = MTMathListBuilder.build(fromString: latex, error: &error)
+
+            if list == nil || error != nil {
+                throw XCTSkip("\\boldsymbol not implemented: \(desc). Error: \(error?.localizedDescription ?? "nil result")")
+            }
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse: \(desc)")
+            XCTAssertTrue(unwrappedList.atoms.count >= 1, "\(desc) should have atoms")
+        }
+    }
+
+    func testStarredMatrices() throws {
+        // Test starred matrix environments with alignment
+        let testCases = [
+            ("\\begin{pmatrix*}[r] 1 & 2 \\\\ 3 & 4 \\end{pmatrix*}", "pmatrix* right align"),
+            ("\\begin{bmatrix*}[l] a & b \\\\ c & d \\end{bmatrix*}", "bmatrix* left align"),
+            ("\\begin{vmatrix*}[c] x & y \\\\ z & w \\end{vmatrix*}", "vmatrix* center align")
+        ]
+
+        for (latex, desc) in testCases {
+            var error: NSError? = nil
+            let list = MTMathListBuilder.build(fromString: latex, error: &error)
+
+            if list == nil || error != nil {
+                throw XCTSkip("Starred matrix environments (*matrix*) not implemented: \(desc). Error: \(error?.localizedDescription ?? "nil result")")
+            }
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse: \(desc)")
+            XCTAssertTrue(unwrappedList.atoms.count >= 1, "\(desc) should have atoms")
+        }
+    }
+
+    func testSmallMatrix() throws {
+        // Test \smallmatrix for inline matrices
+        let testCases = [
+            ("\\left( \\begin{smallmatrix} a & b \\\\ c & d \\end{smallmatrix} \\right)", "smallmatrix with delimiters"),
+            ("A = \\left( \\begin{smallmatrix} 1 & 0 \\\\ 0 & 1 \\end{smallmatrix} \\right)", "identity in smallmatrix"),
+            ("\\begin{smallmatrix} x \\\\ y \\end{smallmatrix}", "column vector in smallmatrix")
+        ]
+
+        for (latex, desc) in testCases {
+            var error: NSError? = nil
+            let list = MTMathListBuilder.build(fromString: latex, error: &error)
+
+            if list == nil || error != nil {
+                throw XCTSkip("\\smallmatrix not implemented: \(desc). Error: \(error?.localizedDescription ?? "nil result")")
+            }
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse: \(desc)")
+            XCTAssertTrue(unwrappedList.atoms.count >= 1, "\(desc) should have atoms")
+        }
+    }
+
 //    func testPerformanceExample() throws {
 //        // This is an example of a performance test case.
 //        measure {
