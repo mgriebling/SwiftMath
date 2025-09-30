@@ -94,6 +94,42 @@ public struct MTMathListBuilder {
             currentCharIndex = string.index(before: currentCharIndex)
         }
     }
+
+    // Peek at next command without consuming it (for \not lookahead)
+    mutating func peekNextCommand() -> String {
+        let savedIndex = currentCharIndex
+        skipSpaces()
+
+        guard hasCharacters else {
+            currentCharIndex = savedIndex
+            return ""
+        }
+
+        let char = getNextCharacter()
+        let command: String
+
+        if char == "\\" {
+            command = readCommand()
+        } else {
+            command = ""
+        }
+
+        // Restore position
+        currentCharIndex = savedIndex
+        return command
+    }
+
+    // Consume the next command (after peeking)
+    mutating func consumeNextCommand() {
+        skipSpaces()
+
+        guard hasCharacters else { return }
+
+        let char = getNextCharacter()
+        if char == "\\" {
+            _ = readCommand()
+        }
+    }
     
     mutating func expectCharacter(_ ch: Character) -> Bool {
         MTAssertNotSpace(ch)
@@ -126,6 +162,24 @@ public struct MTMathListBuilder {
         .text: "textstyle",
         .script: "scriptstyle",
         .scriptOfScript: "scriptscriptstyle"
+    ]
+
+    // Comprehensive mapping of \not command combinations to Unicode negated symbols
+    public static let notCombinations: [String: String] = [
+        // Primary targets (user requested)
+        "equiv": "\u{2262}",    // ≢ Not equivalent
+        "subset": "\u{2284}",   // ⊄ Not subset
+        "in": "\u{2209}",       // ∉ Not element of
+
+        // Additional standard negations
+        "sim": "\u{2241}",      // ≁ Not similar
+        "approx": "\u{2249}",   // ≉ Not approximately equal
+        "cong": "\u{2247}",     // ≇ Not congruent
+        "parallel": "\u{2226}", // ∦ Not parallel
+        "subseteq": "\u{2288}", // ⊈ Not subset or equal
+        "supset": "\u{2285}",   // ⊅ Not superset
+        "supseteq": "\u{2289}", // ⊉ Not superset or equal
+        "=": "\u{2260}",        // ≠ Not equal (alternative to \neq)
     ]
     
     init(string: String) {
@@ -644,6 +698,18 @@ public struct MTMathListBuilder {
 
             inner.innerList = innerList
             return inner
+        } else if command == "not" {
+            // Handle \not command with lookahead for comprehensive negation support
+            let nextCommand = self.peekNextCommand()
+
+            if let negatedUnicode = Self.notCombinations[nextCommand] {
+                self.consumeNextCommand() // Remove base symbol from stream
+                return MTMathAtom(type: .relation, value: negatedUnicode)
+            } else {
+                let errorMessage = "Unsupported \\not\\\(nextCommand) combination"
+                self.setError(.invalidCommand, message: errorMessage)
+                return nil
+            }
         } else {
             let errorMessage = "Invalid command \\\(command)"
             self.setError(.invalidCommand, message:errorMessage)
