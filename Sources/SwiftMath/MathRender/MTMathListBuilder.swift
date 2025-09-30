@@ -620,6 +620,30 @@ public struct MTMathListBuilder {
             mathColorbox.colorString = color!
             mathColorbox.innerList = self.buildInternal(true)
             return mathColorbox
+        } else if command == "pmod" {
+            // A pmod command has 1 argument - creates (mod n)
+            let inner = MTInner()
+            inner.leftBoundary = MTMathAtomFactory.boundary(forDelimiter: "(")
+            inner.rightBoundary = MTMathAtomFactory.boundary(forDelimiter: ")")
+
+            let innerList = MTMathList()
+
+            // Add the "mod" operator (upright text)
+            let modOperator = MTMathAtomFactory.atom(forLatexSymbol: "mod")!
+            innerList.add(modOperator)
+
+            // Add medium space between "mod" and argument (6mu)
+            let space = MTMathSpace(space: 6.0)
+            innerList.add(space)
+
+            // Parse the argument from braces
+            let argument = self.buildInternal(true)
+            if let argList = argument {
+                innerList.append(argList)
+            }
+
+            inner.innerList = innerList
+            return inner
         } else {
             let errorMessage = "Invalid command \\\(command)"
             self.setError(.invalidCommand, message:errorMessage)

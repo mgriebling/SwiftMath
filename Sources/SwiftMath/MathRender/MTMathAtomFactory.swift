@@ -310,6 +310,7 @@ public class MTMathAtomFactory {
         "hom" : MTMathAtomFactory.operatorWithName( "hom", limits: false),
         "exp" : MTMathAtomFactory.operatorWithName( "exp", limits: false),
         "deg" : MTMathAtomFactory.operatorWithName( "deg", limits: false),
+        "mod" : MTMathAtomFactory.operatorWithName("mod", limits: false),
 
         // Limit operators
         "lim" : MTMathAtomFactory.operatorWithName( "lim", limits: true),
