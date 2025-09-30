@@ -131,110 +131,7 @@ public struct MTMathListBuilder {
         }
     }
 
-    // Analyze cases environment content to detect if & characters are present
-    mutating func analyzeCasesContent() -> Bool {
-        let savedIndex = currentCharIndex
-        var braceDepth = 0
-        var hasAmpersand = false
 
-        while currentCharIndex < string.endIndex {
-            let char = string[currentCharIndex]
-            currentCharIndex = string.index(after: currentCharIndex)
-
-            switch char {
-            case "{":
-                braceDepth += 1
-            case "}":
-                braceDepth -= 1
-                if braceDepth < 0 {
-                    // Found unmatched closing brace, likely end of environment content
-                    break
-                }
-            case "&":
-                if braceDepth == 0 {
-                    // Found & at top level (not inside nested braces)
-                    hasAmpersand = true
-                    break
-                }
-            case "\\":
-                // Skip the next character if it's a command
-                if currentCharIndex < string.endIndex {
-                    let nextChar = string[currentCharIndex]
-                    if nextChar == "e" {
-                        // Check if this might be \end{cases}
-                        let remainingChars = string[currentCharIndex...]
-                        if remainingChars.hasPrefix("end{cases}") {
-                            break
-                        }
-                    }
-                    currentCharIndex = string.index(after: currentCharIndex)
-                }
-            default:
-                break
-            }
-        }
-
-        // Restore position
-        currentCharIndex = savedIndex
-        return hasAmpersand
-    }
-
-    // Build single-column cases environment (no & separators)
-    mutating func buildSingleColumnCases(firstList: MTMathList?, isRow: Bool) -> MTMathAtom? {
-        let oldEnv = self.currentEnv
-        currentEnv = MTEnvProperties(name: "cases")
-
-        var rows = [[MTMathList]]()
-        var currentRow = 0
-
-        // Add first list if provided
-        if let first = firstList {
-            rows.append([first])
-            if isRow {
-                currentEnv!.numRows += 1
-                currentRow += 1
-                rows.append([MTMathList]())
-            }
-        } else {
-            rows.append([MTMathList]())
-        }
-
-        while !currentEnv!.ended && self.hasCharacters {
-            let list = self.buildInternal(false)
-            if list == nil {
-                return nil
-            }
-
-            if currentEnv!.numRows > currentRow {
-                // New row triggered by \\
-                currentRow = currentEnv!.numRows
-                rows.append([list!])
-            } else {
-                // Continue current row (should be single cell)
-                if rows[currentRow].isEmpty {
-                    rows[currentRow].append(list!)
-                } else {
-                    // Append to existing cell in single-column mode
-                    rows[currentRow][0].append(list!)
-                }
-            }
-        }
-
-        if !currentEnv!.ended {
-            self.setError(.missingEnd, message: "Missing \\end")
-            return nil
-        }
-
-        var error: NSError? = self.error
-        let table = MTMathAtomFactory.table(withEnvironment: "cases", rows: rows, error: &error)
-        if table == nil && self.error == nil {
-            self.error = error
-            return nil
-        }
-
-        self.currentEnv = oldEnv
-        return table
-    }
     
     mutating func expectCharacter(_ ch: Character) -> Bool {
         MTAssertNotSpace(ch)
@@ -1125,16 +1022,6 @@ public struct MTMathListBuilder {
     }
     
     mutating func buildTable(env: String?, firstList: MTMathList?, isRow: Bool) -> MTMathAtom? {
-        // Special handling for cases environment - detect single vs two column structure
-        if env == "cases" {
-            let hasAmpersand = analyzeCasesContent()
-            if !hasAmpersand {
-                // Parse as single-column cases environment
-                return buildSingleColumnCases(firstList: firstList, isRow: isRow)
-            }
-            // If ampersand found, continue with standard two-column parsing
-        }
-
         // Save the current env till an new one gets built.
         let oldEnv = self.currentEnv
 
