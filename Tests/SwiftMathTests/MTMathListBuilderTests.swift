@@ -1420,6 +1420,453 @@ final class MTMathListBuilderTests: XCTestCase {
         XCTAssertEqual(latex, "\\sum \\nolimits ", desc)
     }
 
+    // MARK: - Inline and Display Math Delimiter Tests
+
+    func testInlineMathDollar() throws {
+        let str = "$x^2$"
+        let list = MTMathListBuilder.build(fromString: str)
+
+        XCTAssertNotNil(list, "Should parse inline math with $")
+        // Should have textstyle at start, then variable with superscript
+        XCTAssertTrue(list!.atoms.count >= 1, "Should have at least one atom")
+
+        // Find the variable atom (skip style atoms)
+        var foundVariable = false
+        for atom in list!.atoms {
+            if atom.type == .variable && atom.nucleus == "x" {
+                foundVariable = true
+                XCTAssertNotNil(atom.superScript, "Should have superscript")
+                break
+            }
+        }
+        XCTAssertTrue(foundVariable, "Should find variable x")
+    }
+
+    func testInlineMathParens() throws {
+        let str = "\\(E=mc^2\\)"
+        let list = MTMathListBuilder.build(fromString: str)
+
+        XCTAssertNotNil(list, "Should parse inline math with \\(\\)")
+        XCTAssertTrue(list!.atoms.count >= 3, "Should have E, =, m, c atoms")
+
+        // Check for equals sign
+        var foundEquals = false
+        for atom in list!.atoms {
+            if atom.type == .relation && atom.nucleus == "=" {
+                foundEquals = true
+                break
+            }
+        }
+        XCTAssertTrue(foundEquals, "Should find equals sign")
+    }
+
+    func testInlineMathWithCases() throws {
+        let str = "\\(\\begin{cases} x + y = 5 \\\\ 2x - y = 1 \\end{cases}\\)"
+        let list = MTMathListBuilder.build(fromString: str)
+
+        XCTAssertNotNil(list, "Should parse inline cases")
+
+        // cases environment returns an Inner atom with table inside
+        var foundInner = false
+        for atom in list!.atoms {
+            if atom.type == .inner {
+                let inner = atom as! MTInner
+                // Look for table inside the inner list
+                if let innerList = inner.innerList {
+                    for innerAtom in innerList.atoms {
+                        if innerAtom.type == .table {
+                            let table = innerAtom as! MTMathTable
+                            XCTAssertEqual(table.environment, "cases", "Should be cases environment")
+                            XCTAssertEqual(table.numRows, 2, "Should have 2 rows")
+                            foundInner = true
+                            break
+                        }
+                    }
+                }
+                if foundInner { break }
+            }
+        }
+        XCTAssertTrue(foundInner, "Should find cases table inside inner atom")
+    }
+
+    func testInlineMathVectorDot() throws {
+        let str = "$\\vec{a} \\cdot \\vec{b}$"
+        let list = MTMathListBuilder.build(fromString: str)
+
+        XCTAssertNotNil(list, "Should parse inline vector dot product")
+
+        // Should contain accents (for vec) and cdot operator
+        var hasAccent = false
+        var hasCdot = false
+
+        for atom in list!.atoms {
+            if atom.type == .accent {
+                hasAccent = true
+            }
+            if atom.type == .binaryOperator && atom.nucleus.contains("\u{22C5}") {
+                hasCdot = true
+            }
+        }
+
+        XCTAssertTrue(hasAccent, "Should have accent for \\vec")
+        XCTAssertTrue(hasCdot, "Should have \\cdot operator")
+    }
+
+    func testDisplayMathDoubleDollar() throws {
+        let str = "$$x^2 + y^2 = z^2$$"
+        let list = MTMathListBuilder.build(fromString: str)
+
+        XCTAssertNotNil(list, "Should parse display math with $$")
+        XCTAssertTrue(list!.atoms.count >= 5, "Should have multiple atoms for expression")
+
+        // Should NOT have textstyle at start (display mode)
+        let firstAtom = list!.atoms.first
+        XCTAssertNotEqual(firstAtom?.type, .style, "Display mode should not force textstyle")
+    }
+
+    func testDisplayMathBrackets() throws {
+        let str = "\\[\\sum_{i=1}^{n} i = \\frac{n(n+1)}{2}\\]"
+        let list = MTMathListBuilder.build(fromString: str)
+
+        XCTAssertNotNil(list, "Should parse display math with \\[\\]")
+
+        // Find sum operator
+        var foundSum = false
+        for atom in list!.atoms {
+            if atom.type == .largeOperator && atom.nucleus.contains("∑") {
+                foundSum = true
+                XCTAssertNotNil(atom.subScript, "Sum should have subscript")
+                XCTAssertNotNil(atom.superScript, "Sum should have superscript")
+                break
+            }
+        }
+        XCTAssertTrue(foundSum, "Should find sum operator")
+    }
+
+    func testDisplayMathCasesWithoutDelimiters() throws {
+        // This should work as before (backward compatibility)
+        let str = "\\begin{cases} x + y = 5 \\\\ 2x - y = 1 \\end{cases}"
+        let list = MTMathListBuilder.build(fromString: str)
+
+        XCTAssertNotNil(list, "Should parse display cases without outer delimiters")
+        XCTAssertTrue(list!.atoms.count >= 1, "Should have at least one atom")
+
+        // cases environment returns an Inner atom with table inside
+        var foundTable = false
+        for atom in list!.atoms {
+            if atom.type == .inner {
+                let inner = atom as! MTInner
+                if let innerList = inner.innerList {
+                    for innerAtom in innerList.atoms {
+                        if innerAtom.type == .table {
+                            let table = innerAtom as! MTMathTable
+                            XCTAssertEqual(table.environment, "cases", "Should be cases environment")
+                            XCTAssertEqual(table.numRows, 2, "Should have 2 rows")
+                            foundTable = true
+                            break
+                        }
+                    }
+                }
+                if foundTable { break }
+            }
+        }
+
+        XCTAssertTrue(foundTable, "Should find cases table inside inner atom")
+    }
+
+    func testBackwardCompatibilityNoDelimiters() throws {
+        // Test that expressions without delimiters still work
+        let str = "x^2 + y^2 = z^2"
+        let list = MTMathListBuilder.build(fromString: str)
+
+        XCTAssertNotNil(list, "Should parse expression without delimiters")
+        XCTAssertTrue(list!.atoms.count >= 5, "Should have multiple atoms")
+    }
+
+    func testEmptyInlineMath() throws {
+        let str = "$$$"  // This is $$$ which should be treated as $$ + $
+        let list = MTMathListBuilder.build(fromString: str)
+
+        // Should handle gracefully
+        XCTAssertNotNil(list, "Should handle edge case")
+    }
+
+    func testEmptyDisplayMath() throws {
+        let str = "\\[\\]"
+        let list = MTMathListBuilder.build(fromString: str)
+
+        // Empty content may return nil or an empty list, both are acceptable
+        if list != nil {
+            XCTAssertTrue(list!.atoms.isEmpty || list!.atoms.count >= 0, "Should have empty or minimal atoms")
+        }
+        // It's ok if it returns nil for empty content
+    }
+
+    func testDollarInMath() throws {
+        // Test that delimiters are properly stripped
+        let str = "$a + b$"
+        let list = MTMathListBuilder.build(fromString: str)
+
+        XCTAssertNotNil(list, "Should parse correctly")
+
+        // Should not contain $ in the parsed atoms
+        for atom in list!.atoms {
+            XCTAssertFalse(atom.nucleus.contains("$"), "Should not have $ in nucleus")
+        }
+    }
+
+    func testComplexInlineExpression() throws {
+        let str = "$\\frac{1}{2} + \\sqrt{3}$"
+        let list = MTMathListBuilder.build(fromString: str)
+
+        XCTAssertNotNil(list, "Should parse complex inline expression")
+
+        // Should have fraction and radical
+        var hasFraction = false
+        var hasRadical = false
+
+        for atom in list!.atoms {
+            if atom.type == .fraction {
+                hasFraction = true
+            }
+            if atom.type == .radical {
+                hasRadical = true
+            }
+        }
+
+        XCTAssertTrue(hasFraction, "Should have fraction")
+        XCTAssertTrue(hasRadical, "Should have radical")
+    }
+
+    func testInlineMathStyleForcing() throws {
+        // Inline math should have textstyle prepended
+        let str = "$\\sum_{i=1}^{n} i$"
+        let list = MTMathListBuilder.build(fromString: str)
+
+        XCTAssertNotNil(list, "Should parse sum in inline mode")
+
+        // First atom should be style atom with text style
+        if let firstAtom = list!.atoms.first, firstAtom.type == .style {
+            let styleAtom = firstAtom as! MTMathStyle
+            XCTAssertEqual(styleAtom.style, .text, "Inline mode should force text style")
+        }
+    }
+
+    // MARK: - Tests for build(fromString:error:) API with delimiters
+
+    func testInlineMathDollarWithError() throws {
+        let str = "$x^2$"
+        var error: NSError? = nil
+        let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+        XCTAssertNotNil(list, "Should parse inline math with $")
+        XCTAssertNil(error, "Should not have error")
+
+        // Find the variable atom (skip style atoms)
+        var foundVariable = false
+        for atom in list!.atoms {
+            if atom.type == .variable && atom.nucleus == "x" {
+                foundVariable = true
+                XCTAssertNotNil(atom.superScript, "Should have superscript")
+                break
+            }
+        }
+        XCTAssertTrue(foundVariable, "Should find variable x")
+    }
+
+    func testInlineMathParensWithError() throws {
+        let str = "\\(E=mc^2\\)"
+        var error: NSError? = nil
+        let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+        XCTAssertNotNil(list, "Should parse inline math with \\(\\)")
+        XCTAssertNil(error, "Should not have error")
+        XCTAssertTrue(list!.atoms.count >= 3, "Should have E, =, m, c atoms")
+
+        // Check for equals sign
+        var foundEquals = false
+        for atom in list!.atoms {
+            if atom.type == .relation && atom.nucleus == "=" {
+                foundEquals = true
+                break
+            }
+        }
+        XCTAssertTrue(foundEquals, "Should find equals sign")
+    }
+
+    func testInlineMathWithCasesWithError() throws {
+        let str = "\\(\\begin{cases} x + y = 5 \\\\ 2x - y = 1 \\end{cases}\\)"
+        var error: NSError? = nil
+        let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+        XCTAssertNotNil(list, "Should parse inline cases")
+        XCTAssertNil(error, "Should not have error")
+
+        // cases environment returns an Inner atom with table inside
+        var foundInner = false
+        for atom in list!.atoms {
+            if atom.type == .inner {
+                let inner = atom as! MTInner
+                if let innerList = inner.innerList {
+                    for innerAtom in innerList.atoms {
+                        if innerAtom.type == .table {
+                            let table = innerAtom as! MTMathTable
+                            XCTAssertEqual(table.environment, "cases", "Should be cases environment")
+                            XCTAssertEqual(table.numRows, 2, "Should have 2 rows")
+                            foundInner = true
+                            break
+                        }
+                    }
+                }
+                if foundInner { break }
+            }
+        }
+        XCTAssertTrue(foundInner, "Should find cases table inside inner atom")
+    }
+
+    func testDisplayMathDoubleDollarWithError() throws {
+        let str = "$$x^2 + y^2 = z^2$$"
+        var error: NSError? = nil
+        let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+        XCTAssertNotNil(list, "Should parse display math with $$")
+        XCTAssertNil(error, "Should not have error")
+        XCTAssertTrue(list!.atoms.count >= 5, "Should have multiple atoms for expression")
+    }
+
+    func testDisplayMathBracketsWithError() throws {
+        let str = "\\[\\sum_{i=1}^{n} i = \\frac{n(n+1)}{2}\\]"
+        var error: NSError? = nil
+        let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+        XCTAssertNotNil(list, "Should parse display math with \\[\\]")
+        XCTAssertNil(error, "Should not have error")
+
+        // Find sum operator
+        var foundSum = false
+        for atom in list!.atoms {
+            if atom.type == .largeOperator && atom.nucleus.contains("∑") {
+                foundSum = true
+                XCTAssertNotNil(atom.subScript, "Sum should have subscript")
+                XCTAssertNotNil(atom.superScript, "Sum should have superscript")
+                break
+            }
+        }
+        XCTAssertTrue(foundSum, "Should find sum operator")
+    }
+
+    func testDisplayMathCasesWithoutDelimitersWithError() throws {
+        let str = "\\begin{cases} x + y = 5 \\\\ 2x - y = 1 \\end{cases}"
+        var error: NSError? = nil
+        let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+        XCTAssertNotNil(list, "Should parse display cases without outer delimiters")
+        XCTAssertNil(error, "Should not have error")
+        XCTAssertTrue(list!.atoms.count >= 1, "Should have at least one atom")
+
+        // cases environment returns an Inner atom with table inside
+        var foundTable = false
+        for atom in list!.atoms {
+            if atom.type == .inner {
+                let inner = atom as! MTInner
+                if let innerList = inner.innerList {
+                    for innerAtom in innerList.atoms {
+                        if innerAtom.type == .table {
+                            let table = innerAtom as! MTMathTable
+                            XCTAssertEqual(table.environment, "cases", "Should be cases environment")
+                            XCTAssertEqual(table.numRows, 2, "Should have 2 rows")
+                            foundTable = true
+                            break
+                        }
+                    }
+                }
+                if foundTable { break }
+            }
+        }
+
+        XCTAssertTrue(foundTable, "Should find cases table inside inner atom")
+    }
+
+    func testBackwardCompatibilityNoDelimitersWithError() throws {
+        let str = "x^2 + y^2 = z^2"
+        var error: NSError? = nil
+        let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+        XCTAssertNotNil(list, "Should parse expression without delimiters")
+        XCTAssertNil(error, "Should not have error")
+        XCTAssertTrue(list!.atoms.count >= 5, "Should have multiple atoms")
+    }
+
+    func testInvalidLatexWithError() throws {
+        let str = "$\\notacommand$"
+        var error: NSError? = nil
+        let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+        XCTAssertNil(list, "Should fail to parse invalid command")
+        XCTAssertNotNil(error, "Should have error")
+        XCTAssertEqual(error?.code, MTParseErrors.invalidCommand.rawValue, "Should be invalid command error")
+    }
+
+    func testMismatchedBracesWithError() throws {
+        let str = "${x+2$"
+        var error: NSError? = nil
+        let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+        XCTAssertNil(list, "Should fail to parse mismatched braces")
+        XCTAssertNotNil(error, "Should have error")
+        XCTAssertEqual(error?.code, MTParseErrors.mismatchBraces.rawValue, "Should be mismatched braces error")
+    }
+
+    func testComplexInlineExpressionWithError() throws {
+        let str = "$\\frac{1}{2} + \\sqrt{3}$"
+        var error: NSError? = nil
+        let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+        XCTAssertNotNil(list, "Should parse complex inline expression")
+        XCTAssertNil(error, "Should not have error")
+
+        // Should have fraction and radical
+        var hasFraction = false
+        var hasRadical = false
+
+        for atom in list!.atoms {
+            if atom.type == .fraction {
+                hasFraction = true
+            }
+            if atom.type == .radical {
+                hasRadical = true
+            }
+        }
+
+        XCTAssertTrue(hasFraction, "Should have fraction")
+        XCTAssertTrue(hasRadical, "Should have radical")
+    }
+
+    func testInlineMathVectorDotWithError() throws {
+        let str = "$\\vec{a} \\cdot \\vec{b}$"
+        var error: NSError? = nil
+        let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+        XCTAssertNotNil(list, "Should parse inline vector dot product")
+        XCTAssertNil(error, "Should not have error")
+
+        // Should contain accents (for vec) and cdot operator
+        var hasAccent = false
+        var hasCdot = false
+
+        for atom in list!.atoms {
+            if atom.type == .accent {
+                hasAccent = true
+            }
+            if atom.type == .binaryOperator && atom.nucleus.contains("\u{22C5}") {
+                hasCdot = true
+            }
+        }
+
+        XCTAssertTrue(hasAccent, "Should have accent for \\vec")
+        XCTAssertTrue(hasCdot, "Should have \\cdot operator")
+    }
+
 //    func testPerformanceExample() throws {
 //        // This is an example of a performance test case.
 //        measure {

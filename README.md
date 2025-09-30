@@ -183,6 +183,55 @@ This is a list of formula types that the library currently supports:
 * Change bold, roman, caligraphic and other font styles (\\bf, \\text, etc.)
 * Most commonly used math symbols
 * Colors for both text and background
+* **Inline and display math mode delimiters** (see below)
+
+### LaTeX Math Delimiters
+
+`SwiftMath` now supports all standard LaTeX math delimiters for both inline and display modes. The parser automatically detects and handles these delimiters:
+
+#### Inline Math (Text Style)
+Use these delimiters for inline math within text, which renders more compactly:
+
+```swift
+// Dollar signs (TeX style)
+label.latex = "$E = mc^2$"
+
+// Parentheses (LaTeX style)
+label.latex = "\\(\\sum_{i=1}^{n} x_i\\)"
+
+// Cases environment in inline mode
+label.latex = "\\(\\begin{cases} x + y = 5 \\\\ 2x - y = 1 \\end{cases}\\)"
+```
+
+#### Display Math (Display Style)
+Use these delimiters for standalone equations with larger operators and limits:
+
+```swift
+// Double dollar signs (TeX style)
+label.latex = "$$\\int_{0}^{\\infty} e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2}$$"
+
+// Square brackets (LaTeX style)
+label.latex = "\\[\\sum_{k=1}^{n} k^2 = \\frac{n(n+1)(2n+1)}{6}\\]"
+
+// Equation environment
+label.latex = "\\begin{equation} x^2 + y^2 = z^2 \\end{equation}"
+
+// Cases environment in display mode
+label.latex = "\\begin{cases} x + y = 5 \\\\ 2x - y = 1 \\end{cases}"
+```
+
+**Note:** The difference between inline and display modes:
+- **Inline mode** (`$...$` or `\(...\)`) renders compactly, suitable for math within text
+- **Display mode** (`$$...$$`, `\[...\]`, or environments) renders with larger operators and limits positioned above/below
+
+All delimiters are automatically stripped during parsing, and the math mode is set appropriately. No additional configuration is needed!
+
+#### Backward Compatibility
+Equations without explicit delimiters continue to work as before, defaulting to display mode:
+
+```swift
+label.latex = "x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}"  // Works as always
+```
 
 Note: SwiftMath only supports the commands in LaTeX's math mode. There is
 also no language support for other than west European langugages and some

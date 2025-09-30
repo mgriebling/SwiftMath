@@ -66,13 +66,22 @@ let MTParseError = "ParseError"
  can be rendered and processed mathematically.
  */
 public struct MTMathListBuilder {
+    /// The math mode determines rendering style (inline vs display)
+    enum MathMode {
+        /// Display style - larger operators, limits above/below (e.g., $$...$$, \[...\])
+        case display
+        /// Inline/text style - compact operators, limits to the side (e.g., $...$, \(...\))
+        case inline
+    }
+
     var string: String
     var currentCharIndex: String.Index
     var currentInnerAtom: MTInner?
     var currentEnv: MTEnvProperties?
     var currentFontStyle:MTFontStyle
     var spacesAllowed:Bool
-    
+    var mathMode: MathMode = .display
+
     /** Contains any error that occurred during parsing. */
     var error:NSError?
     
@@ -191,11 +200,66 @@ public struct MTMathListBuilder {
         self.currentFontStyle = .defaultStyle
         self.spacesAllowed = false
     }
-    
+
+    // MARK: - Delimiter Detection
+
+    /// Detects and strips LaTeX math delimiters from the input string.
+    /// Returns the cleaned content and the detected math mode.
+    /// Supports: $...$ \(...\) $$...$$ \[...\] and environments
+    func detectAndStripDelimiters(from str: String) -> (String, MathMode) {
+        let trimmed = str.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Check display delimiters first (more specific patterns)
+
+        // \[...\] - LaTeX display math
+        if trimmed.hasPrefix("\\[") && trimmed.hasSuffix("\\]") && trimmed.count > 4 {
+            let content = String(trimmed.dropFirst(2).dropLast(2))
+            return (content, .display)
+        }
+
+        // $$...$$ - TeX display math (check before single $)
+        if trimmed.hasPrefix("$$") && trimmed.hasSuffix("$$") && trimmed.count > 4 {
+            let content = String(trimmed.dropFirst(2).dropLast(2))
+            return (content, .display)
+        }
+
+        // Check inline delimiters
+
+        // \(...\) - LaTeX inline math
+        if trimmed.hasPrefix("\\(") && trimmed.hasSuffix("\\)") && trimmed.count > 4 {
+            let content = String(trimmed.dropFirst(2).dropLast(2))
+            return (content, .inline)
+        }
+
+        // $...$ - TeX inline math (must check after $$)
+        if trimmed.hasPrefix("$") && trimmed.hasSuffix("$") && trimmed.count > 2 && !trimmed.hasPrefix("$$") {
+            let content = String(trimmed.dropFirst(1).dropLast(1))
+            return (content, .inline)
+        }
+
+        // Check if it's an environment (\begin{...}\end{...})
+        // These are handled by existing logic and are display mode by default
+        if trimmed.hasPrefix("\\begin{") {
+            return (str, .display)
+        }
+
+        // No delimiters found - default to display mode (current behavior for backward compatibility)
+        return (str, .display)
+    }
+
     // MARK: - MTMathList builder functions
-    
+
     /// Builds a mathlist from the internal `string`. Returns nil if there is an error.
     public mutating func build() -> MTMathList? {
+        // Detect and strip delimiters, updating the string and mode
+        let (cleanedString, mode) = detectAndStripDelimiters(from: self.string)
+        self.string = cleanedString
+        self.currentCharIndex = cleanedString.startIndex
+        self.mathMode = mode
+
+        // If inline mode, we could optionally prepend a \textstyle command
+        // to force inline rendering of operators. For now, just track the mode.
+
         let list = self.buildInternal(false)
         if self.hasCharacters && error == nil {
             self.setError(.mismatchBraces, message: "Mismatched braces: \(self.string)")
@@ -204,6 +268,14 @@ public struct MTMathListBuilder {
         if error != nil {
             return nil
         }
+
+        // Optionally: Add style hint for inline mode
+        if mode == .inline && list != nil && !list!.atoms.isEmpty {
+            // Prepend \textstyle to force inline rendering
+            let styleAtom = MTMathStyle(style: .text)
+            list!.atoms.insert(styleAtom, at: 0)
+        }
+
         return list
     }
     
