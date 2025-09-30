@@ -508,7 +508,14 @@ public struct MTMathListBuilder {
                 }
                 if atom.type == .fraction {
                     if let frac = atom as? MTFraction {
-                        if frac.hasRule {
+                        if frac.isContinuedFraction {
+                            // Generate \cfrac with optional alignment
+                            if frac.alignment != "c" {
+                                str += "\\cfrac[\(frac.alignment)]{\(mathListToString(frac.numerator!))}{\(mathListToString(frac.denominator!))}"
+                            } else {
+                                str += "\\cfrac{\(mathListToString(frac.numerator!))}{\(mathListToString(frac.denominator!))}"
+                            }
+                        } else if frac.hasRule {
                             str += "\\frac{\(mathListToString(frac.numerator!))}{\(mathListToString(frac.denominator!))}"
                         } else {
                             let command: String
@@ -685,6 +692,28 @@ public struct MTMathListBuilder {
         } else if command == "frac" {
             // A fraction command has 2 arguments
             let frac = MTFraction()
+            frac.numerator = self.buildInternal(true)
+            frac.denominator = self.buildInternal(true)
+            return frac;
+        } else if command == "cfrac" {
+            // A continued fraction command with optional alignment and 2 arguments
+            let frac = MTFraction()
+            frac.isContinuedFraction = true
+
+            // Parse optional alignment parameter [l], [r], [c]
+            skipSpaces()
+            if hasCharacters && string[currentCharIndex] == "[" {
+                _ = getNextCharacter() // consume '['
+                let alignmentChar = getNextCharacter()
+                if alignmentChar == "l" || alignmentChar == "r" || alignmentChar == "c" {
+                    frac.alignment = String(alignmentChar)
+                }
+                // Consume closing ']'
+                if hasCharacters && string[currentCharIndex] == "]" {
+                    _ = getNextCharacter()
+                }
+            }
+
             frac.numerator = self.buildInternal(true)
             frac.denominator = self.buildInternal(true)
             return frac;
@@ -981,6 +1010,27 @@ public struct MTMathListBuilder {
             return accent
         } else if command == "frac" {
             let frac = MTFraction()
+            frac.numerator = self.buildInternal(true)
+            frac.denominator = self.buildInternal(true)
+            return frac
+        } else if command == "cfrac" {
+            let frac = MTFraction()
+            frac.isContinuedFraction = true
+
+            // Parse optional alignment parameter [l], [r], [c]
+            skipSpaces()
+            if hasCharacters && string[currentCharIndex] == "[" {
+                _ = getNextCharacter() // consume '['
+                let alignmentChar = getNextCharacter()
+                if alignmentChar == "l" || alignmentChar == "r" || alignmentChar == "c" {
+                    frac.alignment = String(alignmentChar)
+                }
+                // Consume closing ']'
+                if hasCharacters && string[currentCharIndex] == "]" {
+                    _ = getNextCharacter()
+                }
+            }
+
             frac.numerator = self.buildInternal(true)
             frac.denominator = self.buildInternal(true)
             return frac

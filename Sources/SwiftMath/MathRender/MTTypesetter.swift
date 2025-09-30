@@ -990,9 +990,22 @@ class MTTypesetter {
     
     func makeFraction(_ frac:MTFraction?) -> MTDisplay? {
         // lay out the parts of the fraction
-        let fractionStyle = self.fractionStyle;
-        let numeratorDisplay = MTTypesetter.createLineForMathList(frac!.numerator, font:font, style:fractionStyle(), cramped:false)
-        let denominatorDisplay = MTTypesetter.createLineForMathList(frac!.denominator, font:font, style:fractionStyle(), cramped:true)
+        let numeratorStyle: MTLineStyle
+        let denominatorStyle: MTLineStyle
+
+        if frac!.isContinuedFraction {
+            // Continued fractions always use display style
+            numeratorStyle = .display
+            denominatorStyle = .display
+        } else {
+            // Regular fractions use adaptive style
+            let fractionStyle = self.fractionStyle;
+            numeratorStyle = fractionStyle()
+            denominatorStyle = fractionStyle()
+        }
+
+        let numeratorDisplay = MTTypesetter.createLineForMathList(frac!.numerator, font:font, style:numeratorStyle, cramped:false)
+        let denominatorDisplay = MTTypesetter.createLineForMathList(frac!.denominator, font:font, style:denominatorStyle, cramped:true)
         
         // determine the location of the numerator
         var numeratorShiftUp = self.numeratorShiftUp(frac!.hasRule)
