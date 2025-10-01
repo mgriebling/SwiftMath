@@ -2369,15 +2369,41 @@ final class MTMathListBuilderTests: XCTestCase {
         ]
 
         for (latex, desc) in testCases {
+            print("Testing: \(desc)")
+            print("  LaTeX: \(latex)")
             var error: NSError? = nil
             let list = MTMathListBuilder.build(fromString: latex, error: &error)
 
-            if list == nil || error != nil {
-                throw XCTSkip("\\smallmatrix not implemented: \(desc). Error: \(error?.localizedDescription ?? "nil result")")
+            if let err = error {
+                print("  ERROR: \(err.localizedDescription)")
+            } else if list == nil {
+                print("  List is nil but no error")
+            } else {
+                print("  SUCCESS: Got \(list!.atoms.count) atoms")
             }
 
             let unwrappedList = try XCTUnwrap(list, "Should parse: \(desc)")
+            XCTAssertNil(error, "Should not error on \(desc): \(error?.localizedDescription ?? "")")
             XCTAssertTrue(unwrappedList.atoms.count >= 1, "\(desc) should have atoms")
+
+            // Verify we have a table structure
+            var foundTable = false
+            for atom in unwrappedList.atoms {
+                if atom.type == .table {
+                    foundTable = true
+                    break
+                }
+                // Check inside inner atoms (for matrices with delimiters)
+                if atom.type == .inner, let inner = atom as? MTInner, let innerList = inner.innerList {
+                    for innerAtom in innerList.atoms {
+                        if innerAtom.type == .table {
+                            foundTable = true
+                            break
+                        }
+                    }
+                }
+            }
+            XCTAssertTrue(foundTable, "\(desc) should contain a table structure")
         }
     }
 

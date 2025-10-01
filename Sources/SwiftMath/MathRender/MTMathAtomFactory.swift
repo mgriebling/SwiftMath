@@ -791,7 +791,8 @@ public class MTMathAtomFactory {
         "bmatrix": ["[", "]"],
         "Bmatrix": ["{", "}"],
         "vmatrix": ["vert", "vert"],
-        "Vmatrix": ["Vert", "Vert"]
+        "Vmatrix": ["Vert", "Vert"],
+        "smallmatrix": []
     ]
     
     /** Builds a table for a given environment with the given rows. Returns a `MTMathAtom` containing the
@@ -821,17 +822,21 @@ public class MTMathAtomFactory {
         } else if let env = env {
             if let delims = matrixEnvs[env] {
                 table.environment = "matrix"
+
+                // smallmatrix uses script style and tighter spacing for inline use
+                let isSmallMatrix = (env == "smallmatrix")
+
                 table.interRowAdditionalSpacing = 0
-                table.interColumnSpacing = 18
-                
-                let style = MTMathStyle(style: .text)
-                
+                table.interColumnSpacing = isSmallMatrix ? 6 : 18
+
+                let style = MTMathStyle(style: isSmallMatrix ? .script : .text)
+
                 for i in 0..<table.cells.count {
                     for j in 0..<table.cells[i].count {
                         table.cells[i][j].insert(style, at: 0)
                     }
                 }
-                
+
                 if delims.count == 2 {
                     let inner = MTInner()
                     inner.leftBoundary = Self.boundary(forDelimiter: delims[0])
