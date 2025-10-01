@@ -1276,11 +1276,18 @@ class MTTypesetter {
     func findGlyphForCharacterAtIndex(_ index:String.Index, inString str:String) -> CGGlyph {
         // Get the character at index taking into account UTF-32 characters
         var chars = Array(str[index].utf16)
-        
+
         // Get the glyph from the font
         var glyph = [CGGlyph](repeating: CGGlyph.zero, count: chars.count)
         let found = CTFontGetGlyphsForCharacters(styleFont.ctFont, &chars, &glyph, chars.count)
         if !found {
+            // Try fallback font if available
+            if let fallbackFont = styleFont.fallbackFont {
+                let fallbackFound = CTFontGetGlyphsForCharacters(fallbackFont, &chars, &glyph, chars.count)
+                if fallbackFound {
+                    return glyph[0]
+                }
+            }
             // the font did not contain a glyph for our character, so we just return 0 (notdef)
             return 0
         }

@@ -145,4 +145,44 @@ final class MathFontTests: XCTestCase {
         }
         queue.async(group: group, execute: workitem)
     }
+
+    func testFallbackFont() throws {
+        #if os(iOS) || os(visionOS)
+        let systemFont = UIFont.systemFont(ofSize: 20)
+        let systemCTFont = CTFontCreateWithName(systemFont.fontName as CFString, 20, nil)
+        #elseif os(macOS)
+        let systemFont = NSFont.systemFont(ofSize: 20)
+        let systemCTFont = CTFontCreateWithName(systemFont.fontName as CFString, 20, nil)
+        #endif
+
+        // Create a math font with fallback
+        guard let mathFont = MTFontManager().font(withName: MathFont.latinModernFont.rawValue, size: 20) else {
+            XCTFail("Failed to create math font")
+            return
+        }
+        mathFont.fallbackFont = systemCTFont
+
+        // Build a math list with Chinese text
+        var error: NSError?
+        let mathList = MTMathListBuilder.build(fromString: "\\text{中文测试}", error: &error)
+
+        XCTAssertNil(error, "Should parse Chinese text without error")
+        XCTAssertNotNil(mathList, "Math list should be created")
+
+        // \text{...} creates atoms for each character (4 Chinese characters = 4 atoms)
+        XCTAssertEqual(mathList?.atoms.count, 4, "Should have 4 atoms for 4 Chinese characters")
+
+        // Verify atoms have the correct font style (roman for text)
+        for atom in mathList?.atoms ?? [] {
+            XCTAssertEqual(atom.fontStyle, .roman, "Text atoms should have roman font style")
+        }
+
+        // Create a display to verify glyph rendering works with fallback
+        let display = MTTypesetter.createLineForMathList(mathList!, font: mathFont, style: .text)
+
+        XCTAssertNotNil(display, "Display should be created with fallback font")
+
+        // Verify the display was actually created (would be nil if all glyphs failed)
+        XCTAssertGreaterThan(display?.width ?? 0, 0, "Display should have non-zero width with fallback font")
+    }
 }

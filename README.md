@@ -164,23 +164,25 @@ struct MathView: NSViewRepresentable {
 This is a list of formula types that the library currently supports:
 
 * Simple algebraic equations
-* Fractions and continued fractions
+* Fractions and continued fractions (including `\cfrac`)
 * Exponents and subscripts
 * Trigonometric formulae
 * Square roots and n-th roots
-* Calculus symbos - limits, derivatives, integrals
+* Calculus symbols - limits, derivatives, integrals (including `\iint`, `\iiint`, `\iiiint`)
 * Big operators (e.g. product, sum)
-* Big delimiters (using \\left and \\right)
+* Big delimiters (using `\left` and `\right`)
 * Greek alphabet
-* Combinatorics (\\binom, \\choose etc.)
+* Combinatorics (`\binom`, `\choose` etc.)
 * Geometry symbols (e.g. angle, congruence etc.)
 * Ratios, proportions, percentages
 * Math spacing
 * Overline and underline
 * Math accents
-* Matrices
+* Matrices (including `\smallmatrix` and starred variants like `pmatrix*` with alignment)
+* Multi-line subscripts and limits (`\substack`)
 * Equation alignment
-* Change bold, roman, caligraphic and other font styles (\\bf, \\text, etc.)
+* Change bold, roman, caligraphic and other font styles (`\bf`, `\text`, etc.)
+* Style commands (`\displaystyle`, `\textstyle`)
 * Most commonly used math symbols
 * Colors for both text and background
 * **Inline and display math mode delimiters** (see below)
@@ -311,6 +313,37 @@ It is also possible to set different colors for different parts of the
 equation. Just access the `displayList` field and set the `textColor`
 of the underlying displays of which you want to change the color. 
 
+##### Fallback Font for Unicode Text
+By default, math fonts only support a limited set of characters (Latin, Greek, common math symbols).
+To display other Unicode characters like Chinese, Japanese, Korean, emoji, or other scripts in `\text{}`
+commands, you can configure a fallback font:
+
+```swift
+let mathFont = MTFontManager().font(withName: MathFont.latinModernFont.rawValue, size: 30)
+
+// Set a fallback font for unsupported characters (defaults to nil)
+#if os(iOS) || os(visionOS)
+let systemFont = UIFont.systemFont(ofSize: 30)
+mathFont?.fallbackFont = CTFontCreateWithName(systemFont.fontName as CFString, 30, nil)
+#elseif os(macOS)
+let systemFont = NSFont.systemFont(ofSize: 30)
+mathFont?.fallbackFont = CTFontCreateWithName(systemFont.fontName as CFString, 30, nil)
+#endif
+
+label.font = mathFont
+label.latex = "\\text{Hello 世界 🌍}"  // English, Chinese, and emoji
+```
+
+When the main math font doesn't contain a glyph for a character, the fallback font will be used automatically.
+This is particularly useful for:
+- Chinese text: `\text{中文}`
+- Japanese text: `\text{日本語}`
+- Korean text: `\text{한국어}`
+- Emoji: `\text{Math is fun! 🎉📐}`
+- Mixed scripts: `\text{Equation: 方程式}`
+
+**Note**: The fallback font only applies to characters within `\text{}` commands, not regular math mode.
+
 ##### Custom Commands
 You can define your own commands that are not already predefined. This is
 similar to macros is LaTeX. To define your own command use:
@@ -350,8 +383,13 @@ Note this is not a complete implementation of LaTeX math mode. There are
 some important pieces that are missing and will be included in future
 updates. This includes:
 
-* Support for explicit big delimiters (bigl, bigr etc.)
-* Addition of missing plain TeX commands 
+* Support for explicit big delimiters (`\big`, `\Big`, `\bigg`, `\Bigg`, etc.)
+* `\middle` delimiter for use between `\left` and `\right`
+* Fine spacing commands (`\,`, `\:`, `\;`, `\!`)
+* Bold symbol command (`\boldsymbol`)
+* Addition of missing plain TeX commands
+
+For a complete list of missing features and their implementation status, see [MISSING_FEATURES.md](MISSING_FEATURES.md).
 
 ## License
 

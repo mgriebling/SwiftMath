@@ -438,8 +438,15 @@ public struct MTMathListBuilder {
             } else {
                 atom = MTMathAtomFactory.atom(forCharacter: char)
                 if atom == nil {
-                    // Not a recognized character
-                    continue
+                    // Not a recognized character in standard math mode
+                    // In text mode (spacesAllowed && roman style), accept any Unicode character for fallback font support
+                    // This enables Chinese, Japanese, Korean, emoji, etc. in \text{} commands
+                    if spacesAllowed && currentFontStyle == .roman {
+                        atom = MTMathAtom(type: .ordinary, value: String(char))
+                    } else {
+                        // In math mode or non-text commands, skip unrecognized characters
+                        continue
+                    }
                 }
             }
             
