@@ -331,6 +331,7 @@ public class MTMathAtomFactory {
         "int" : MTMathAtomFactory.operatorWithName( "\u{222B}", limits: false),
         "iint" : MTMathAtomFactory.operatorWithName( "\u{222C}", limits: false),
         "iiint" : MTMathAtomFactory.operatorWithName( "\u{222D}", limits: false),
+        "iiiint" : MTMathAtomFactory.operatorWithName( "\u{2A0C}", limits: false),
         "oint" : MTMathAtomFactory.operatorWithName( "\u{222E}", limits: false),
         "bigwedge" : MTMathAtomFactory.operatorWithName( "\u{22C0}", limits: true),
         "bigvee" : MTMathAtomFactory.operatorWithName( "\u{22C1}", limits: true),

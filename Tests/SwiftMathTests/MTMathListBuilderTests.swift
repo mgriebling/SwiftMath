@@ -2286,12 +2286,25 @@ final class MTMathListBuilderTests: XCTestCase {
             var error: NSError? = nil
             let list = MTMathListBuilder.build(fromString: latex, error: &error)
 
-            if list == nil || error != nil {
-                throw XCTSkip("Multiple integral symbols (\\iint, \\iiint) not implemented: \(desc). Error: \(error?.localizedDescription ?? "nil result")")
+            if let err = error {
+                XCTFail("ERROR: \(err.localizedDescription)")
+            } else if list == nil {
+                XCTFail("List is nil but no error")
             }
 
             let unwrappedList = try XCTUnwrap(list, "Should parse: \(desc)")
+            XCTAssertNil(error, "Should not error on \(desc): \(error?.localizedDescription ?? "")")
             XCTAssertTrue(unwrappedList.atoms.count >= 1, "\(desc) should have atoms")
+
+            // Verify we have a large operator (integral) in the list
+            var foundOperator = false
+            for atom in unwrappedList.atoms {
+                if atom.type == .largeOperator {
+                    foundOperator = true
+                    break
+                }
+            }
+            XCTAssertTrue(foundOperator, "\(desc) should contain a large operator (integral)")
         }
     }
 
