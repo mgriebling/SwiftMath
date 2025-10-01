@@ -2174,22 +2174,53 @@ final class MTMathListBuilderTests: XCTestCase {
 
     func testSubstack() throws {
         // Test \substack for multi-line subscripts and limits
+
         let testCases = [
+            ("\\substack{a \\\\ b}", "simple substack"),
+            ("x_{\\substack{a \\\\ b}}", "substack in subscript"),
             ("\\sum_{\\substack{0 \\le i \\le m \\\\ 0 < j < n}} P(i,j)", "substack in sum limits"),
             ("\\prod_{\\substack{p \\text{ prime} \\\\ p < 100}} p", "substack with text"),
-            ("A_{\\substack{n \\\\ k}}", "substack in subscript")
+            ("A_{\\substack{n \\\\ k}}", "subscript with substack"),
+            ("\\substack{\\frac{a}{b} \\\\ c}", "substack with frac"),
+            ("\\substack{a}", "single row substack"),
+            ("\\substack{a \\\\ b \\\\ c \\\\ d}", "multi-row substack")
         ]
 
         for (latex, desc) in testCases {
+            print("Testing: \(desc)")
+            print("  LaTeX: \(latex)")
             var error: NSError? = nil
             let list = MTMathListBuilder.build(fromString: latex, error: &error)
 
-            if list == nil || error != nil {
-                throw XCTSkip("\\substack not implemented: \(desc). Error: \(error?.localizedDescription ?? "nil result")")
+            if let err = error {
+                print("  ERROR: \(err.localizedDescription)")
+            } else if list == nil {
+                print("  List is nil but no error")
+            } else {
+                print("  SUCCESS: Got \(list!.atoms.count) atoms")
             }
 
             let unwrappedList = try XCTUnwrap(list, "Should parse: \(desc)")
+            XCTAssertNil(error, "Should not error on \(desc): \(error?.localizedDescription ?? "")")
             XCTAssertTrue(unwrappedList.atoms.count >= 1, "\(desc) should have atoms")
+
+            // Verify we have a table structure (either directly or in subscript)
+            var foundTable = false
+            for atom in unwrappedList.atoms {
+                if atom.type == .table {
+                    foundTable = true
+                    break
+                }
+                if let subScript = atom.subScript {
+                    for subAtom in subScript.atoms {
+                        if subAtom.type == .table {
+                            foundTable = true
+                            break
+                        }
+                    }
+                }
+            }
+            XCTAssertTrue(foundTable, "\(desc) should contain a table structure")
         }
     }
 

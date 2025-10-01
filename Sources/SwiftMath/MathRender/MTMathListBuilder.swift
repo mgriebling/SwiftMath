@@ -366,6 +366,13 @@ public struct MTMathListBuilder {
                 // \ means a command
                 assert(!oneCharOnly, "This should have been handled before")
                 assert(stop == nil, "This should have been handled before")
+                // Special case: } terminates implicit table (envName == nil) created by \\
+                // This happens when \\ is used inside braces: \substack{a \\ b}
+                if self.currentEnv != nil && self.currentEnv!.envName == nil {
+                    // Mark environment as ended, don't consume the }
+                    self.currentEnv!.ended = true
+                    return list
+                }
                 // We encountered a closing brace when there is no stop set, that means there was no
                 // corresponding opening brace.
                 self.setError(.mismatchBraces, message:"Mismatched braces.")
@@ -740,6 +747,35 @@ public struct MTMathListBuilder {
             let under = MTUnderLine()
             under.innerList = self.buildInternal(true)
             return under
+        } else if command == "substack" {
+            // \substack reads ONE braced argument containing rows separated by \\
+            // Similar to how \frac reads {numerator}{denominator}
+
+            // Read the braced content using standard pattern
+            let content = self.buildInternal(true)
+
+            if content == nil {
+                return nil
+            }
+
+            // The content may already be a table if \\ was encountered
+            // Check if we got a table from the \\ parsing
+            if content!.atoms.count == 1, let tableAtom = content!.atoms.first as? MTMathTable {
+                return tableAtom
+            }
+
+            // Otherwise, single row - wrap in table
+            var rows = [[MTMathList]]()
+            rows.append([content!])
+
+            var error: NSError? = self.error
+            let table = MTMathAtomFactory.table(withEnvironment: nil, rows: rows, error: &error)
+            if table == nil && self.error == nil {
+                self.error = error
+                return nil
+            }
+
+            return table
         } else if command == "begin" {
             let env = self.readEnvironment()
             if env == nil {
