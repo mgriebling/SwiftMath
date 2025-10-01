@@ -17,7 +17,7 @@ final class MathFontTests: XCTestCase {
             XCTAssertNotNil($0.cgFont())
             XCTAssertNotNil($0.ctFont(withSize: CGFloat(size)))
             XCTAssertEqual($0.ctFont(withSize: CGFloat(size)).fontSize, CGFloat(size), "ctFont fontSize != size.")
-            XCTAssertEqual($0.cgFont().postScriptName as? String, $0.fontName, "postscript Name != UIFont fontName")
+            XCTAssertEqual($0.cgFont().postScriptName as? String, $0.postScriptName, "cgFont.postScriptName != postScriptName")
             // XCTAssertEqual($0.uiFont(withSize: CGFloat(size))?.familyName, $0.fontFamilyName, "uifont familyName != familyName.")
             XCTAssertEqual(CTFontCopyFamilyName($0.ctFont(withSize: CGFloat(size))) as String, $0.fontFamilyName, "ctfont.family != familyName")
         }
@@ -48,7 +48,7 @@ final class MathFontTests: XCTestCase {
         XCTAssertEqual(mathFont.ctFont(withSize: CGFloat(size)).fontSize, CGFloat(size), "ctFont fontSize test")
     }
     var fontNames: [String] {
-        MathFont.allCases.map { $0.fontName }
+        MathFont.allCases.map { $0.postScriptName }
     }
     var fontFamilyNames: [String] {
         MathFont.allCases.map { $0.fontFamilyName }
