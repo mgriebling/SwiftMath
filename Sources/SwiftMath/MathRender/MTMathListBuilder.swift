@@ -15,11 +15,13 @@ struct MTEnvProperties {
     var envName: String?
     var ended: Bool
     var numRows: Int
-    
-    init(name: String?) {
+    var alignment: MTColumnAlignment?  // Optional alignment for starred matrix environments
+
+    init(name: String?, alignment: MTColumnAlignment? = nil) {
         self.envName = name
         self.numRows = 0
         self.ended = false
+        self.alignment = alignment
     }
 }
 
@@ -1084,7 +1086,16 @@ public struct MTMathListBuilder {
             return under
         } else if command == "begin" {
             if let env = self.readEnvironment() {
-                let table = self.buildTable(env: env, firstList: nil, isRow: false)
+                // Check if this is a starred matrix environment and read optional alignment
+                var alignment: MTColumnAlignment? = nil
+                if env.hasSuffix("*") {
+                    alignment = self.readOptionalAlignment()
+                    if self.error != nil {
+                        return nil
+                    }
+                }
+
+                let table = self.buildTable(env: env, alignment: alignment, firstList: nil, isRow: false)
                 return table
             } else {
                 return nil
@@ -1113,10 +1124,10 @@ public struct MTMathListBuilder {
             self.setError(.characterNotFound, message: "Missing {")
             return nil
         }
-        
+
         self.skipSpaces()
         let env = self.readString()
-        
+
         if !self.expectCharacter("}") {
             // We didn"t find an closing brace, so invalid format.
             self.setError(.characterNotFound, message: "Missing }")
@@ -1124,16 +1135,58 @@ public struct MTMathListBuilder {
         }
         return env
     }
+
+    /// Reads optional alignment parameter for starred matrix environments: [r], [l], or [c]
+    mutating func readOptionalAlignment() -> MTColumnAlignment? {
+        self.skipSpaces()
+
+        // Check if there's an opening bracket
+        guard hasCharacters && string[currentCharIndex] == "[" else {
+            return nil
+        }
+
+        _ = getNextCharacter()  // consume '['
+        self.skipSpaces()
+
+        guard hasCharacters else {
+            self.setError(.characterNotFound, message: "Missing alignment specifier after [")
+            return nil
+        }
+
+        let alignChar = getNextCharacter()
+        let alignment: MTColumnAlignment?
+
+        switch alignChar {
+        case "l":
+            alignment = .left
+        case "c":
+            alignment = .center
+        case "r":
+            alignment = .right
+        default:
+            self.setError(.invalidEnv, message: "Invalid alignment specifier: \(alignChar). Must be l, c, or r")
+            return nil
+        }
+
+        self.skipSpaces()
+
+        if !self.expectCharacter("]") {
+            self.setError(.characterNotFound, message: "Missing ] after alignment specifier")
+            return nil
+        }
+
+        return alignment
+    }
     
     func MTAssertNotSpace(_ ch: Character) {
         assert(ch >= "\u{21}" && ch <= "\u{7E}", "Expected non-space character \(ch)")
     }
     
-    mutating func buildTable(env: String?, firstList: MTMathList?, isRow: Bool) -> MTMathAtom? {
+    mutating func buildTable(env: String?, alignment: MTColumnAlignment? = nil, firstList: MTMathList?, isRow: Bool) -> MTMathAtom? {
         // Save the current env till an new one gets built.
         let oldEnv = self.currentEnv
 
-        currentEnv = MTEnvProperties(name: env)
+        currentEnv = MTEnvProperties(name: env, alignment: alignment)
         
         var currentRow = 0
         var currentCol = 0
@@ -1171,7 +1224,7 @@ public struct MTMathListBuilder {
         }
         
         var error:NSError? = self.error
-        let table = MTMathAtomFactory.table(withEnvironment: currentEnv?.envName, rows: rows, error: &error)
+        let table = MTMathAtomFactory.table(withEnvironment: currentEnv?.envName, alignment: currentEnv?.alignment, rows: rows, error: &error)
         if table == nil && self.error == nil {
             self.error = error
             return nil
@@ -1228,11 +1281,11 @@ public struct MTMathListBuilder {
     }
     
     mutating func readString() -> String {
-        // a string of all upper and lower case characters.
+        // a string of all upper and lower case characters (and asterisks for starred environments)
         var output = ""
         while self.hasCharacters {
             let char = self.getNextCharacter()
-            if char.isLowercase || char.isUppercase {
+            if char.isLowercase || char.isUppercase || char == "*" {
                 output.append(char)
             } else {
                 self.unlookCharacter()

@@ -792,7 +792,14 @@ public class MTMathAtomFactory {
         "Bmatrix": ["{", "}"],
         "vmatrix": ["vert", "vert"],
         "Vmatrix": ["Vert", "Vert"],
-        "smallmatrix": []
+        "smallmatrix": [],
+        // Starred versions with optional alignment
+        "matrix*": [],
+        "pmatrix*": ["(", ")"],
+        "bmatrix*": ["[", "]"],
+        "Bmatrix*": ["{", "}"],
+        "vmatrix*": ["vert", "vert"],
+        "Vmatrix*": ["Vert", "Vert"]
     ]
     
     /** Builds a table for a given environment with the given rows. Returns a `MTMathAtom` containing the
@@ -802,9 +809,9 @@ public class MTMathAtomFactory {
      @note The reason this function returns a `MTMathAtom` and not a `MTMathTable` is because some
      matrix environments are have builtin delimiters added to the table and hence are returned as inner atoms.
      */
-    public static func table(withEnvironment env: String?, rows: [[MTMathList]], error:inout NSError?) -> MTMathAtom? {
+    public static func table(withEnvironment env: String?, alignment: MTColumnAlignment? = nil, rows: [[MTMathList]], error:inout NSError?) -> MTMathAtom? {
         let table = MTMathTable(environment: env)
-        
+
         for i in 0..<rows.count {
             let row = rows[i]
             for j in 0..<row.count {
@@ -834,6 +841,13 @@ public class MTMathAtomFactory {
                 for i in 0..<table.cells.count {
                     for j in 0..<table.cells[i].count {
                         table.cells[i][j].insert(style, at: 0)
+                    }
+                }
+
+                // Apply alignment for starred matrix environments
+                if let align = alignment {
+                    for col in 0..<table.numColumns {
+                        table.set(alignment: align, forColumn: col)
                     }
                 }
 
