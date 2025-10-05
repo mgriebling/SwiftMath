@@ -114,18 +114,34 @@ struct MathView: UIViewRepresentable {
     var fontSize: CGFloat = 30
     var labelMode: MTMathUILabelMode = .text
     var insets: MTEdgeInsets = MTEdgeInsets()
-    
+
     func makeUIView(context: Context) -> MTMathUILabel {
         let view = MTMathUILabel()
+        view.setContentHuggingPriority(.required, for: .vertical)
+        view.setContentCompressionResistancePriority(.required, for: .vertical)
         return view
     }
+
     func updateUIView(_ view: MTMathUILabel, context: Context) {
         view.latex = equation
-        view.font = MTFontManager().font(withName: font.rawValue, size: fontSize)
+        let font = MTFontManager().font(withName: font.rawValue, size: fontSize)
+        font?.fallbackFont = UIFont.systemFont(ofSize: fontSize)
+        view.font = font
         view.textAlignment = textAlignment
         view.labelMode = labelMode
         view.textColor = MTColor(Color.primary)
         view.contentInsets = insets
+        view.invalidateIntrinsicContentSize()
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: MTMathUILabel, context: Context) -> CGSize? {
+        // Enable line wrapping by passing proposed width to the label
+        if let width = proposal.width, width.isFinite, width > 0 {
+            uiView.preferredMaxLayoutWidth = width
+            let size = uiView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
+            return size
+        }
+        return nil
     }
 }
 ```
@@ -143,46 +159,201 @@ struct MathView: NSViewRepresentable {
     var fontSize: CGFloat = 30
     var labelMode: MTMathUILabelMode = .text
     var insets: MTEdgeInsets = MTEdgeInsets()
-    
+
     func makeNSView(context: Context) -> MTMathUILabel {
         let view = MTMathUILabel()
+        view.setContentHuggingPriority(.required, for: .vertical)
+        view.setContentCompressionResistancePriority(.required, for: .vertical)
         return view
     }
-    
+
     func updateNSView(_ view: MTMathUILabel, context: Context) {
         view.latex = equation
-        view.font = MTFontManager().font(withName: font.rawValue, size: fontSize)
+        let font = MTFontManager().font(withName: font.rawValue, size: fontSize)
+        font?.fallbackFont = NSFont.systemFont(ofSize: fontSize)
+        view.font = font
         view.textAlignment = textAlignment
         view.labelMode = labelMode
         view.textColor = MTColor(Color.primary)
         view.contentInsets = insets
+        view.invalidateIntrinsicContentSize()
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView: MTMathUILabel, context: Context) -> CGSize? {
+        // Enable line wrapping by passing proposed width to the label
+        if let width = proposal.width, width.isFinite, width > 0 {
+            nsView.preferredMaxLayoutWidth = width
+            let size = nsView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
+            return size
+        }
+        return nil
     }
 }
+```
+
+### Automatic Line Wrapping
+
+`SwiftMath` supports automatic line wrapping for text and simple math expressions. When the content exceeds the available width, it will wrap at word boundaries to fit within the constrained space.
+
+#### Using Line Wrapping with UIKit/AppKit
+
+For direct `MTMathUILabel` usage, set the `preferredMaxLayoutWidth` property:
+
+```swift
+let label = MTMathUILabel()
+label.latex = "\\(\\text{Remember the conversion: 1 km equals 1000 meters.}\\)"
+label.font = MTFontManager.fontManager.defaultFont
+label.labelMode = .text
+
+// Enable line wrapping by setting a maximum width
+label.preferredMaxLayoutWidth = 300
+```
+
+You can also use `sizeThatFits` to calculate the size with a width constraint:
+
+```swift
+let constrainedSize = label.sizeThatFits(CGSize(width: 300, height: .greatestFiniteMagnitude))
+```
+
+#### Using Line Wrapping with SwiftUI
+
+The `MathView` examples above include `sizeThatFits()` which automatically enables line wrapping when SwiftUI proposes a width constraint. No additional configuration is needed:
+
+```swift
+VStack(alignment: .leading, spacing: 8) {
+    MathView(
+        equation: "\\(\\text{Remember the conversion: 1 km equals 1000 meters.}\\)",
+        fontSize: 17,
+        labelMode: .text
+    )
+}
+.frame(maxWidth: 300)  // The text will wrap to fit within 300pt
+```
+
+#### Line Wrapping Behavior
+
+- **Works for**: Text content (`\text{...}`), mixed text with simple math, and simple equations
+- **Breaks at**: Word boundaries (spaces)
+- **Preserves**: Complex math layout (fractions, superscripts, matrices remain on single lines)
+- **Respects**: Unicode text including CJK characters with proper word boundaries
+
+#### Examples
+
+**Simple text wrapping:**
+```swift
+// Long text will wrap to multiple lines
+label.latex = "\\(\\text{The quadratic formula is used to solve equations of the form } ax^2 + bx + c = 0\\)"
+label.preferredMaxLayoutWidth = 250
+```
+
+**Simple equation with operators:**
+```swift
+// Long equations can break between operators if too long
+label.latex = "\\(5 + 10 + 15 + 20 + 25 + 30\\)"
+label.preferredMaxLayoutWidth = 150
+// Will wrap: "5 + 10 + 15 + 20 +"
+//            "25 + 30"
+```
+
+**Mixed text and math:**
+```swift
+// Text wraps but math expressions stay intact
+label.latex = "\\(\\text{Result: } 5 \\times 1000 = 5000 \\text{ meters}\\)"
+label.preferredMaxLayoutWidth = 200
+// Will wrap at spaces between text and operators
+```
+
+**Multiple lines in SwiftUI:**
+```swift
+ScrollView {
+    VStack(alignment: .leading, spacing: 12) {
+        ForEach(steps) { step in
+            MathView(
+                equation: step.description,
+                fontSize: 17,
+                labelMode: .text
+            )
+        }
+    }
+    .padding()
+}
+// Each MathView will automatically wrap based on available width
 ```
 
 ### Included Features
 This is a list of formula types that the library currently supports:
 
 * Simple algebraic equations
-* Fractions and continued fractions
+* Fractions and continued fractions (including `\cfrac`)
 * Exponents and subscripts
 * Trigonometric formulae
 * Square roots and n-th roots
-* Calculus symbos - limits, derivatives, integrals
+* Calculus symbols - limits, derivatives, integrals (including `\iint`, `\iiint`, `\iiiint`)
 * Big operators (e.g. product, sum)
-* Big delimiters (using \\left and \\right)
+* Big delimiters (using `\left` and `\right`)
 * Greek alphabet
-* Combinatorics (\\binom, \\choose etc.)
+* Combinatorics (`\binom`, `\choose` etc.)
 * Geometry symbols (e.g. angle, congruence etc.)
 * Ratios, proportions, percentages
 * Math spacing
 * Overline and underline
 * Math accents
-* Matrices
+* Matrices (including `\smallmatrix` and starred variants like `pmatrix*` with alignment)
+* Multi-line subscripts and limits (`\substack`)
 * Equation alignment
-* Change bold, roman, caligraphic and other font styles (\\bf, \\text, etc.)
+* Change bold, roman, caligraphic and other font styles (`\bf`, `\text`, etc.)
+* Style commands (`\displaystyle`, `\textstyle`)
 * Most commonly used math symbols
 * Colors for both text and background
+* **Inline and display math mode delimiters** (see below)
+
+### LaTeX Math Delimiters
+
+`SwiftMath` now supports all standard LaTeX math delimiters for both inline and display modes. The parser automatically detects and handles these delimiters:
+
+#### Inline Math (Text Style)
+Use these delimiters for inline math within text, which renders more compactly:
+
+```swift
+// Dollar signs (TeX style)
+label.latex = "$E = mc^2$"
+
+// Parentheses (LaTeX style)
+label.latex = "\\(\\sum_{i=1}^{n} x_i\\)"
+
+// Cases environment in inline mode
+label.latex = "\\(\\begin{cases} x + y = 5 \\\\ 2x - y = 1 \\end{cases}\\)"
+```
+
+#### Display Math (Display Style)
+Use these delimiters for standalone equations with larger operators and limits:
+
+```swift
+// Double dollar signs (TeX style)
+label.latex = "$$\\int_{0}^{\\infty} e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2}$$"
+
+// Square brackets (LaTeX style)
+label.latex = "\\[\\sum_{k=1}^{n} k^2 = \\frac{n(n+1)(2n+1)}{6}\\]"
+
+// Equation environment
+label.latex = "\\begin{equation} x^2 + y^2 = z^2 \\end{equation}"
+
+// Cases environment in display mode
+label.latex = "\\begin{cases} x + y = 5 \\\\ 2x - y = 1 \\end{cases}"
+```
+
+**Note:** The difference between inline and display modes:
+- **Inline mode** (`$...$` or `\(...\)`) renders compactly, suitable for math within text
+- **Display mode** (`$$...$$`, `\[...\]`, or environments) renders with larger operators and limits positioned above/below
+
+All delimiters are automatically stripped during parsing, and the math mode is set appropriately. No additional configuration is needed!
+
+#### Backward Compatibility
+Equations without explicit delimiters continue to work as before, defaulting to display mode:
+
+```swift
+label.latex = "x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}"  // Works as always
+```
 
 Note: SwiftMath only supports the commands in LaTeX's math mode. There is
 also no language support for other than west European langugages and some
@@ -262,6 +433,37 @@ It is also possible to set different colors for different parts of the
 equation. Just access the `displayList` field and set the `textColor`
 of the underlying displays of which you want to change the color. 
 
+##### Fallback Font for Unicode Text
+By default, math fonts only support a limited set of characters (Latin, Greek, common math symbols).
+To display other Unicode characters like Chinese, Japanese, Korean, emoji, or other scripts in `\text{}`
+commands, you can configure a fallback font:
+
+```swift
+let mathFont = MTFontManager().font(withName: MathFont.latinModernFont.rawValue, size: 30)
+
+// Set a fallback font for unsupported characters (defaults to nil)
+#if os(iOS) || os(visionOS)
+let systemFont = UIFont.systemFont(ofSize: 30)
+mathFont?.fallbackFont = CTFontCreateWithName(systemFont.fontName as CFString, 30, nil)
+#elseif os(macOS)
+let systemFont = NSFont.systemFont(ofSize: 30)
+mathFont?.fallbackFont = CTFontCreateWithName(systemFont.fontName as CFString, 30, nil)
+#endif
+
+label.font = mathFont
+label.latex = "\\text{Hello 世界 🌍}"  // English, Chinese, and emoji
+```
+
+When the main math font doesn't contain a glyph for a character, the fallback font will be used automatically.
+This is particularly useful for:
+- Chinese text: `\text{中文}`
+- Japanese text: `\text{日本語}`
+- Korean text: `\text{한국어}`
+- Emoji: `\text{Math is fun! 🎉📐}`
+- Mixed scripts: `\text{Equation: 方程式}`
+
+**Note**: The fallback font only applies to characters within `\text{}` commands, not regular math mode.
+
 ##### Custom Commands
 You can define your own commands that are not already predefined. This is
 similar to macros is LaTeX. To define your own command use:
@@ -301,8 +503,13 @@ Note this is not a complete implementation of LaTeX math mode. There are
 some important pieces that are missing and will be included in future
 updates. This includes:
 
-* Support for explicit big delimiters (bigl, bigr etc.)
-* Addition of missing plain TeX commands 
+* Support for explicit big delimiters (`\big`, `\Big`, `\bigg`, `\Bigg`, etc.)
+* `\middle` delimiter for use between `\left` and `\right`
+* Fine spacing commands (`\,`, `\:`, `\;`, `\!`)
+* Bold symbol command (`\boldsymbol`)
+* Addition of missing plain TeX commands
+
+For a complete list of missing features and their implementation status, see [MISSING_FEATURES.md](MISSING_FEATURES.md).
 
 ## License
 

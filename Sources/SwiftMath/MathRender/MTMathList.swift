@@ -328,6 +328,10 @@ public class MTFraction: MTMathAtom {
     public var rightDelimiter = ""
     public var numerator: MTMathList?
     public var denominator: MTMathList?
+
+    // Continued fraction properties
+    public var isContinuedFraction: Bool = false
+    public var alignment: String = "c"  // "l", "r", "c" for left, right, center
     
     init(_ frac: MTFraction?) {
         super.init(frac)
@@ -338,6 +342,8 @@ public class MTFraction: MTMathAtom {
             self.hasRule = frac.hasRule
             self.leftDelimiter = frac.leftDelimiter
             self.rightDelimiter = frac.rightDelimiter
+            self.isContinuedFraction = frac.isContinuedFraction
+            self.alignment = frac.alignment
         }
     }
     

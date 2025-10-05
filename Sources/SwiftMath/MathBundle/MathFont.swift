@@ -41,11 +41,28 @@ public enum MathFont: String, CaseIterable, Identifiable {
             case .firaFont:         "Fira Math"
             case .notoSansFont:     "Noto Sans Math"
             case .libertinusFont:   "Libertinus Math"
-            case .garamondFont:     "Garamond Math"
+            case .garamondFont:     "Garamond-Math"  // PostScript name is "Garamond-Math", not "Garamond Math"
             case .leteSansFont:     "Lete Sans Math"
         }
     }
-	
+
+    var postScriptName: String {
+        switch self {
+            case .latinModernFont:  "LatinModernMath-Regular"
+            case .kpMathLightFont:  "KpMath-Light"
+            case .kpMathSansFont:   "KpMath-Sans"
+            case .xitsFont:         "XITSMath"
+            case .termesFont:       "TeXGyreTermesMath-Regular"
+            case .asanaFont:        "Asana-Math"
+            case .eulerFont:        "Euler-Math"
+            case .firaFont:         "FiraMath-Regular"
+            case .notoSansFont:     "NotoSansMath-Regular"
+            case .libertinusFont:   "LibertinusMath-Regular"
+            case .garamondFont:     "Garamond-Math"
+            case .leteSansFont:     "LeteSansMath"
+        }
+    }
+
     var fontName: String { self.rawValue }
 	
     public func cgFont() -> CGFont {

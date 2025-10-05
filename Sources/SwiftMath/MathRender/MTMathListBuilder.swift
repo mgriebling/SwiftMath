@@ -15,11 +15,13 @@ struct MTEnvProperties {
     var envName: String?
     var ended: Bool
     var numRows: Int
-    
-    init(name: String?) {
+    var alignment: MTColumnAlignment?  // Optional alignment for starred matrix environments
+
+    init(name: String?, alignment: MTColumnAlignment? = nil) {
         self.envName = name
         self.numRows = 0
         self.ended = false
+        self.alignment = alignment
     }
 }
 
@@ -66,13 +68,22 @@ let MTParseError = "ParseError"
  can be rendered and processed mathematically.
  */
 public struct MTMathListBuilder {
+    /// The math mode determines rendering style (inline vs display)
+    enum MathMode {
+        /// Display style - larger operators, limits above/below (e.g., $$...$$, \[...\])
+        case display
+        /// Inline/text style - compact operators, limits to the side (e.g., $...$, \(...\))
+        case inline
+    }
+
     var string: String
     var currentCharIndex: String.Index
     var currentInnerAtom: MTInner?
     var currentEnv: MTEnvProperties?
     var currentFontStyle:MTFontStyle
     var spacesAllowed:Bool
-    
+    var mathMode: MathMode = .display
+
     /** Contains any error that occurred during parsing. */
     var error:NSError?
     
@@ -94,6 +105,44 @@ public struct MTMathListBuilder {
             currentCharIndex = string.index(before: currentCharIndex)
         }
     }
+
+    // Peek at next command without consuming it (for \not lookahead)
+    mutating func peekNextCommand() -> String {
+        let savedIndex = currentCharIndex
+        skipSpaces()
+
+        guard hasCharacters else {
+            currentCharIndex = savedIndex
+            return ""
+        }
+
+        let char = getNextCharacter()
+        let command: String
+
+        if char == "\\" {
+            command = readCommand()
+        } else {
+            command = ""
+        }
+
+        // Restore position
+        currentCharIndex = savedIndex
+        return command
+    }
+
+    // Consume the next command (after peeking)
+    mutating func consumeNextCommand() {
+        skipSpaces()
+
+        guard hasCharacters else { return }
+
+        let char = getNextCharacter()
+        if char == "\\" {
+            _ = readCommand()
+        }
+    }
+
+
     
     mutating func expectCharacter(_ ch: Character) -> Bool {
         MTAssertNotSpace(ch)
@@ -127,6 +176,24 @@ public struct MTMathListBuilder {
         .script: "scriptstyle",
         .scriptOfScript: "scriptscriptstyle"
     ]
+
+    // Comprehensive mapping of \not command combinations to Unicode negated symbols
+    public static let notCombinations: [String: String] = [
+        // Primary targets (user requested)
+        "equiv": "\u{2262}",    // ≢ Not equivalent
+        "subset": "\u{2284}",   // ⊄ Not subset
+        "in": "\u{2209}",       // ∉ Not element of
+
+        // Additional standard negations
+        "sim": "\u{2241}",      // ≁ Not similar
+        "approx": "\u{2249}",   // ≉ Not approximately equal
+        "cong": "\u{2247}",     // ≇ Not congruent
+        "parallel": "\u{2226}", // ∦ Not parallel
+        "subseteq": "\u{2288}", // ⊈ Not subset or equal
+        "supset": "\u{2285}",   // ⊅ Not superset
+        "supseteq": "\u{2289}", // ⊉ Not superset or equal
+        "=": "\u{2260}",        // ≠ Not equal (alternative to \neq)
+    ]
     
     init(string: String) {
         self.error = nil
@@ -135,11 +202,66 @@ public struct MTMathListBuilder {
         self.currentFontStyle = .defaultStyle
         self.spacesAllowed = false
     }
-    
+
+    // MARK: - Delimiter Detection
+
+    /// Detects and strips LaTeX math delimiters from the input string.
+    /// Returns the cleaned content and the detected math mode.
+    /// Supports: $...$ \(...\) $$...$$ \[...\] and environments
+    func detectAndStripDelimiters(from str: String) -> (String, MathMode) {
+        let trimmed = str.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Check display delimiters first (more specific patterns)
+
+        // \[...\] - LaTeX display math
+        if trimmed.hasPrefix("\\[") && trimmed.hasSuffix("\\]") && trimmed.count > 4 {
+            let content = String(trimmed.dropFirst(2).dropLast(2))
+            return (content, .display)
+        }
+
+        // $$...$$ - TeX display math (check before single $)
+        if trimmed.hasPrefix("$$") && trimmed.hasSuffix("$$") && trimmed.count > 4 {
+            let content = String(trimmed.dropFirst(2).dropLast(2))
+            return (content, .display)
+        }
+
+        // Check inline delimiters
+
+        // \(...\) - LaTeX inline math
+        if trimmed.hasPrefix("\\(") && trimmed.hasSuffix("\\)") && trimmed.count > 4 {
+            let content = String(trimmed.dropFirst(2).dropLast(2))
+            return (content, .inline)
+        }
+
+        // $...$ - TeX inline math (must check after $$)
+        if trimmed.hasPrefix("$") && trimmed.hasSuffix("$") && trimmed.count > 2 && !trimmed.hasPrefix("$$") {
+            let content = String(trimmed.dropFirst(1).dropLast(1))
+            return (content, .inline)
+        }
+
+        // Check if it's an environment (\begin{...}\end{...})
+        // These are handled by existing logic and are display mode by default
+        if trimmed.hasPrefix("\\begin{") {
+            return (str, .display)
+        }
+
+        // No delimiters found - default to display mode (current behavior for backward compatibility)
+        return (str, .display)
+    }
+
     // MARK: - MTMathList builder functions
-    
+
     /// Builds a mathlist from the internal `string`. Returns nil if there is an error.
     public mutating func build() -> MTMathList? {
+        // Detect and strip delimiters, updating the string and mode
+        let (cleanedString, mode) = detectAndStripDelimiters(from: self.string)
+        self.string = cleanedString
+        self.currentCharIndex = cleanedString.startIndex
+        self.mathMode = mode
+
+        // If inline mode, we could optionally prepend a \textstyle command
+        // to force inline rendering of operators. For now, just track the mode.
+
         let list = self.buildInternal(false)
         if self.hasCharacters && error == nil {
             self.setError(.mismatchBraces, message: "Mismatched braces: \(self.string)")
@@ -148,6 +270,14 @@ public struct MTMathListBuilder {
         if error != nil {
             return nil
         }
+
+        // Optionally: Add style hint for inline mode
+        if mode == .inline && list != nil && !list!.atoms.isEmpty {
+            // Prepend \textstyle to force inline rendering
+            let styleAtom = MTMathStyle(style: .text)
+            list!.atoms.insert(styleAtom, at: 0)
+        }
+
         return list
     }
     
@@ -238,6 +368,13 @@ public struct MTMathListBuilder {
                 // \ means a command
                 assert(!oneCharOnly, "This should have been handled before")
                 assert(stop == nil, "This should have been handled before")
+                // Special case: } terminates implicit table (envName == nil) created by \\
+                // This happens when \\ is used inside braces: \substack{a \\ b}
+                if self.currentEnv != nil && self.currentEnv!.envName == nil {
+                    // Mark environment as ended, don't consume the }
+                    self.currentEnv!.ended = true
+                    return list
+                }
                 // We encountered a closing brace when there is no stop set, that means there was no
                 // corresponding opening brace.
                 self.setError(.mismatchBraces, message:"Mismatched braces.")
@@ -301,8 +438,15 @@ public struct MTMathListBuilder {
             } else {
                 atom = MTMathAtomFactory.atom(forCharacter: char)
                 if atom == nil {
-                    // Not a recognized character
-                    continue
+                    // Not a recognized character in standard math mode
+                    // In text mode (spacesAllowed && roman style), accept any Unicode character for fallback font support
+                    // This enables Chinese, Japanese, Korean, emoji, etc. in \text{} commands
+                    if spacesAllowed && currentFontStyle == .roman {
+                        atom = MTMathAtom(type: .ordinary, value: String(char))
+                    } else {
+                        // In math mode or non-text commands, skip unrecognized characters
+                        continue
+                    }
                 }
             }
             
@@ -349,7 +493,14 @@ public struct MTMathListBuilder {
                 }
                 if atom.type == .fraction {
                     if let frac = atom as? MTFraction {
-                        if frac.hasRule {
+                        if frac.isContinuedFraction {
+                            // Generate \cfrac with optional alignment
+                            if frac.alignment != "c" {
+                                str += "\\cfrac[\(frac.alignment)]{\(mathListToString(frac.numerator!))}{\(mathListToString(frac.denominator!))}"
+                            } else {
+                                str += "\\cfrac{\(mathListToString(frac.numerator!))}{\(mathListToString(frac.denominator!))}"
+                            }
+                        } else if frac.hasRule {
                             str += "\\frac{\(mathListToString(frac.numerator!))}{\(mathListToString(frac.denominator!))}"
                         } else {
                             let command: String
@@ -529,6 +680,28 @@ public struct MTMathListBuilder {
             frac.numerator = self.buildInternal(true)
             frac.denominator = self.buildInternal(true)
             return frac;
+        } else if command == "cfrac" {
+            // A continued fraction command with optional alignment and 2 arguments
+            let frac = MTFraction()
+            frac.isContinuedFraction = true
+
+            // Parse optional alignment parameter [l], [r], [c]
+            skipSpaces()
+            if hasCharacters && string[currentCharIndex] == "[" {
+                _ = getNextCharacter() // consume '['
+                let alignmentChar = getNextCharacter()
+                if alignmentChar == "l" || alignmentChar == "r" || alignmentChar == "c" {
+                    frac.alignment = String(alignmentChar)
+                }
+                // Consume closing ']'
+                if hasCharacters && string[currentCharIndex] == "]" {
+                    _ = getNextCharacter()
+                }
+            }
+
+            frac.numerator = self.buildInternal(true)
+            frac.denominator = self.buildInternal(true)
+            return frac;
         } else if command == "binom" {
             // A binom command has 2 arguments
             let frac = MTFraction(hasRule: false)
@@ -583,6 +756,35 @@ public struct MTMathListBuilder {
             let under = MTUnderLine()
             under.innerList = self.buildInternal(true)
             return under
+        } else if command == "substack" {
+            // \substack reads ONE braced argument containing rows separated by \\
+            // Similar to how \frac reads {numerator}{denominator}
+
+            // Read the braced content using standard pattern
+            let content = self.buildInternal(true)
+
+            if content == nil {
+                return nil
+            }
+
+            // The content may already be a table if \\ was encountered
+            // Check if we got a table from the \\ parsing
+            if content!.atoms.count == 1, let tableAtom = content!.atoms.first as? MTMathTable {
+                return tableAtom
+            }
+
+            // Otherwise, single row - wrap in table
+            var rows = [[MTMathList]]()
+            rows.append([content!])
+
+            var error: NSError? = self.error
+            let table = MTMathAtomFactory.table(withEnvironment: nil, rows: rows, error: &error)
+            if table == nil && self.error == nil {
+                self.error = error
+                return nil
+            }
+
+            return table
         } else if command == "begin" {
             let env = self.readEnvironment()
             if env == nil {
@@ -620,6 +822,42 @@ public struct MTMathListBuilder {
             mathColorbox.colorString = color!
             mathColorbox.innerList = self.buildInternal(true)
             return mathColorbox
+        } else if command == "pmod" {
+            // A pmod command has 1 argument - creates (mod n)
+            let inner = MTInner()
+            inner.leftBoundary = MTMathAtomFactory.boundary(forDelimiter: "(")
+            inner.rightBoundary = MTMathAtomFactory.boundary(forDelimiter: ")")
+
+            let innerList = MTMathList()
+
+            // Add the "mod" operator (upright text)
+            let modOperator = MTMathAtomFactory.atom(forLatexSymbol: "mod")!
+            innerList.add(modOperator)
+
+            // Add medium space between "mod" and argument (6mu)
+            let space = MTMathSpace(space: 6.0)
+            innerList.add(space)
+
+            // Parse the argument from braces
+            let argument = self.buildInternal(true)
+            if let argList = argument {
+                innerList.append(argList)
+            }
+
+            inner.innerList = innerList
+            return inner
+        } else if command == "not" {
+            // Handle \not command with lookahead for comprehensive negation support
+            let nextCommand = self.peekNextCommand()
+
+            if let negatedUnicode = Self.notCombinations[nextCommand] {
+                self.consumeNextCommand() // Remove base symbol from stream
+                return MTMathAtom(type: .relation, value: negatedUnicode)
+            } else {
+                let errorMessage = "Unsupported \\not\\\(nextCommand) combination"
+                self.setError(.invalidCommand, message: errorMessage)
+                return nil
+            }
         } else {
             let errorMessage = "Invalid command \\\(command)"
             self.setError(.invalidCommand, message:errorMessage)
@@ -789,6 +1027,27 @@ public struct MTMathListBuilder {
             frac.numerator = self.buildInternal(true)
             frac.denominator = self.buildInternal(true)
             return frac
+        } else if command == "cfrac" {
+            let frac = MTFraction()
+            frac.isContinuedFraction = true
+
+            // Parse optional alignment parameter [l], [r], [c]
+            skipSpaces()
+            if hasCharacters && string[currentCharIndex] == "[" {
+                _ = getNextCharacter() // consume '['
+                let alignmentChar = getNextCharacter()
+                if alignmentChar == "l" || alignmentChar == "r" || alignmentChar == "c" {
+                    frac.alignment = String(alignmentChar)
+                }
+                // Consume closing ']'
+                if hasCharacters && string[currentCharIndex] == "]" {
+                    _ = getNextCharacter()
+                }
+            }
+
+            frac.numerator = self.buildInternal(true)
+            frac.denominator = self.buildInternal(true)
+            return frac
         } else if command == "binom" {
             let frac = MTFraction(hasRule: false)
             frac.numerator = self.buildInternal(true)
@@ -834,7 +1093,16 @@ public struct MTMathListBuilder {
             return under
         } else if command == "begin" {
             if let env = self.readEnvironment() {
-                let table = self.buildTable(env: env, firstList: nil, isRow: false)
+                // Check if this is a starred matrix environment and read optional alignment
+                var alignment: MTColumnAlignment? = nil
+                if env.hasSuffix("*") {
+                    alignment = self.readOptionalAlignment()
+                    if self.error != nil {
+                        return nil
+                    }
+                }
+
+                let table = self.buildTable(env: env, alignment: alignment, firstList: nil, isRow: false)
                 return table
             } else {
                 return nil
@@ -863,10 +1131,10 @@ public struct MTMathListBuilder {
             self.setError(.characterNotFound, message: "Missing {")
             return nil
         }
-        
+
         self.skipSpaces()
         let env = self.readString()
-        
+
         if !self.expectCharacter("}") {
             // We didn"t find an closing brace, so invalid format.
             self.setError(.characterNotFound, message: "Missing }")
@@ -874,16 +1142,58 @@ public struct MTMathListBuilder {
         }
         return env
     }
+
+    /// Reads optional alignment parameter for starred matrix environments: [r], [l], or [c]
+    mutating func readOptionalAlignment() -> MTColumnAlignment? {
+        self.skipSpaces()
+
+        // Check if there's an opening bracket
+        guard hasCharacters && string[currentCharIndex] == "[" else {
+            return nil
+        }
+
+        _ = getNextCharacter()  // consume '['
+        self.skipSpaces()
+
+        guard hasCharacters else {
+            self.setError(.characterNotFound, message: "Missing alignment specifier after [")
+            return nil
+        }
+
+        let alignChar = getNextCharacter()
+        let alignment: MTColumnAlignment?
+
+        switch alignChar {
+        case "l":
+            alignment = .left
+        case "c":
+            alignment = .center
+        case "r":
+            alignment = .right
+        default:
+            self.setError(.invalidEnv, message: "Invalid alignment specifier: \(alignChar). Must be l, c, or r")
+            return nil
+        }
+
+        self.skipSpaces()
+
+        if !self.expectCharacter("]") {
+            self.setError(.characterNotFound, message: "Missing ] after alignment specifier")
+            return nil
+        }
+
+        return alignment
+    }
     
     func MTAssertNotSpace(_ ch: Character) {
         assert(ch >= "\u{21}" && ch <= "\u{7E}", "Expected non-space character \(ch)")
     }
     
-    mutating func buildTable(env: String?, firstList: MTMathList?, isRow: Bool) -> MTMathAtom? {
+    mutating func buildTable(env: String?, alignment: MTColumnAlignment? = nil, firstList: MTMathList?, isRow: Bool) -> MTMathAtom? {
         // Save the current env till an new one gets built.
         let oldEnv = self.currentEnv
-        
-        currentEnv = MTEnvProperties(name: env)
+
+        currentEnv = MTEnvProperties(name: env, alignment: alignment)
         
         var currentRow = 0
         var currentCol = 0
@@ -921,7 +1231,7 @@ public struct MTMathListBuilder {
         }
         
         var error:NSError? = self.error
-        let table = MTMathAtomFactory.table(withEnvironment: currentEnv?.envName, rows: rows, error: &error)
+        let table = MTMathAtomFactory.table(withEnvironment: currentEnv?.envName, alignment: currentEnv?.alignment, rows: rows, error: &error)
         if table == nil && self.error == nil {
             self.error = error
             return nil
@@ -978,11 +1288,11 @@ public struct MTMathListBuilder {
     }
     
     mutating func readString() -> String {
-        // a string of all upper and lower case characters.
+        // a string of all upper and lower case characters (and asterisks for starred environments)
         var output = ""
         while self.hasCharacters {
             let char = self.getNextCharacter()
-            if char.isLowercase || char.isUppercase {
+            if char.isLowercase || char.isUppercase || char == "*" {
                 output.append(char)
             } else {
                 self.unlookCharacter()

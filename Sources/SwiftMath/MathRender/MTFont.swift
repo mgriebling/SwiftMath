@@ -11,12 +11,18 @@ import CoreText
 //
 
 public class MTFont {
-    
+
     var defaultCGFont: CGFont!
     var ctFont: CTFont!
     var mathTable: MTFontMathTable?
     var rawMathTable: NSDictionary?
-    
+
+    /// Fallback font for characters not supported by the main math font.
+    /// Defaults to the system font at the same size. This is particularly useful
+    /// for rendering text in \text{} commands with characters outside the math font's coverage
+    /// (e.g., Chinese, Japanese, Korean, emoji, etc.)
+    public var fallbackFont: CTFont?
+
     init() {}
     
     /// `MTFont(fontWithName:)` does not load the complete math font, it only has about half the glyphs of the full math font.
