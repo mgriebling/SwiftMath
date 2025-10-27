@@ -216,6 +216,7 @@ public class MTMathUILabel : MTView {
         self.layer?.isGeometryFlipped = true
 #else
         self.layer.isGeometryFlipped = true
+        self.clipsToBounds = true
 #endif
         _fontSize = 20
         _contentInsets = MTEdgeInsetsZero
@@ -305,8 +306,16 @@ public class MTMathUILabel : MTView {
             return CGSize(width: -1, height: -1)
         }
 
-        let resultWidth = displayList!.width + contentInsets.left + contentInsets.right
+        var resultWidth = displayList!.width + contentInsets.left + contentInsets.right
         let resultHeight = displayList!.ascent + displayList!.descent + contentInsets.top + contentInsets.bottom
+
+        // Ensure we don't exceed the width constraints
+        if _preferredMaxLayoutWidth > 0 && resultWidth > _preferredMaxLayoutWidth {
+            resultWidth = _preferredMaxLayoutWidth
+        } else if _preferredMaxLayoutWidth == 0 && size.width > 0 && resultWidth > size.width {
+            resultWidth = size.width
+        }
+
         return CGSize(width: resultWidth, height: resultHeight)
     }
 
