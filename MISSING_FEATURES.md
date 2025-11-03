@@ -4,10 +4,10 @@ This document lists LaTeX features that are **not yet implemented** in SwiftMath
 
 ## Summary
 
-- **Total Features Tested**: 11
-- **Fully Implemented**: 6 (55%)
+- **Total Features Tested**: 12
+- **Fully Implemented**: 7 (58%)
 - **Partially Implemented**: 0 (0%)
-- **Not Implemented**: 5 (45%)
+- **Not Implemented**: 5 (42%)
 
 ---
 
@@ -123,6 +123,25 @@ x \, y \: z \; w                  % mixed spacing
 **Test Results**: All tests passed
 - Simple `\cfrac{1}{2}` - ✅ Works
 - Nested continued fractions - ✅ Works
+
+---
+
+### 7b. ✅ `\dfrac` and `\tfrac` - Display/Text Style Fractions - **IMPLEMENTED**
+**Status**: ✅ Working
+**Description**: Fractions with forced display or text style
+
+**Test Results**: All tests passed
+- `\dfrac{1}{2}` - ✅ Works (display-style fraction)
+- `\tfrac{a}{b}` - ✅ Works (text-style fraction)
+- `y'=-\dfrac{2}{x^{3}}` - ✅ Works (complex expression)
+- Nested `\dfrac` and `\tfrac` - ✅ Works
+
+**Use Case**:
+- `\dfrac` forces display style (larger, more readable fractions)
+- `\tfrac` forces text style (smaller, inline fractions)
+- Useful when you want consistent fraction appearance regardless of context
+
+**Implementation**: Prepends style atoms to numerator and denominator to force rendering style.
 
 ---
 

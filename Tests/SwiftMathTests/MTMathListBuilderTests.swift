@@ -2330,6 +2330,118 @@ final class MTMathListBuilderTests: XCTestCase {
         }
     }
 
+    func testDisplayStyleFraction() throws {
+        // Test \dfrac - display-style fraction
+        let str = "\\dfrac{1}{2}"
+        var error: NSError? = nil
+        let list = MTMathListBuilder.build(fromString: str, error: &error)
+        let desc = "Error for string: \(str)"
+
+        XCTAssertNil(error, desc)
+        let unwrappedList = try XCTUnwrap(list, desc)
+        XCTAssertEqual(unwrappedList.atoms.count, 1, desc)
+
+        let frac = try XCTUnwrap(unwrappedList.atoms[0] as? MTFraction, desc)
+        XCTAssertEqual(frac.type, .fraction, desc)
+        XCTAssertTrue(frac.hasRule, desc)
+
+        // Check numerator
+        let numerator = try XCTUnwrap(frac.numerator, desc)
+        XCTAssertTrue(numerator.atoms.count >= 1, "Numerator should have at least style atom")
+
+        // First atom should be displaystyle
+        if numerator.atoms.count > 1 {
+            let styleAtom = numerator.atoms[0] as? MTMathStyle
+            XCTAssertNotNil(styleAtom, "First atom should be style atom")
+            XCTAssertEqual(styleAtom?.style, .display, "Should be display style")
+        }
+
+        // Check denominator
+        let denominator = try XCTUnwrap(frac.denominator, desc)
+        XCTAssertTrue(denominator.atoms.count >= 1, "Denominator should have at least style atom")
+
+        if denominator.atoms.count > 1 {
+            let styleAtom = denominator.atoms[0] as? MTMathStyle
+            XCTAssertNotNil(styleAtom, "First atom should be style atom")
+            XCTAssertEqual(styleAtom?.style, .display, "Should be display style")
+        }
+    }
+
+    func testTextStyleFraction() throws {
+        // Test \tfrac - text-style fraction
+        let str = "\\tfrac{a}{b}"
+        var error: NSError? = nil
+        let list = MTMathListBuilder.build(fromString: str, error: &error)
+        let desc = "Error for string: \(str)"
+
+        XCTAssertNil(error, desc)
+        let unwrappedList = try XCTUnwrap(list, desc)
+        XCTAssertEqual(unwrappedList.atoms.count, 1, desc)
+
+        let frac = try XCTUnwrap(unwrappedList.atoms[0] as? MTFraction, desc)
+        XCTAssertEqual(frac.type, .fraction, desc)
+        XCTAssertTrue(frac.hasRule, desc)
+
+        // Check numerator
+        let numerator = try XCTUnwrap(frac.numerator, desc)
+        XCTAssertTrue(numerator.atoms.count >= 1, "Numerator should have at least style atom")
+
+        if numerator.atoms.count > 1 {
+            let styleAtom = numerator.atoms[0] as? MTMathStyle
+            XCTAssertNotNil(styleAtom, "First atom should be style atom")
+            XCTAssertEqual(styleAtom?.style, .text, "Should be text style")
+        }
+
+        // Check denominator
+        let denominator = try XCTUnwrap(frac.denominator, desc)
+        XCTAssertTrue(denominator.atoms.count >= 1, "Denominator should have at least style atom")
+
+        if denominator.atoms.count > 1 {
+            let styleAtom = denominator.atoms[0] as? MTMathStyle
+            XCTAssertNotNil(styleAtom, "First atom should be style atom")
+            XCTAssertEqual(styleAtom?.style, .text, "Should be text style")
+        }
+    }
+
+    func testDisplayAndTextStyleFractions() throws {
+        // Test the original LaTeX from the user's issue
+        let str = "y'=-\\dfrac{2}{x^{3}}"
+        var error: NSError? = nil
+        let list = MTMathListBuilder.build(fromString: str, error: &error)
+        let desc = "Error for string: \(str)"
+
+        XCTAssertNil(error, desc)
+        let unwrappedList = try XCTUnwrap(list, desc)
+        XCTAssertTrue(unwrappedList.atoms.count >= 4, "Should have y, ', =, -, and fraction")
+
+        // Find the fraction atom
+        var foundFraction = false
+        for atom in unwrappedList.atoms {
+            if atom.type == .fraction {
+                foundFraction = true
+                let frac = atom as! MTFraction
+
+                // Check that numerator has displaystyle
+                if let numerator = frac.numerator, numerator.atoms.count > 0 {
+                    let firstAtom = numerator.atoms[0]
+                    if let styleAtom = firstAtom as? MTMathStyle {
+                        XCTAssertEqual(styleAtom.style, .display, "Should force display style")
+                    }
+                }
+                break
+            }
+        }
+
+        XCTAssertTrue(foundFraction, "Should find fraction in the expression")
+
+        // Test nested dfrac and tfrac
+        let nestedStr = "\\dfrac{\\tfrac{a}{b}}{c}"
+        error = nil
+        let nestedList = MTMathListBuilder.build(fromString: nestedStr, error: &error)
+        XCTAssertNil(error, "Should parse nested dfrac/tfrac")
+        XCTAssertNotNil(nestedList, "Should parse nested dfrac/tfrac")
+    }
+
     func testBoldsymbol() throws {
         // Test \boldsymbol for bold Greek letters
         let testCases = [
