@@ -191,4 +191,288 @@ class MTMathUILabelLineWrappingTests: XCTestCase {
         XCTAssertNotNil(label.displayList, "Display list should be created")
         XCTAssertNil(label.error, "Should have no rendering error")
     }
+
+    func testNumberProtection_FrenchDecimal() {
+        let label = MTMathUILabel()
+        // French decimal number should NOT be broken
+        label.latex = "\\(\\text{La valeur de pi est approximativement 3,14 dans ce calcul simple.}\\)"
+        label.font = MTFontManager.fontManager.defaultFont
+        label.labelMode = .text
+
+        // Constrain to force wrapping, but 3,14 should stay together
+        label.preferredMaxLayoutWidth = 200
+        let size = label.intrinsicContentSize
+
+        // Verify it renders without error
+        label.frame = CGRect(origin: .zero, size: size)
+        #if os(macOS)
+        label.layout()
+        #else
+        label.layoutSubviews()
+        #endif
+
+        XCTAssertNotNil(label.displayList, "Display list should be created")
+        XCTAssertNil(label.error, "Should have no rendering error")
+    }
+
+    func testNumberProtection_ThousandsSeparator() {
+        let label = MTMathUILabel()
+        // Number with comma separator should stay together
+        label.latex = "\\(\\text{The population is approximately 1,000,000 people in this city.}\\)"
+        label.font = MTFontManager.fontManager.defaultFont
+        label.labelMode = .text
+
+        label.preferredMaxLayoutWidth = 200
+        let size = label.intrinsicContentSize
+
+        label.frame = CGRect(origin: .zero, size: size)
+        #if os(macOS)
+        label.layout()
+        #else
+        label.layoutSubviews()
+        #endif
+
+        XCTAssertNotNil(label.displayList, "Display list should be created")
+        XCTAssertNil(label.error, "Should have no rendering error")
+    }
+
+    func testNumberProtection_MixedWithText() {
+        let label = MTMathUILabel()
+        // Mixed numbers and text - numbers should be protected
+        label.latex = "\\(\\text{Results: 3.14, 2.71, and 1.41 are important constants.}\\)"
+        label.font = MTFontManager.fontManager.defaultFont
+        label.labelMode = .text
+
+        label.preferredMaxLayoutWidth = 180
+        let size = label.intrinsicContentSize
+
+        label.frame = CGRect(origin: .zero, size: size)
+        #if os(macOS)
+        label.layout()
+        #else
+        label.layoutSubviews()
+        #endif
+
+        XCTAssertNotNil(label.displayList, "Display list should be created")
+        XCTAssertNil(label.error, "Should have no rendering error")
+    }
+
+    // MARK: - International Text Tests
+
+    func testChineseTextWrapping() {
+        let label = MTMathUILabel()
+        // Chinese text: "Mathematical equations are an important tool for describing natural phenomena"
+        label.latex = "\\(\\text{数学方程式は自然現象を記述するための重要なツールです。}\\)"
+        label.font = MTFontManager.fontManager.defaultFont
+        label.labelMode = .text
+
+        // Get unconstrained size
+        let unconstrainedSize = label.intrinsicContentSize
+
+        // Set constraint to force wrapping
+        label.preferredMaxLayoutWidth = 200
+        let constrainedSize = label.intrinsicContentSize
+
+        // Chinese should wrap (can break between characters)
+        XCTAssertGreaterThan(constrainedSize.width, 0, "Width should be > 0")
+        XCTAssertLessThanOrEqual(constrainedSize.width, 200, "Width should not exceed constraint")
+        XCTAssertGreaterThan(constrainedSize.height, unconstrainedSize.height, "Height should increase when wrapped")
+
+        label.frame = CGRect(origin: .zero, size: constrainedSize)
+        #if os(macOS)
+        label.layout()
+        #else
+        label.layoutSubviews()
+        #endif
+
+        XCTAssertNotNil(label.displayList, "Display list should be created")
+        XCTAssertNil(label.error, "Should have no rendering error")
+    }
+
+    func testJapaneseTextWrapping() {
+        let label = MTMathUILabel()
+        // Japanese text (Hiragana + Kanji): "This is a mathematics explanation"
+        label.latex = "\\(\\text{これは数学の説明です。計算式を使います。}\\)"
+        label.font = MTFontManager.fontManager.defaultFont
+        label.labelMode = .text
+
+        let unconstrainedSize = label.intrinsicContentSize
+
+        label.preferredMaxLayoutWidth = 180
+        let constrainedSize = label.intrinsicContentSize
+
+        XCTAssertGreaterThan(constrainedSize.width, 0, "Width should be > 0")
+        XCTAssertLessThanOrEqual(constrainedSize.width, 180, "Width should not exceed constraint")
+        XCTAssertGreaterThan(constrainedSize.height, unconstrainedSize.height, "Height should increase when wrapped")
+
+        label.frame = CGRect(origin: .zero, size: constrainedSize)
+        #if os(macOS)
+        label.layout()
+        #else
+        label.layoutSubviews()
+        #endif
+
+        XCTAssertNotNil(label.displayList, "Display list should be created")
+        XCTAssertNil(label.error, "Should have no rendering error")
+    }
+
+    func testKoreanTextWrapping() {
+        let label = MTMathUILabel()
+        // Korean text: "Mathematics is a very important subject"
+        label.latex = "\\(\\text{수학은 매우 중요한 과목입니다. 방정식을 배웁니다.}\\)"
+        label.font = MTFontManager.fontManager.defaultFont
+        label.labelMode = .text
+
+        let unconstrainedSize = label.intrinsicContentSize
+
+        label.preferredMaxLayoutWidth = 200
+        let constrainedSize = label.intrinsicContentSize
+
+        // Korean uses spaces, should wrap at word boundaries
+        XCTAssertGreaterThan(constrainedSize.width, 0, "Width should be > 0")
+        XCTAssertLessThanOrEqual(constrainedSize.width, 200, "Width should not exceed constraint")
+
+        label.frame = CGRect(origin: .zero, size: constrainedSize)
+        #if os(macOS)
+        label.layout()
+        #else
+        label.layoutSubviews()
+        #endif
+
+        XCTAssertNotNil(label.displayList, "Display list should be created")
+        XCTAssertNil(label.error, "Should have no rendering error")
+    }
+
+    func testMixedLatinCJKWrapping() {
+        let label = MTMathUILabel()
+        // Mixed English and Chinese
+        label.latex = "\\(\\text{The equation is 方程式: } x^2 + y^2 = r^2 \\text{ です。}\\)"
+        label.font = MTFontManager.fontManager.defaultFont
+        label.labelMode = .text
+
+        let unconstrainedSize = label.intrinsicContentSize
+
+        label.preferredMaxLayoutWidth = 250
+        let constrainedSize = label.intrinsicContentSize
+
+        XCTAssertGreaterThan(constrainedSize.width, 0, "Width should be > 0")
+        XCTAssertLessThanOrEqual(constrainedSize.width, 250, "Width should not exceed constraint")
+
+        label.frame = CGRect(origin: .zero, size: constrainedSize)
+        #if os(macOS)
+        label.layout()
+        #else
+        label.layoutSubviews()
+        #endif
+
+        XCTAssertNotNil(label.displayList, "Display list should be created")
+        XCTAssertNil(label.error, "Should have no rendering error")
+    }
+
+    func testEmojiGraphemeClusters() {
+        let label = MTMathUILabel()
+        // Emoji and complex grapheme clusters should not be broken
+        label.latex = "\\(\\text{Math is fun! 🎉📐📊 The formula is } E = mc^2 \\text{ 🚀✨}\\)"
+        label.font = MTFontManager.fontManager.defaultFont
+        label.labelMode = .text
+
+        label.preferredMaxLayoutWidth = 200
+        let size = label.intrinsicContentSize
+
+        // Should wrap but not break emoji
+        XCTAssertGreaterThan(size.width, 0, "Width should be > 0")
+        XCTAssertLessThanOrEqual(size.width, 200, "Width should not exceed constraint")
+
+        label.frame = CGRect(origin: .zero, size: size)
+        #if os(macOS)
+        label.layout()
+        #else
+        label.layoutSubviews()
+        #endif
+
+        XCTAssertNotNil(label.displayList, "Display list should be created")
+        XCTAssertNil(label.error, "Should have no rendering error")
+    }
+
+    func testLongEnglishMultiSentence() {
+        let label = MTMathUILabel()
+        // Standard English multi-sentence paragraph
+        label.latex = "\\(\\text{Mathematics is the study of numbers, shapes, and patterns. It is used in science, engineering, and everyday life. Equations help us solve problems.}\\)"
+        label.font = MTFontManager.fontManager.defaultFont
+        label.labelMode = .text
+
+        let unconstrainedSize = label.intrinsicContentSize
+
+        label.preferredMaxLayoutWidth = 300
+        let constrainedSize = label.intrinsicContentSize
+
+        // Should wrap at word boundaries (spaces)
+        XCTAssertGreaterThan(constrainedSize.width, 0, "Width should be > 0")
+        XCTAssertLessThanOrEqual(constrainedSize.width, 300, "Width should not exceed constraint")
+        XCTAssertGreaterThan(constrainedSize.height, unconstrainedSize.height, "Height should increase when wrapped")
+
+        label.frame = CGRect(origin: .zero, size: constrainedSize)
+        #if os(macOS)
+        label.layout()
+        #else
+        label.layoutSubviews()
+        #endif
+
+        XCTAssertNotNil(label.displayList, "Display list should be created")
+        XCTAssertNil(label.error, "Should have no rendering error")
+    }
+
+    func testSpanishAccentedText() {
+        let label = MTMathUILabel()
+        // Spanish with various accents
+        label.latex = "\\(\\text{La ecuación es muy útil para cálculos científicos y matemáticos.}\\)"
+        label.font = MTFontManager.fontManager.defaultFont
+        label.labelMode = .text
+
+        let unconstrainedSize = label.intrinsicContentSize
+
+        label.preferredMaxLayoutWidth = 220
+        let constrainedSize = label.intrinsicContentSize
+
+        XCTAssertGreaterThan(constrainedSize.width, 0, "Width should be > 0")
+        XCTAssertLessThanOrEqual(constrainedSize.width, 220, "Width should not exceed constraint")
+        XCTAssertGreaterThan(constrainedSize.height, unconstrainedSize.height, "Height should increase when wrapped")
+
+        label.frame = CGRect(origin: .zero, size: constrainedSize)
+        #if os(macOS)
+        label.layout()
+        #else
+        label.layoutSubviews()
+        #endif
+
+        XCTAssertNotNil(label.displayList, "Display list should be created")
+        XCTAssertNil(label.error, "Should have no rendering error")
+    }
+
+    func testGermanUmlautsWrapping() {
+        let label = MTMathUILabel()
+        // German with umlauts
+        label.latex = "\\(\\text{Mathematische Gleichungen können für Berechnungen verwendet werden.}\\)"
+        label.font = MTFontManager.fontManager.defaultFont
+        label.labelMode = .text
+
+        let unconstrainedSize = label.intrinsicContentSize
+
+        label.preferredMaxLayoutWidth = 250
+        let constrainedSize = label.intrinsicContentSize
+
+        XCTAssertGreaterThan(constrainedSize.width, 0, "Width should be > 0")
+        XCTAssertLessThanOrEqual(constrainedSize.width, 250, "Width should not exceed constraint")
+        XCTAssertGreaterThan(constrainedSize.height, unconstrainedSize.height, "Height should increase when wrapped")
+
+        label.frame = CGRect(origin: .zero, size: constrainedSize)
+        #if os(macOS)
+        label.layout()
+        #else
+        label.layoutSubviews()
+        #endif
+
+        XCTAssertNotNil(label.displayList, "Display list should be created")
+        XCTAssertNil(label.error, "Should have no rendering error")
+    }
 }
