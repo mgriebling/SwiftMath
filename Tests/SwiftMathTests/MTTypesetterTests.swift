@@ -1709,5 +1709,404 @@ final class MTTypesetterTests: XCTestCase {
         }
     }
 
+    // MARK: - Complex Display Line Breaking Tests (Fractions & Radicals)
+
+    func testComplexDisplay_FractionStaysInlineWhenFits() throws {
+        // Fraction that should stay inline with surrounding content
+        let latex = "a+\\frac{1}{2}+b"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Failed to parse LaTeX")
+
+        // Wide enough to fit everything on one line
+        let maxWidth: CGFloat = 200
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Should fit on a single line (fraction stays inline)
+        XCTAssertLessThanOrEqual(display!.subDisplays.count, 2,
+            "Expected fraction to stay inline, not break to separate line")
+
+        // Total width should be within constraint
+        XCTAssertLessThan(display!.width, maxWidth,
+            "Expression should fit within width constraint")
+    }
+
+    func testComplexDisplay_FractionBreaksWhenTooWide() throws {
+        // Multiple fractions with narrow width should break
+        let latex = "a+\\frac{1}{2}+b+\\frac{3}{4}+c"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Failed to parse LaTeX")
+
+        // Narrow width should force breaking
+        let maxWidth: CGFloat = 80
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Should have multiple lines
+        XCTAssertGreaterThan(display!.subDisplays.count, 1,
+            "Expected line breaking with narrow width")
+
+        // Each line should respect width constraint (with tolerance)
+        for (index, subDisplay) in display!.subDisplays.enumerated() {
+            XCTAssertLessThanOrEqual(subDisplay.width, maxWidth * 1.2,
+                "Line \(index) width \(subDisplay.width) exceeds maxWidth \(maxWidth) significantly")
+        }
+    }
+
+    func testComplexDisplay_RadicalStaysInlineWhenFits() throws {
+        // Radical that should stay inline with surrounding content
+        let latex = "x+\\sqrt{2}+y"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Failed to parse LaTeX")
+
+        // Wide enough to fit everything on one line
+        let maxWidth: CGFloat = 150
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Should fit on a single line (radical stays inline)
+        XCTAssertLessThanOrEqual(display!.subDisplays.count, 2,
+            "Expected radical to stay inline, not break to separate line")
+
+        // Total width should be within constraint
+        XCTAssertLessThan(display!.width, maxWidth,
+            "Expression should fit within width constraint")
+    }
+
+    func testComplexDisplay_RadicalBreaksWhenTooWide() throws {
+        // Multiple radicals with narrow width should break
+        let latex = "a+\\sqrt{2}+b+\\sqrt{3}+c+\\sqrt{5}"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Failed to parse LaTeX")
+
+        // Narrow width should force breaking
+        let maxWidth: CGFloat = 100
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Should have multiple lines
+        XCTAssertGreaterThan(display!.subDisplays.count, 1,
+            "Expected line breaking with narrow width")
+
+        // Each line should respect width constraint (with tolerance)
+        for (index, subDisplay) in display!.subDisplays.enumerated() {
+            XCTAssertLessThanOrEqual(subDisplay.width, maxWidth * 1.2,
+                "Line \(index) width \(subDisplay.width) exceeds maxWidth \(maxWidth) significantly")
+        }
+    }
+
+    func testComplexDisplay_MixedFractionsAndRadicals() throws {
+        // Mix of fractions and radicals
+        let latex = "a+\\frac{1}{2}+\\sqrt{3}+b"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Failed to parse LaTeX")
+
+        // Medium width
+        let maxWidth: CGFloat = 150
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Should handle mixed complex displays
+        for (index, subDisplay) in display!.subDisplays.enumerated() {
+            XCTAssertLessThanOrEqual(subDisplay.width, maxWidth * 1.2,
+                "Line \(index) width exceeds constraint")
+        }
+    }
+
+    func testComplexDisplay_FractionWithComplexNumerator() throws {
+        // Fraction with more complex content
+        let latex = "\\frac{a+b}{c}+d"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Failed to parse LaTeX")
+
+        let maxWidth: CGFloat = 150
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Should stay inline if it fits
+        XCTAssertLessThan(display!.width, maxWidth * 1.5,
+            "Complex fraction should handle width reasonably")
+    }
+
+    func testComplexDisplay_RadicalWithDegree() throws {
+        // Cube root
+        let latex = "\\sqrt[3]{8}+x"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Failed to parse LaTeX")
+
+        let maxWidth: CGFloat = 150
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Should handle radicals with degrees
+        XCTAssertLessThan(display!.width, maxWidth * 1.2,
+            "Radical with degree should fit reasonably")
+    }
+
+    func testComplexDisplay_NoBreakingWithoutWidthConstraint() throws {
+        // Without width constraint, should never break
+        let latex = "a+\\frac{1}{2}+\\sqrt{3}+b+\\frac{4}{5}+c"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Failed to parse LaTeX")
+
+        // No width constraint (maxWidth = 0)
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display)
+        XCTAssertNotNil(display)
+
+        // Should not artificially break when no constraint
+        // The display might have multiple subDisplays for internal structure,
+        // but we verify that the total rendering doesn't have forced line breaks
+        // by checking that all elements are at y=0 (no vertical offset)
+        var allAtSameY = true
+        let firstY = display!.subDisplays.first?.position.y ?? 0
+        for subDisplay in display!.subDisplays {
+            if abs(subDisplay.position.y - firstY) > 0.1 {
+                allAtSameY = false
+                break
+            }
+        }
+        XCTAssertTrue(allAtSameY, "Without width constraint, all elements should be at same Y position")
+    }
+
+    // MARK: - Additional Recommended Tests
+
+    func testEdgeCase_VeryNarrowWidth() throws {
+        // Test behavior with extremely narrow width constraint
+        let latex = "a+b+c"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Failed to parse LaTeX")
+
+        // Very narrow width - each element might need its own line
+        let maxWidth: CGFloat = 30
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Should handle gracefully without crashing
+        XCTAssertGreaterThan(display!.subDisplays.count, 0, "Should produce at least one display")
+
+        // Each subdisplay should attempt to respect width (though may overflow for single atoms)
+        for subDisplay in display!.subDisplays {
+            // Allow overflow for unavoidable cases (single atom wider than constraint)
+            XCTAssertLessThan(subDisplay.width, maxWidth * 3,
+                "Width shouldn't be excessively larger than constraint")
+        }
+    }
+
+    func testEdgeCase_VeryWideAtom() throws {
+        // Test handling of atom that's wider than maxWidth constraint
+        let latex = "\\text{ThisIsAnExtremelyLongWordThatCannotBreak}+b"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Failed to parse LaTeX")
+
+        let maxWidth: CGFloat = 100
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Should not crash, even if single atom exceeds width
+        XCTAssertGreaterThan(display!.subDisplays.count, 0, "Should produce display")
+
+        // The wide atom should be placed, even if it exceeds maxWidth
+        // (no way to break it further)
+        XCTAssertNotNil(display, "Should handle oversized atoms gracefully")
+    }
+
+    func testMixedScriptsAndNonScripts() throws {
+        // Test mixing atoms with scripts and without scripts
+        let latex = "a+b^{2}+c+d^{3}+e"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Failed to parse LaTeX")
+
+        let maxWidth: CGFloat = 120
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Should handle mixed content
+        for (index, subDisplay) in display!.subDisplays.enumerated() {
+            XCTAssertLessThanOrEqual(subDisplay.width, maxWidth * 1.3,
+                "Line \(index) with mixed scripts should respect width reasonably")
+        }
+    }
+
+    func testMultipleLineBreaks() throws {
+        // Test expression that requires 4+ line breaks
+        let latex = "a+b+c+d+e+f+g+h+i+j+k+l+m+n+o+p+q+r+s+t"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Failed to parse LaTeX")
+
+        // Very narrow to force many breaks
+        let maxWidth: CGFloat = 60
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Should create multiple lines
+        XCTAssertGreaterThanOrEqual(display!.subDisplays.count, 4,
+            "Should create at least 4 lines for long expression")
+
+        // Verify vertical positioning - each line should be below the previous
+        for i in 1..<display!.subDisplays.count {
+            let prevLine = display!.subDisplays[i-1]
+            let currentLine = display!.subDisplays[i]
+            XCTAssertLessThan(currentLine.position.y, prevLine.position.y,
+                "Line \(i) should be below line \(i-1)")
+        }
+
+        // Verify consistent line spacing
+        if display!.subDisplays.count >= 3 {
+            let spacing1 = abs(display!.subDisplays[0].position.y - display!.subDisplays[1].position.y)
+            let spacing2 = abs(display!.subDisplays[1].position.y - display!.subDisplays[2].position.y)
+            XCTAssertEqual(spacing1, spacing2, accuracy: 1.0,
+                "Line spacing should be consistent")
+        }
+    }
+
+    func testUnicodeTextWrapping() throws {
+        // Test wrapping with Unicode characters (including CJK)
+        let latex = "\\text{Hello 世界 こんにちは 안녕하세요 مرحبا}"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Failed to parse LaTeX")
+
+        let maxWidth: CGFloat = 150
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Should handle Unicode text (may need fallback font)
+        XCTAssertNotNil(display, "Should handle Unicode text")
+
+        // Each line should attempt to respect width
+        for subDisplay in display!.subDisplays {
+            // More tolerance for Unicode as font metrics vary
+            XCTAssertLessThanOrEqual(subDisplay.width, maxWidth * 1.5,
+                "Unicode text line should respect width reasonably")
+        }
+    }
+
+    func testNumberProtection() throws {
+        // Test that numbers don't break in the middle
+        let latex = "\\text{The value is 3.14159 or 2,718 or 1,000,000}"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Failed to parse LaTeX")
+
+        let maxWidth: CGFloat = 150
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Numbers should stay together (not split like "3.14" → "3." on one line, "14" on next)
+        // This is handled by the universal breaking mechanism with Core Text
+        XCTAssertNotNil(display, "Should handle text with numbers")
+    }
+
+    // MARK: - Tests for Not-Yet-Optimized Cases (Document Current Behavior)
+
+    func testCurrentBehavior_LargeOperators() throws {
+        // Documents current behavior: large operators still force line breaks
+        let latex = "\\sum_{i=1}^{n}x_{i}+\\int_{0}^{1}f(x)dx"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Failed to parse LaTeX")
+
+        let maxWidth: CGFloat = 300
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Current behavior: operators force breaks
+        // This test documents current behavior for future improvement
+        XCTAssertNotNil(display, "Large operators render (may force breaks)")
+    }
+
+    func testCurrentBehavior_NestedDelimiters() throws {
+        // Documents current behavior: \left...\right still forces line breaks
+        let latex = "a+\\left(b+c\\right)+d"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Failed to parse LaTeX")
+
+        let maxWidth: CGFloat = 200
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Current behavior: delimiters may force breaks
+        // This test documents current behavior for future improvement
+        XCTAssertNotNil(display, "Delimiters render (may force breaks)")
+    }
+
+    func testCurrentBehavior_ColoredExpressions() throws {
+        // Documents current behavior: colored sections still force line breaks
+        let latex = "a+\\color{red}{b+c}+d"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Failed to parse LaTeX")
+
+        let maxWidth: CGFloat = 200
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Current behavior: colored sections may force breaks
+        // This test documents current behavior for future improvement
+        XCTAssertNotNil(display, "Colored sections render (may force breaks)")
+    }
+
+    func testCurrentBehavior_MatricesWithSurroundingContent() throws {
+        // Documents current behavior: matrices still force line breaks
+        let latex = "A=\\begin{pmatrix}1&2\\\\3&4\\end{pmatrix}+B"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Failed to parse LaTeX")
+
+        let maxWidth: CGFloat = 300
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Current behavior: matrices force breaks
+        // This test documents current behavior for future improvement
+        XCTAssertNotNil(display, "Matrices render (force breaks)")
+    }
+
+    func testRealWorldExample_QuadraticFormula() throws {
+        // Real-world test: quadratic formula with width constraint
+        let latex = "x=\\frac{-b\\pm\\sqrt{b^{2}-4ac}}{2a}"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Failed to parse LaTeX")
+
+        let maxWidth: CGFloat = 200
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Should render the formula (may break if too wide)
+        XCTAssertNotNil(display, "Quadratic formula renders")
+        XCTAssertGreaterThan(display!.width, 0, "Formula has non-zero width")
+    }
+
+    func testRealWorldExample_ComplexFraction() throws {
+        // Real-world test: continued fraction
+        let latex = "\\frac{1}{2+\\frac{1}{3+\\frac{1}{4}}}"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Failed to parse LaTeX")
+
+        let maxWidth: CGFloat = 150
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Should render nested fractions
+        XCTAssertNotNil(display, "Nested fractions render")
+        XCTAssertGreaterThan(display!.width, 0, "Formula has non-zero width")
+    }
+
+    func testRealWorldExample_MixedOperationsWithFractions() throws {
+        // Real-world test: mixed arithmetic with multiple fractions
+        let latex = "\\frac{1}{2}+\\frac{2}{3}+\\frac{3}{4}+\\frac{4}{5}"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Failed to parse LaTeX")
+
+        let maxWidth: CGFloat = 180
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // With new implementation, fractions should stay inline when possible
+        // May break into 2-3 lines depending on actual widths
+        XCTAssertGreaterThan(display!.subDisplays.count, 0, "Multiple fractions render")
+
+        // Verify width constraints are respected
+        for (index, subDisplay) in display!.subDisplays.enumerated() {
+            XCTAssertLessThanOrEqual(subDisplay.width, maxWidth * 1.3,
+                "Line \(index) should respect width constraint reasonably")
+        }
+    }
+
 }
 

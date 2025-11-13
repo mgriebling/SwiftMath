@@ -548,6 +548,38 @@ class MTTypesetter {
 
         return false
     }
+
+    /// Check if we should break before adding a complex display (fraction, radical, etc.)
+    /// Returns true if breaking is needed
+    func shouldBreakBeforeDisplay(_ display: MTDisplay, prevNode: MTMathAtom?, displayType: MTMathAtomType = .ordinary) -> Bool {
+        // No breaking if no width constraint
+        guard maxWidth > 0 else { return false }
+
+        // No breaking if line is empty
+        guard currentLine.length > 0 else { return false }
+
+        // Calculate spacing between current content and new display
+        var interElementSpace: CGFloat = 0
+        if prevNode != nil {
+            interElementSpace = getInterElementSpace(prevNode!.type, right: displayType)
+        }
+
+        // Calculate projected width
+        let currentWidth = getCurrentLineWidth()
+        let projectedWidth = currentWidth + interElementSpace + display.width
+
+        // Break only if it would exceed max width
+        return projectedWidth > maxWidth
+    }
+
+    /// Perform line break for complex displays
+    func performLineBreak() {
+        if currentLine.length > 0 {
+            self.addDisplayLine()
+        }
+        currentPosition.y -= styleFont.fontSize * 1.5
+        currentPosition.x = 0
+    }
     
     func createDisplayAtoms(_ preprocessed:[MTMathAtom]) {
         // items should contain all the nodes that need to be layed out.
@@ -643,22 +675,28 @@ class MTTypesetter {
                     displayAtoms.append(display!)
                     
                 case .radical:
-                    // stash the existing layout
-                    if currentLine.length > 0 {
-                        self.addDisplayLine()
-                    }
+                    // Create the radical display first
                     let rad = atom as! MTRadical
-                    // Radicals are considered as Ord in rule 16.
-                    self.addInterElementSpace(prevNode, currentType:.ordinary)
                     let displayRad = self.makeRadical(rad.radicand, range:rad.indexRange)
                     if rad.degree != nil {
                         // add the degree to the radical
                         let degree = MTTypesetter.createLineForMathList(rad.degree, font:font, style:.scriptOfScript)
                         displayRad!.setDegree(degree, fontMetrics:styleFont.mathTable)
                     }
+
+                    // Check if we need to break before adding this radical
+                    // Radicals are considered as Ord in rule 16.
+                    if shouldBreakBeforeDisplay(displayRad!, prevNode: prevNode, displayType: .ordinary) {
+                        performLineBreak()
+                    } else {
+                        self.addInterElementSpace(prevNode, currentType:.ordinary)
+                    }
+
+                    // Position and add the radical display
+                    displayRad!.position = currentPosition
                     displayAtoms.append(displayRad!)
                     currentPosition.x += displayRad!.width
-                    
+
                     // add super scripts || subscripts
                     if atom.subScript != nil || atom.superScript != nil {
                         self.makeScripts(atom, display:displayRad, index:UInt(rad.indexRange.location), delta:0)
@@ -667,15 +705,22 @@ class MTTypesetter {
                     //atom.type = .ordinary;
                     
                 case .fraction:
-                    // stash the existing layout
-                    if currentLine.length > 0 {
-                        self.addDisplayLine()
-                    }
+                    // Create the fraction display first
                     let frac = atom as! MTFraction?
-                    self.addInterElementSpace(prevNode, currentType:atom.type)
                     let display = self.makeFraction(frac)
+
+                    // Check if we need to break before adding this fraction
+                    if shouldBreakBeforeDisplay(display!, prevNode: prevNode, displayType: atom.type) {
+                        performLineBreak()
+                    } else {
+                        self.addInterElementSpace(prevNode, currentType:atom.type)
+                    }
+
+                    // Position and add the fraction display
+                    display!.position = currentPosition
                     displayAtoms.append(display!)
-                    currentPosition.x += display!.width;
+                    currentPosition.x += display!.width
+
                     // add super scripts || subscripts
                     if atom.subScript != nil || atom.superScript != nil {
                         self.makeScripts(atom, display:display, index:UInt(frac!.indexRange.location), delta:0)

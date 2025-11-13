@@ -293,6 +293,29 @@ label.preferredMaxLayoutWidth = 150
 // Breaks between Greek letters
 ```
 
+**✅ Fractions (NEW!):**
+```swift
+label.latex = "a+\\frac{1}{2}+b+\\frac{3}{4}+c"
+label.preferredMaxLayoutWidth = 150
+// Fractions stay inline if they fit, break to new line only when needed
+// Example: "a + ½ + b" stays on one line if it fits
+```
+
+**✅ Radicals/Square roots (NEW!):**
+```swift
+label.latex = "x+\\sqrt{2}+y+\\sqrt{3}+z"
+label.preferredMaxLayoutWidth = 150
+// Radicals stay inline if they fit, break to new line only when needed
+// Example: "x + √2 + y" stays on one line if it fits
+```
+
+**✅ Mixed fractions and radicals (NEW!):**
+```swift
+label.latex = "a+\\frac{1}{2}+\\sqrt{3}+b"
+label.preferredMaxLayoutWidth = 200
+// Intelligently breaks between complex mathematical elements
+```
+
 #### Limited Support Cases
 
 These cases work but with some constraints:
@@ -314,53 +337,35 @@ label.preferredMaxLayoutWidth = 200
 // Protects numbers from being split (e.g., "3.14" stays together)
 ```
 
-#### Unsupported/Forced Line Break Cases
+#### Remaining Unsupported Cases
 
-These atom types **always start on a new line** because they flush the current line before rendering. This can lead to excessive line breaks:
+These atom types still force line breaks (not yet optimized):
 
-**❌ Fractions:**
-```swift
-label.latex = "a + \\frac{1}{2} + b"
-// Results in:
-// Line 1: "a +"
-// Line 2: "½" (fraction on own line)
-// Line 3: "+ b"
-```
-
-**❌ Radicals (square roots):**
-```swift
-label.latex = "x + \\sqrt{2} + y"
-// Results in:
-// Line 1: "x +"
-// Line 2: "√2" (radical on own line)
-// Line 3: "+ y"
-```
-
-**❌ Large operators (∑, ∫, ∏, lim):**
+**⚠️ Large operators (∑, ∫, ∏, lim):**
 ```swift
 label.latex = "\\sum_{i=1}^{n} x_i + \\int_{0}^{1} f(x)dx"
 // Each operator forces a new line
 ```
 
-**❌ Matrices and tables:**
+**⚠️ Matrices and tables:**
 ```swift
 label.latex = "A = \\begin{pmatrix} 1 & 2 \\\\ 3 & 4 \\end{pmatrix}"
 // Matrix always on own line
 ```
 
-**❌ Delimited expressions (\left...\right):**
+**⚠️ Delimited expressions (\left...\right):**
 ```swift
 label.latex = "\\left(\\frac{a}{b}\\right) + c"
 // The parenthesized group forces line breaks
 ```
 
-**❌ Colored expressions:**
+**⚠️ Colored expressions:**
 ```swift
 label.latex = "a + \\color{red}{b} + c"
 // Colored portion causes line break
 ```
 
-**❌ Math accents:**
+**⚠️ Math accents:**
 ```swift
 label.latex = "\\hat{x} + \\tilde{y} + \\bar{z}"
 // Accents may cause line breaks
@@ -375,9 +380,8 @@ label.latex = "\\hat{x} + \\tilde{y} + \\bar{z}"
 - Set appropriate `preferredMaxLayoutWidth` based on your layout needs
 
 **DON'T:**
-- Expect natural breaking in expressions with many fractions
-- Expect natural breaking in expressions with many radicals
-- Expect natural breaking in expressions with large operators
+- Expect natural breaking in expressions with large operators (∑, ∫, etc. - not yet optimized)
+- Expect natural breaking in expressions with \left...\right delimiters (not yet optimized)
 - Use extremely narrow widths (less than ~80pt) which may cause poor breaks
 
 #### Examples
@@ -396,12 +400,20 @@ label.preferredMaxLayoutWidth = 150
 // ✅ Breaks between operators cleanly
 ```
 
-**Problematic use case (many fractions):**
+**Excellent use case (fractions inline - NEW!):**
 ```swift
-label.latex = "\\frac{1}{2}+\\frac{3}{4}+\\frac{5}{6}+\\frac{7}{8}"
+label.latex = "a+\\frac{1}{2}+b+\\frac{3}{4}+c"
 label.preferredMaxLayoutWidth = 200
-// ⚠️ Each fraction on separate line, not ideal
-// Better to avoid line breaking for such expressions
+// ✅ Fractions stay inline when they fit!
+// Breaks intelligently: "a + ½ + b" on line 1, "+ ¾ + c" on line 2
+```
+
+**Excellent use case (radicals inline - NEW!):**
+```swift
+label.latex = "x+\\sqrt{2}+y+\\sqrt{3}+z"
+label.preferredMaxLayoutWidth = 150
+// ✅ Radicals stay inline when they fit!
+// Example: "x + √2 + y" on line 1, "+ √3 + z" on line 2
 ```
 
 **Alternative for complex expressions:**
