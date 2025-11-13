@@ -479,6 +479,75 @@ class MTTypesetter {
         }
         self.currentPosition.x += interElementSpace
     }
+
+    // MARK: - Interatom Line Breaking
+
+    /// Calculate the width that would result from adding this atom to the current line
+    /// Returns the approximate width including inter-element spacing
+    func calculateAtomWidth(_ atom: MTMathAtom, prevNode: MTMathAtom?) -> CGFloat {
+        // Calculate inter-element spacing
+        var interElementSpace: CGFloat = 0
+        if prevNode != nil {
+            interElementSpace = getInterElementSpace(prevNode!.type, right: atom.type)
+        } else if self.spaced {
+            interElementSpace = getInterElementSpace(.open, right: atom.type)
+        }
+
+        // Calculate the width of the atom's nucleus
+        let atomString = NSAttributedString(string: atom.nucleus, attributes: [
+            kCTFontAttributeName as NSAttributedString.Key: styleFont.ctFont as Any
+        ])
+        let ctLine = CTLineCreateWithAttributedString(atomString as CFAttributedString)
+        let atomWidth = CGFloat(CTLineGetTypographicBounds(ctLine, nil, nil, nil))
+
+        return interElementSpace + atomWidth
+    }
+
+    /// Calculate the current line width
+    func getCurrentLineWidth() -> CGFloat {
+        if currentLine.length == 0 {
+            return 0
+        }
+        let attrString = currentLine.mutableCopy() as! NSMutableAttributedString
+        attrString.addAttribute(kCTFontAttributeName as NSAttributedString.Key, value: styleFont.ctFont as Any, range: NSMakeRange(0, attrString.length))
+        let ctLine = CTLineCreateWithAttributedString(attrString)
+        return CGFloat(CTLineGetTypographicBounds(ctLine, nil, nil, nil))
+    }
+
+    /// Check if we should break to a new line before adding this atom
+    /// Returns true if a line break was performed
+    @discardableResult
+    func checkAndPerformInteratomLineBreak(_ atom: MTMathAtom, prevNode: MTMathAtom?) -> Bool {
+        // Only perform interatom breaking when maxWidth is set
+        guard maxWidth > 0 else { return false }
+
+        // Don't break if current line is empty
+        guard currentLine.length > 0 else { return false }
+
+        // Calculate what the width would be if we add this atom
+        let currentLineWidth = getCurrentLineWidth()
+        let atomWidth = calculateAtomWidth(atom, prevNode: prevNode)
+        let projectedWidth = currentLineWidth + atomWidth
+
+        // If projected width exceeds max width, flush current line and start new one
+        if projectedWidth > maxWidth {
+            // Flush the current line
+            self.addDisplayLine()
+
+            // Move down for new line
+            currentPosition.y -= styleFont.fontSize * 1.5
+            currentPosition.x = 0
+
+            // Reset for new line
+            currentLine = NSMutableAttributedString()
+            currentAtoms = []
+            currentLineIndexRange = NSMakeRange(NSNotFound, NSNotFound)
+
+            return true
+        }
+
+        return false
+    }
     
     func createDisplayAtoms(_ preprocessed:[MTMathAtom]) {
         // items should contain all the nodes that need to be layed out.
@@ -772,6 +841,10 @@ class MTTypesetter {
                 case .ordinary, .binaryOperator, .relation, .open, .close, .placeholder, .punctuation:
                     // the rendering for all the rest is pretty similar
                     // All we need is render the character and set the interelement space.
+
+                    // INTERATOM LINE BREAKING: Check if we need to break before adding this atom
+                    checkAndPerformInteratomLineBreak(atom, prevNode: prevNode)
+
                     if prevNode != nil {
                         let interElementSpace = self.getInterElementSpace(prevNode!.type, right:atom.type)
                         if currentLine.length > 0 {

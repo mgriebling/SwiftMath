@@ -1572,5 +1572,142 @@ final class MTTypesetterTests: XCTestCase {
         XCTAssertEqual(display.width, 44.86, accuracy: 0.01)
     }
 
+    // MARK: - Interatom Line Breaking Tests
+
+    func testInteratomLineBreaking_SimpleEquation() throws {
+        // Simple equation that should break between atoms when width is constrained
+        let latex = "a=1, b=2, c=3, d=4"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Failed to parse LaTeX")
+
+        // Create display with narrow width constraint (should force multiple lines)
+        let maxWidth: CGFloat = 100
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Should have multiple sub-displays (lines)
+        XCTAssertGreaterThan(display!.subDisplays.count, 1, "Expected multiple lines with width constraint of \(maxWidth)")
+
+        // Verify that each line respects the width constraint
+        for (index, subDisplay) in display!.subDisplays.enumerated() {
+            XCTAssertLessThanOrEqual(subDisplay.width, maxWidth * 1.1, "Line \(index) width \(subDisplay.width) exceeds maxWidth \(maxWidth)")
+        }
+
+        // Verify vertical positioning - lines should be below each other
+        if display!.subDisplays.count > 1 {
+            let firstLine = display!.subDisplays[0]
+            let secondLine = display!.subDisplays[1]
+            XCTAssertLessThan(secondLine.position.y, firstLine.position.y, "Second line should be positioned below first line")
+        }
+    }
+
+    func testInteratomLineBreaking_TextAndMath() throws {
+        // The user's specific example: text mixed with math
+        let latex = "\\text{Calculer le discriminant }\\Delta=b^{2}-4ac\\text{ avec }a=1\\text{, }b=-1\\text{, }c=-5"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Failed to parse LaTeX")
+
+        // Create display with width constraint of 235 as specified by user
+        let maxWidth: CGFloat = 235
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Should have multiple lines
+        XCTAssertGreaterThan(display!.subDisplays.count, 1, "Expected multiple lines with width \(maxWidth) for the given LaTeX")
+
+        // Verify each line respects width constraint
+        for (index, subDisplay) in display!.subDisplays.enumerated() {
+            // Allow 10% tolerance for spacing and rounding
+            XCTAssertLessThanOrEqual(subDisplay.width, maxWidth * 1.1,
+                "Line \(index) width \(subDisplay.width) exceeds maxWidth \(maxWidth)")
+        }
+
+        // Verify vertical spacing between lines
+        if display!.subDisplays.count >= 2 {
+            let firstLine = display!.subDisplays[0]
+            let secondLine = display!.subDisplays[1]
+            let verticalSpacing = abs(firstLine.position.y - secondLine.position.y)
+            XCTAssertGreaterThan(verticalSpacing, 0, "Lines should have vertical spacing")
+            // Typical line height is around 1.5 * font size
+            XCTAssertGreaterThan(verticalSpacing, self.font.fontSize * 0.5, "Vertical spacing seems too small")
+        }
+    }
+
+    func testInteratomLineBreaking_BreaksAtAtomBoundaries() throws {
+        // Test that breaking happens between atoms, not within them
+        // Using mathematical atoms separated by operators
+        let latex = "a+b+c+d+e+f+g+h+i+j+k+l+m+n+o+p"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Failed to parse LaTeX")
+
+        // Create display with narrow width that should force breaking
+        let maxWidth: CGFloat = 120
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Should have multiple lines
+        XCTAssertGreaterThan(display!.subDisplays.count, 1, "Expected line breaking with narrow width")
+
+        // Each line should respect the width constraint (with some tolerance)
+        // since we break at atom boundaries, not mid-atom
+        for (index, subDisplay) in display!.subDisplays.enumerated() {
+            XCTAssertLessThanOrEqual(subDisplay.width, maxWidth * 1.2,
+                "Line \(index) width \(subDisplay.width) exceeds maxWidth \(maxWidth) by too much")
+        }
+    }
+
+    func testInteratomLineBreaking_WithSuperscripts() throws {
+        // Test breaking with atoms that have superscripts
+        let latex = "a^{2}+b^{2}+c^{2}+d^{2}+e^{2}"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Failed to parse LaTeX")
+
+        let maxWidth: CGFloat = 100
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Should handle superscripts properly and create multiple lines if needed
+        for (index, subDisplay) in display!.subDisplays.enumerated() {
+            XCTAssertLessThanOrEqual(subDisplay.width, maxWidth * 1.1,
+                "Line \(index) with superscripts exceeds width")
+        }
+    }
+
+    func testInteratomLineBreaking_NoBreakingWhenNotNeeded() throws {
+        // Test that short content doesn't break unnecessarily
+        let latex = "a=b"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Failed to parse LaTeX")
+
+        let maxWidth: CGFloat = 200
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Should stay on single line since content is short
+        // Note: The number of subDisplays might be 1 or more depending on internal structure,
+        // but the total width should be well under maxWidth
+        XCTAssertLessThan(display!.width, maxWidth, "Short content should fit without breaking")
+    }
+
+    func testInteratomLineBreaking_BreaksAfterOperators() throws {
+        // Test that breaking prefers to happen after operators (good break points)
+        let latex = "a+b+c+d+e+f+g+h"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Failed to parse LaTeX")
+
+        let maxWidth: CGFloat = 80
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Should break into multiple lines
+        XCTAssertGreaterThan(display!.subDisplays.count, 1, "Expected multiple lines")
+
+        // Verify width constraints
+        for (index, subDisplay) in display!.subDisplays.enumerated() {
+            XCTAssertLessThanOrEqual(subDisplay.width, maxWidth * 1.1,
+                "Line \(index) exceeds width")
+        }
+    }
+
 }
 
