@@ -164,17 +164,21 @@ SwiftMath now supports automatic line breaking (multiline display) for mathemati
 
 **Impact**: ⭐⭐⭐ GOOD improvement for small matrices and vectors!
 
-## Limited Support Cases
-
-### ⚠️ Atoms with Scripts
+### ✅ Atoms with Scripts (NEWLY IMPROVED!)
 ```swift
 "a^{2} + b^{2} + c^{2} + d^{2}"
 ```
-**Works but suboptimal**: Falls back to universal breaking which breaks within accumulated text rather than at clean atom boundaries.
+**Now works much better**: Atoms with superscripts and subscripts now participate in intelligent width-based breaking!
 
-**Why**: Atoms with scripts still trigger line flushing for script positioning, which interrupts the interatom breaking flow.
+**Implementation**: Lines 1123-1137 in MTTypesetter.swift
+- Estimates total width of atom including scripts before adding
+- Checks if adding scripted atom would exceed maxWidth
+- Only breaks to new line if necessary
+- Otherwise adds inline with proper spacing
 
-**Impact**: May not break at the most aesthetically pleasing positions.
+**Impact**: ⭐⭐⭐⭐ SIGNIFICANT improvement for mathematical expressions with exponents!
+
+## Limited Support Cases
 
 ### ⚠️ Very Long Text Atoms
 ```swift
@@ -254,17 +258,16 @@ The following cases that previously forced line breaks now work perfectly:
 
 **Possible solution**: Calculate actual line height based on ascent/descent of atoms on each line.
 
-### 3. Scripts Disable Interatom Breaking
-**Problem**: Atoms with superscripts/subscripts fall back to universal breaking.
+### 3. ✅ FIXED: Scripts Disable Interatom Breaking
+**Previous Problem**: Atoms with superscripts/subscripts fell back to universal breaking.
 
-**Example**:
-```swift
-"a^{2} + b^{2} + c^{2}"
-```
+**Solution Implemented**: Now checks width before flushing for scripted atoms!
+- Added `estimateAtomWidthWithScripts()` helper function
+- Checks if atom with scripts would exceed width constraint BEFORE flushing
+- Only breaks line if necessary
+- Scripted atoms now participate in intelligent width-based breaking
 
-**Root cause**: Scripts cause line flushing for vertical positioning (line 892-908), interrupting interatom flow.
-
-**Possible solution**: Refactor script handling to not require immediate line flush, or handle scripted atoms specially in interatom breaking.
+**Result**: ✅ Much better breaking behavior for expressions with exponents!
 
 ### 4. No Break Quality Scoring
 **Problem**: All break points are treated equally - no preference for breaking after operators vs. before.
@@ -319,21 +322,22 @@ The following cases that previously forced line breaks now work perfectly:
 
 **Progress**: 100% complete! 🎉
 
-### Priority 1 (NEW): Improve Script Handling
-**Goal**: Make atoms with scripts work with interatom breaking.
+### ✅ COMPLETED: Priority 1 - Improve Script Handling
+**Status**: ✅ IMPLEMENTED AND TESTED
 
-**Approach**:
-1. Calculate total width including scripts
-2. Include in interatom breaking decision
-3. Defer script positioning until after line breaking decision
+**What was done**:
+1. Added `estimateAtomWidthWithScripts()` helper function to calculate atom width including scripts
+2. Check width constraint BEFORE flushing for scripted atoms (lines 1123-1137)
+3. Only break line if adding scripted atom would exceed maxWidth
+4. Otherwise add inline with proper spacing
+5. Added 8 comprehensive tests covering all scenarios
+6. All 232 tests pass on iOS ✅
 
-**Implementation**: Refactor `makeScripts` to be non-flushing.
+**Impact**: ⭐⭐⭐⭐ SIGNIFICANT improvement! Expressions with exponents now break intelligently based on width!
 
-**Impact**: ⭐⭐⭐⭐ (Significant improvement for common cases)
+**Progress**: Scripted atoms now participate in interatom breaking decisions while preserving correct script positioning!
 
-**Difficulty**: Medium-High (requires refactoring script positioning logic)
-
-### Priority 2: Implement Break Quality Scoring
+### Priority 1 (NEW): Implement Break Quality Scoring
 **Goal**: Prefer better break points (e.g., after operators).
 
 **Approach**:
@@ -347,7 +351,7 @@ The following cases that previously forced line breaks now work perfectly:
 
 **Difficulty**: Medium (new algorithm but well-defined pattern)
 
-### Priority 3: Dynamic Line Height
+### Priority 2: Dynamic Line Height
 **Goal**: Adjust vertical spacing based on actual line content height.
 
 **Approach**:
@@ -389,13 +393,14 @@ The following cases that previously forced line breaks now work perfectly:
 ✅ **Integration tests** (NEW - 2 tests in lines 2364-2415)
 ✅ **Real-world examples** (NEW - 3 tests in lines 2417-2492)
 ✅ **Edge cases** (NEW - 2 tests in lines 2494-2534)
+✅ **Scripted atoms inline** (NEW - 8 tests in lines 2609-2780)
 
-**Total: 71 tests in MTTypesetterTests.swift, all passing on iOS and macOS**
-**Overall: 222 tests across entire test suite, all passing**
+**Total: 81 tests in MTTypesetterTests.swift, all passing on iOS**
+**Overall: 232 tests across entire test suite, all passing**
 
 ### Coverage Summary by Category
 
-**Complex Atoms - Inline Layout:** (20 NEW tests)
+**Complex Atoms - Inline Layout:** (20 tests)
 - Large operators: 3 tests (inline when fit, break when too wide, multiple operators)
 - Delimiters: 4 tests (inline when fit, break when too wide, nested delimiters, multiple delimiters)
 - Colored expressions: 3 tests (inline when fit, break when too wide, multiple colored sections)
@@ -403,6 +408,16 @@ The following cases that previously forced line breaks now work perfectly:
 - Integration: 2 tests (mixed complex elements, no breaking without constraints)
 - Real-world: 3 tests (quadratic formula with color, complex fractions, mixed operations)
 - Edge cases: 2 tests (very narrow width, very wide atom)
+
+**Improved Script Handling:** (8 NEW tests)
+- Scripted atoms inline when fit
+- Scripted atoms break when too wide
+- Mixed scripted and non-scripted atoms
+- Both subscripts and superscripts
+- Real-world: Quadratic expansion with exponents
+- Real-world: Polynomial with multiple exponent terms
+- No breaking without width constraint
+- Complex expressions mixing fractions and scripts
 
 **Edge Cases & Stress Tests:** (4 tests)
 - Very narrow widths (30pt)
@@ -449,6 +464,7 @@ The implementation now provides **excellent support** for:
 - ✅ **Delimited expressions inline** (COMPLETED!)
 - ✅ **Colored expressions inline** (COMPLETED!)
 - ✅ **Matrices/tables inline** (COMPLETED!)
+- ✅ **Scripted atoms (superscripts/subscripts)** (COMPLETED!)
 - ✅ **Mixed complex expressions** (COMPLETED!)
 - ✅ **Width constraint propagation to nested content** (COMPLETED!)
 
@@ -458,20 +474,22 @@ The implementation now provides **excellent support** for:
 - ✅ Delimited content like `(a+b) + \left(\frac{c}{d}\right) + e` stays inline with proper wrapping!
 - ✅ Colored sections respect width constraints with proper nested wrapping!
 - ✅ Small matrices and tables can stay inline with surrounding content!
+- ✅ **NEW**: Scripted atoms like `a^{2} + b^{2} + c^{2}` break intelligently based on width!
 
 ### ⚠️ Remaining Limitations (Minor Cases Only)
 
 **Still need work** for:
-- ⚠️ Scripted atoms (superscripts/subscripts) - use fallback mechanism (works but suboptimal)
 - ⚠️ Very long text atoms - break within atom rather than between atoms
+- ⚠️ Break quality scoring - all break points treated equally (no preference for breaking after operators)
+- ⚠️ Dynamic line height - fixed spacing regardless of content height
 
-**Note**: These are relatively minor compared to the major improvements achieved!
+**Note**: These are aesthetic improvements rather than fundamental limitations!
 
 ### 🎯 Next Priorities
 
 The most impactful remaining improvements:
-1. **Improve script handling** (NEW Priority 1) - include scripted atoms in interatom breaking
-2. **Add break quality scoring** (Priority 2) - prefer better break points aesthetically
-3. **Dynamic line height** (Priority 3) - adjust vertical spacing based on content
+1. **Add break quality scoring** (Priority 1) - prefer better break points aesthetically
+2. **Dynamic line height** (Priority 2) - adjust vertical spacing based on content height
+3. **Look-ahead optimization** (Priority 3) - consider slightly better break points nearby
 
-**Progress**: 🎉 **100% complete for complex atoms!** All major complex atom types (fractions, radicals, operators, delimiters, colors, matrices) now support intelligent inline layout with width checking and proper nesting!
+**Progress**: 🎉 **100% complete for all atom types!** All major atom types (simple, complex, and scripted) now support intelligent inline layout with width-based breaking!

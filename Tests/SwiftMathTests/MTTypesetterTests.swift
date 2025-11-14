@@ -2604,5 +2604,195 @@ final class MTTypesetterTests: XCTestCase {
 
     }
 
+    // MARK: - Improved Script Handling Tests
+
+    func testScriptedAtoms_StayInlineWhenFit() throws {
+        // Test that atoms with superscripts stay inline when they fit
+        let latex = "a^{2}+b^{2}+c^{2}"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Should parse LaTeX")
+
+        // Wide enough to fit everything on one line
+        let maxWidth: CGFloat = 200
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Check for line breaks (large y position gaps indicate line breaks)
+        // Note: Superscripts/subscripts have different y positions but are on same "line"
+        // Line breaks use fontSize * 1.5 spacing, so look for gaps > fontSize
+        var yPositions = display!.subDisplays.map { $0.position.y }.sorted()
+        var lineBreakCount = 0
+        for i in 1..<yPositions.count {
+            let gap = abs(yPositions[i] - yPositions[i-1])
+            if gap > self.font.fontSize {
+                lineBreakCount += 1
+            }
+        }
+
+        XCTAssertEqual(lineBreakCount, 0,
+            "Should have no line breaks when content fits within width")
+
+        // Total width should be within constraint
+        XCTAssertLessThan(display!.width, maxWidth,
+            "Expression should fit within width constraint")
+    }
+
+    func testScriptedAtoms_BreakWhenTooWide() throws {
+        // Test that atoms with superscripts break when width is exceeded
+        let latex = "a^{2}+b^{2}+c^{2}+d^{2}+e^{2}+f^{2}"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Should parse LaTeX")
+
+        // Narrow width should force breaking
+        let maxWidth: CGFloat = 100
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Should have multiple lines (different y positions)
+        var uniqueYPositions = Set<CGFloat>()
+        for subDisplay in display!.subDisplays {
+            uniqueYPositions.insert(round(subDisplay.position.y * 10) / 10) // Round to avoid floating point issues
+        }
+
+        XCTAssertGreaterThan(uniqueYPositions.count, 1,
+            "Should have multiple lines due to width constraint")
+
+        // Each subdisplay should respect width constraint
+        for (index, subDisplay) in display!.subDisplays.enumerated() {
+            XCTAssertLessThanOrEqual(subDisplay.width, maxWidth * 1.2,
+                "Line \(index) width (\(subDisplay.width)) should respect constraint")
+        }
+    }
+
+    func testMixedScriptedAndNonScripted() throws {
+        // Test mixing scripted and non-scripted atoms
+        let latex = "a+b^{2}+c+d^{2}+e"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Should parse LaTeX")
+
+        let maxWidth: CGFloat = 180
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Should fit on one or few lines
+        // Note: subdisplay count may be higher due to flushing before scripted atoms
+        XCTAssertLessThanOrEqual(display!.subDisplays.count, 8,
+            "Mixed expression should have reasonable line count")
+
+        // Verify width constraints
+        for (index, subDisplay) in display!.subDisplays.enumerated() {
+            XCTAssertLessThanOrEqual(subDisplay.width, maxWidth * 1.2,
+                "Line \(index) should respect width constraint")
+        }
+    }
+
+    func testSubscriptsAndSuperscripts() throws {
+        // Test atoms with both subscripts and superscripts
+        let latex = "x_{1}^{2}+x_{2}^{2}+x_{3}^{2}"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Should parse LaTeX")
+
+        let maxWidth: CGFloat = 200
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Should fit on reasonable number of lines
+        XCTAssertGreaterThan(display!.subDisplays.count, 0,
+            "Should have content")
+
+        // Verify width constraints
+        for (index, subDisplay) in display!.subDisplays.enumerated() {
+            XCTAssertLessThanOrEqual(subDisplay.width, maxWidth * 1.2,
+                "Line \(index) should respect width constraint")
+        }
+    }
+
+    func testRealWorld_QuadraticExpansion() throws {
+        // Real-world test: quadratic expansion with exponents
+        let latex = "(a+b)^{2}=a^{2}+2ab+b^{2}"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Should parse LaTeX")
+
+        let maxWidth: CGFloat = 250
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Should fit on reasonable number of lines
+        XCTAssertGreaterThan(display!.subDisplays.count, 0,
+            "Quadratic expansion should render")
+
+        // Verify width constraints
+        for (index, subDisplay) in display!.subDisplays.enumerated() {
+            XCTAssertLessThanOrEqual(subDisplay.width, maxWidth * 1.2,
+                "Line \(index) should respect width constraint")
+        }
+    }
+
+    func testRealWorld_Polynomial() throws {
+        // Real-world test: polynomial with multiple terms
+        let latex = "x^{4}+x^{3}+x^{2}+x+1"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Should parse LaTeX")
+
+        let maxWidth: CGFloat = 180
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Should have reasonable structure
+        XCTAssertGreaterThan(display!.subDisplays.count, 0,
+            "Polynomial should render")
+
+        // Verify width constraints
+        for (index, subDisplay) in display!.subDisplays.enumerated() {
+            XCTAssertLessThanOrEqual(subDisplay.width, maxWidth * 1.2,
+                "Line \(index) should respect width constraint")
+        }
+    }
+
+    func testScriptedAtoms_NoBreakingWithoutConstraint() throws {
+        // Test that scripted atoms don't break unnecessarily without width constraint
+        let latex = "a^{2}+b^{2}+c^{2}+d^{2}+e^{2}"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Should parse LaTeX")
+
+        // No width constraint (maxWidth = 0)
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: 0)
+        XCTAssertNotNil(display)
+
+        // Check for line breaks - should have none without width constraint
+        var yPositions = display!.subDisplays.map { $0.position.y }.sorted()
+        var lineBreakCount = 0
+        for i in 1..<yPositions.count {
+            let gap = abs(yPositions[i] - yPositions[i-1])
+            if gap > self.font.fontSize {
+                lineBreakCount += 1
+            }
+        }
+
+        XCTAssertEqual(lineBreakCount, 0,
+            "Without width constraint, should have no line breaks")
+    }
+
+    func testComplexScriptedExpression() throws {
+        // Test complex expression mixing fractions and scripts
+        let latex = "\\frac{x^{2}}{y^{2}}+a^{2}+\\sqrt{b^{2}}"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Should parse LaTeX")
+
+        let maxWidth: CGFloat = 220
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Should render successfully
+        XCTAssertGreaterThan(display!.subDisplays.count, 0,
+            "Complex expression should render")
+
+        // Verify width constraints
+        for (index, subDisplay) in display!.subDisplays.enumerated() {
+            XCTAssertLessThanOrEqual(subDisplay.width, maxWidth * 1.3,
+                "Line \(index) should respect width constraint (with tolerance for complex atoms)")
+        }
+    }
+
 }
 

@@ -580,7 +580,37 @@ class MTTypesetter {
         currentPosition.y -= styleFont.fontSize * 1.5
         currentPosition.x = 0
     }
-    
+
+    /// Estimate the width of an atom including its scripts (without actually creating the displays)
+    /// This is used for width-checking decisions for atoms with super/subscripts
+    func estimateAtomWidthWithScripts(_ atom: MTMathAtom) -> CGFloat {
+        // Estimate base atom width
+        var atomWidth = CGFloat(atom.nucleus.count) * styleFont.fontSize * 0.5 // rough estimate
+
+        // If atom has scripts, estimate their contribution
+        if atom.superScript != nil || atom.subScript != nil {
+            let scriptFontSize = Self.getStyleSize(self.scriptStyle(), font: font)
+
+            var scriptWidth: CGFloat = 0
+            if let superScript = atom.superScript {
+                // Estimate superscript width
+                let superScriptAtomCount = superScript.atoms.count
+                scriptWidth = max(scriptWidth, CGFloat(superScriptAtomCount) * scriptFontSize * 0.5)
+            }
+
+            if let subScript = atom.subScript {
+                // Estimate subscript width
+                let subScriptAtomCount = subScript.atoms.count
+                scriptWidth = max(scriptWidth, CGFloat(subScriptAtomCount) * scriptFontSize * 0.5)
+            }
+
+            // Add script width plus space after script
+            atomWidth += scriptWidth + styleFont.mathTable!.spaceAfterScript
+        }
+
+        return atomWidth
+    }
+
     func createDisplayAtoms(_ preprocessed:[MTMathAtom]) {
         // items should contain all the nodes that need to be layed out.
         // convert to a list of DisplayAtoms
@@ -1089,6 +1119,23 @@ class MTTypesetter {
                             // If no break point found, let it overflow (better than breaking mid-word)
                         }
                     }
+
+                    // Check if atom with scripts would exceed width constraint (improved script handling)
+                    if maxWidth > 0 && (atom.subScript != nil || atom.superScript != nil) && currentLine.length > 0 {
+                        // Estimate width including scripts
+                        let atomWidthWithScripts = estimateAtomWidthWithScripts(atom)
+                        let interElementSpace = self.getInterElementSpace(prevNode?.type ?? .ordinary, right: atom.type)
+                        let currentWidth = getCurrentLineWidth()
+                        let projectedWidth = currentWidth + interElementSpace + atomWidthWithScripts
+
+                        // If adding this scripted atom would exceed width, break line first
+                        if projectedWidth > maxWidth {
+                            self.addDisplayLine()
+                            currentPosition.y -= styleFont.fontSize * 1.5
+                            currentPosition.x = 0
+                        }
+                    }
+
                     // add the atom to the current range
                     if currentLineIndexRange.location == NSNotFound {
                         currentLineIndexRange = atom.indexRange
@@ -1101,7 +1148,7 @@ class MTTypesetter {
                     } else {
                         currentAtoms.append(atom)
                     }
-                    
+
                     // add super scripts || subscripts
                     if atom.subScript != nil || atom.superScript != nil {
                         // stash the existing line
