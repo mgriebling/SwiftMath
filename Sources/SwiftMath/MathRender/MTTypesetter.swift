@@ -620,40 +620,49 @@ class MTTypesetter {
                     continue
                     
                 case .color:
-                    // stash the existing layout
-                    if currentLine.length > 0 {
-                        self.addDisplayLine()
-                    }
+                    // Create the colored display first (pass maxWidth for inner breaking)
                     let colorAtom = atom as! MTMathColor
-                    let display = MTTypesetter.createLineForMathList(colorAtom.innerList, font: font, style: style)
+                    let display = MTTypesetter.createLineForMathList(colorAtom.innerList, font: font, style: style, maxWidth: maxWidth)
                     display!.localTextColor = MTColor(fromHexString: colorAtom.colorString)
+
+                    // Check if we need to break before adding this colored content
+                    if shouldBreakBeforeDisplay(display!, prevNode: prevNode, displayType: .ordinary) {
+                        performLineBreak()
+                    } else {
+                        self.addInterElementSpace(prevNode, currentType:.ordinary)
+                    }
+
                     display!.position = currentPosition
                     currentPosition.x += display!.width
                     displayAtoms.append(display!)
 
                 case .textcolor:
-                    // stash the existing layout
-                    if currentLine.length > 0 {
-                        self.addDisplayLine()
-                    }
+                    // Create the text colored display first (pass maxWidth for inner breaking)
                     let colorAtom = atom as! MTMathTextColor
-                    let display = MTTypesetter.createLineForMathList(colorAtom.innerList, font: font, style: style)
+                    let display = MTTypesetter.createLineForMathList(colorAtom.innerList, font: font, style: style, maxWidth: maxWidth)
                     display!.localTextColor = MTColor(fromHexString: colorAtom.colorString)
 
-                    if prevNode != nil {
-                        let subDisplay: MTDisplay = display!.subDisplays[0]
-                        let subDisplayAtom = (subDisplay as? MTCTLineDisplay)!.atoms[0]
-                        let interElementSpace = self.getInterElementSpace(prevNode!.type, right:subDisplayAtom.type)
-                        if currentLine.length > 0 {
-                            if interElementSpace > 0 {
-                                // add a kerning of that space to the previous character
-                                currentLine.addAttribute(kCTKernAttributeName as NSAttributedString.Key,
-                                                         value:NSNumber(floatLiteral: interElementSpace),
-                                                         range:currentLine.mutableString.rangeOfComposedCharacterSequence(at: currentLine.length-1))
+                    // Check if we need to break before adding this colored content
+                    if shouldBreakBeforeDisplay(display!, prevNode: prevNode, displayType: .ordinary) {
+                        performLineBreak()
+                    } else if prevNode != nil && display!.subDisplays.count > 0 {
+                        // Handle inter-element spacing if not breaking
+                        if let subDisplay = display!.subDisplays.first,
+                           let ctLineDisplay = subDisplay as? MTCTLineDisplay,
+                           !ctLineDisplay.atoms.isEmpty {
+                            let subDisplayAtom = ctLineDisplay.atoms[0]
+                            let interElementSpace = self.getInterElementSpace(prevNode!.type, right:subDisplayAtom.type)
+                            if currentLine.length > 0 {
+                                if interElementSpace > 0 {
+                                    // add a kerning of that space to the previous character
+                                    currentLine.addAttribute(kCTKernAttributeName as NSAttributedString.Key,
+                                                             value:NSNumber(floatLiteral: interElementSpace),
+                                                             range:currentLine.mutableString.rangeOfComposedCharacterSequence(at: currentLine.length-1))
+                                }
+                            } else {
+                                // increase the space
+                                currentPosition.x += interElementSpace
                             }
-                        } else {
-                            // increase the space
-                            currentPosition.x += interElementSpace
                         }
                     }
 
@@ -662,16 +671,21 @@ class MTTypesetter {
                     displayAtoms.append(display!)
 
                 case .colorBox:
-                    // stash the existing layout
-                    if currentLine.length > 0 {
-                        self.addDisplayLine()
-                    }
+                    // Create the colorbox display first (pass maxWidth for inner breaking)
                     let colorboxAtom =  atom as! MTMathColorbox
-                    let display = MTTypesetter.createLineForMathList(colorboxAtom.innerList, font:font, style:style)
-                    
+                    let display = MTTypesetter.createLineForMathList(colorboxAtom.innerList, font:font, style:style, maxWidth: maxWidth)
+
                     display!.localBackgroundColor = MTColor(fromHexString: colorboxAtom.colorString)
+
+                    // Check if we need to break before adding this colorbox
+                    if shouldBreakBeforeDisplay(display!, prevNode: prevNode, displayType: .ordinary) {
+                        performLineBreak()
+                    } else {
+                        self.addInterElementSpace(prevNode, currentType:.ordinary)
+                    }
+
                     display!.position = currentPosition
-                    currentPosition.x += display!.width;
+                    currentPosition.x += display!.width
                     displayAtoms.append(display!)
                     
                 case .radical:
@@ -727,31 +741,50 @@ class MTTypesetter {
                     }
                     
                 case .largeOperator:
-                    // stash the existing layout
-                    if currentLine.length > 0 {
-                        self.addDisplayLine()
-                    }
-                    self.addInterElementSpace(prevNode, currentType:atom.type)
+                    // Create the large operator display first
                     let op = atom as! MTLargeOperator?
                     let display = self.makeLargeOp(op)
+
+                    // Check if we need to break before adding this operator
+                    // Large operators can be tall (with limits), so check both width and height
+                    let isTooTall = (display!.ascent + display!.descent) > styleFont.fontSize * 2.5
+                    let isTooWide = shouldBreakBeforeDisplay(display!, prevNode: prevNode, displayType: atom.type)
+
+                    if isTooTall || isTooWide {
+                        performLineBreak()
+                    } else {
+                        self.addInterElementSpace(prevNode, currentType:atom.type)
+                    }
+
+                    // Position and add the operator display
+                    display!.position = currentPosition
                     displayAtoms.append(display!)
+                    currentPosition.x += display!.width
                     
                 case .inner:
-                    // stash the existing layout
-                    if currentLine.length > 0 {
-                        self.addDisplayLine()
-                    }
-                    self.addInterElementSpace(prevNode, currentType:atom.type)
+                    // Create the inner display first
                     let inner =  atom as! MTInner?
                     var display : MTDisplay? = nil
                     if inner!.leftBoundary != nil || inner!.rightBoundary != nil {
-                        display = self.makeLeftRight(inner)
+                        // Pass maxWidth to delimited content so it can also break
+                        display = self.makeLeftRight(inner, maxWidth:maxWidth)
                     } else {
-                        display = MTTypesetter.createLineForMathList(inner!.innerList, font:font, style:style, cramped:cramped)
+                        // Pass maxWidth to inner content so it can also break
+                        display = MTTypesetter.createLineForMathList(inner!.innerList, font:font, style:style, cramped:cramped, maxWidth:maxWidth)
                     }
+
+                    // Check if we need to break before adding this inner content
+                    if shouldBreakBeforeDisplay(display!, prevNode: prevNode, displayType: .inner) {
+                        performLineBreak()
+                    } else {
+                        self.addInterElementSpace(prevNode, currentType:atom.type)
+                    }
+
+                    // Position and add the inner display
                     display!.position = currentPosition
                     currentPosition.x += display!.width
                     displayAtoms.append(display!)
+
                     // add super scripts || subscripts
                     if atom.subScript != nil || atom.superScript != nil {
                         self.makeScripts(atom, display:display, index:UInt(atom.indexRange.location), delta:0)
@@ -869,16 +902,20 @@ class MTTypesetter {
                     }
                     
                 case .table:
-                    // stash the existing layout
-                    if currentLine.length > 0 {
-                        self.addDisplayLine()
-                    }
-                    // We will consider tables as inner
-                    self.addInterElementSpace(prevNode, currentType:.inner)
-                    atom.type = .inner;
-                    
+                    // Create the table display first
                     let table = atom as! MTMathTable?
                     let display = self.makeTable(table)
+
+                    // Check if we need to break before adding this table
+                    // We will consider tables as inner
+                    if shouldBreakBeforeDisplay(display!, prevNode: prevNode, displayType: .inner) {
+                        performLineBreak()
+                    } else {
+                        self.addInterElementSpace(prevNode, currentType:.inner)
+                    }
+                    atom.type = .inner
+
+                    display!.position = currentPosition
                     displayAtoms.append(display!)
                     currentPosition.x += display!.width
                     // A table doesn't have subscripts or superscripts
@@ -1829,10 +1866,10 @@ class MTTypesetter {
     static let kDelimiterFactor = CGFloat(901)
     static let kDelimiterShortfallPoints = CGFloat(5)
     
-    func makeLeftRight(_ inner: MTInner?) -> MTDisplay? {
+    func makeLeftRight(_ inner: MTInner?, maxWidth: CGFloat = 0) -> MTDisplay? {
         assert(inner!.leftBoundary != nil || inner!.rightBoundary != nil, "Inner should have a boundary to call this function");
-        
-        let innerListDisplay = MTTypesetter.createLineForMathList(inner!.innerList, font:font, style:style, cramped:cramped, spaced:true)
+
+        let innerListDisplay = MTTypesetter.createLineForMathList(inner!.innerList, font:font, style:style, cramped:cramped, spaced:true, maxWidth:maxWidth)
         let axisHeight = styleFont.mathTable!.axisHeight
         // delta is the max distance from the axis
         let delta = max(innerListDisplay!.ascent - axisHeight, innerListDisplay!.descent + axisHeight);
