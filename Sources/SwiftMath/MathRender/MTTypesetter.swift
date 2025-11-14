@@ -485,11 +485,17 @@ class MTTypesetter {
     /// Calculate the width that would result from adding this atom to the current line
     /// Returns the approximate width including inter-element spacing
     func calculateAtomWidth(_ atom: MTMathAtom, prevNode: MTMathAtom?) -> CGFloat {
-        // Calculate inter-element spacing
+        // Skip atoms that don't participate in normal width calculation
+        // These are handled specially in the rendering code
+        if atom.type == .space || atom.type == .style {
+            return 0
+        }
+
+        // Calculate inter-element spacing (only for types that have defined spacing)
         var interElementSpace: CGFloat = 0
-        if prevNode != nil {
+        if prevNode != nil && prevNode!.type != .space && prevNode!.type != .style {
             interElementSpace = getInterElementSpace(prevNode!.type, right: atom.type)
-        } else if self.spaced {
+        } else if self.spaced && prevNode?.type != .space {
             interElementSpace = getInterElementSpace(.open, right: atom.type)
         }
 
@@ -515,9 +521,10 @@ class MTTypesetter {
     }
 
     /// Check if we should break to a new line before adding this atom
+    /// Uses look-ahead to find better break points aesthetically
     /// Returns true if a line break was performed
     @discardableResult
-    func checkAndPerformInteratomLineBreak(_ atom: MTMathAtom, prevNode: MTMathAtom?) -> Bool {
+    func checkAndPerformInteratomLineBreak(_ atom: MTMathAtom, prevNode: MTMathAtom?, nextAtoms: [MTMathAtom] = []) -> Bool {
         // Only perform interatom breaking when maxWidth is set
         guard maxWidth > 0 else { return false }
 
@@ -529,24 +536,80 @@ class MTTypesetter {
         let atomWidth = calculateAtomWidth(atom, prevNode: prevNode)
         let projectedWidth = currentLineWidth + atomWidth
 
-        // If projected width exceeds max width, flush current line and start new one
-        if projectedWidth > maxWidth {
-            // Flush the current line
-            self.addDisplayLine()
+        // If we're well within the limit, no need to break
+        if projectedWidth <= maxWidth {
+            return false
+        }
 
-            // Move down for new line
-            currentPosition.y -= styleFont.fontSize * 1.5
-            currentPosition.x = 0
+        // We've exceeded the width. Now use break quality scoring to find the best break point.
 
-            // Reset for new line
-            currentLine = NSMutableAttributedString()
-            currentAtoms = []
-            currentLineIndexRange = NSMakeRange(NSNotFound, NSNotFound)
-
+        // If we're far over the limit (>20% excess), break immediately regardless of quality
+        if projectedWidth > maxWidth * 1.2 {
+            performInteratomLineBreak()
             return true
         }
 
-        return false
+        // We're slightly over the limit. Look ahead to see if there's a better break point coming soon.
+        let currentPenalty = calculateBreakPenalty(afterAtom: prevNode, beforeAtom: atom)
+
+        // Look ahead up to 3 atoms to find better break points
+        var bestBreakOffset = 0  // 0 = break now (before current atom)
+        var bestPenalty = currentPenalty
+
+        var cumulativeWidth = projectedWidth
+        var lookAheadPrev = atom
+
+        for (offset, nextAtom) in nextAtoms.prefix(3).enumerated() {
+            // Calculate width if we continue to this atom
+            let nextAtomWidth = calculateAtomWidth(nextAtom, prevNode: lookAheadPrev)
+            cumulativeWidth += nextAtomWidth
+
+            // If we'd be way over the limit, stop looking ahead
+            if cumulativeWidth > maxWidth * 1.3 {
+                break
+            }
+
+            // Calculate penalty for breaking before this next atom
+            let penalty = calculateBreakPenalty(afterAtom: lookAheadPrev, beforeAtom: nextAtom)
+
+            // If this is a better break point (lower penalty), remember it
+            if penalty < bestPenalty {
+                bestPenalty = penalty
+                bestBreakOffset = offset + 1  // +1 because we want to break before nextAtom
+            }
+
+            // If we found a perfect break point (penalty = 0), use it
+            if penalty == 0 {
+                break
+            }
+
+            lookAheadPrev = nextAtom
+        }
+
+        // If best break point is not at current position, defer the break
+        if bestBreakOffset > 0 {
+            // Don't break yet - continue adding atoms to find the better break point
+            return false
+        }
+
+        // Break at current position (best option available)
+        performInteratomLineBreak()
+        return true
+    }
+
+    /// Perform the actual line break operation
+    private func performInteratomLineBreak() {
+        // Flush the current line
+        self.addDisplayLine()
+
+        // Move down for new line
+        currentPosition.y -= styleFont.fontSize * 1.5
+        currentPosition.x = 0
+
+        // Reset for new line
+        currentLine = NSMutableAttributedString()
+        currentAtoms = []
+        currentLineIndexRange = NSMakeRange(NSNotFound, NSNotFound)
     }
 
     /// Check if we should break before adding a complex display (fraction, radical, etc.)
@@ -611,12 +674,56 @@ class MTTypesetter {
         return atomWidth
     }
 
+    /// Calculate break penalty score for breaking after a given atom type
+    /// Lower scores indicate better break points (0 = best, higher = worse)
+    func calculateBreakPenalty(afterAtom: MTMathAtom?, beforeAtom: MTMathAtom?) -> Int {
+        // No atom context - neutral penalty
+        guard let after = afterAtom else { return 50 }
+
+        let afterType = after.type
+        let beforeType = beforeAtom?.type
+
+        // Best break points (penalty = 0): After binary operators, relations, punctuation
+        if afterType == .binaryOperator {
+            return 0  // Great: break after +, -, ×, ÷
+        }
+        if afterType == .relation {
+            return 0  // Great: break after =, <, >, ≤, ≥
+        }
+        if afterType == .punctuation {
+            return 0  // Great: break after commas, semicolons
+        }
+
+        // Good break points (penalty = 10): After ordinary atoms (variables, numbers)
+        if afterType == .ordinary {
+            return 10  // Good: break after variables like a, b, c
+        }
+
+        // Bad break points (penalty = 100): After open brackets or before close brackets
+        if afterType == .open {
+            return 100  // Bad: don't break immediately after (
+        }
+        if beforeType == .close {
+            return 100  // Bad: don't break immediately before )
+        }
+
+        // Worse break points (penalty = 150): Would break operator-operand pairing
+        if afterType == .unaryOperator || afterType == .largeOperator {
+            return 150  // Worse: don't break after operators like ∑, ∫
+        }
+
+        // Neutral default
+        return 50
+    }
+
     func createDisplayAtoms(_ preprocessed:[MTMathAtom]) {
         // items should contain all the nodes that need to be layed out.
         // convert to a list of DisplayAtoms
         var prevNode:MTMathAtom? = nil
         var lastType:MTMathAtomType!
-        for atom in preprocessed {
+        for (index, atom) in preprocessed.enumerated() {
+            // Get next atoms for look-ahead (up to 3 atoms ahead)
+            let nextAtoms = Array(preprocessed.suffix(from: min(index + 1, preprocessed.count)).prefix(3))
             switch atom.type {
                 case .number, .variable,. unaryOperator:
                     // These should never appear as they should have been removed by preprocessing
@@ -1014,7 +1121,8 @@ class MTTypesetter {
                     // All we need is render the character and set the interelement space.
 
                     // INTERATOM LINE BREAKING: Check if we need to break before adding this atom
-                    checkAndPerformInteratomLineBreak(atom, prevNode: prevNode)
+                    // Pass nextAtoms for look-ahead to find better break points
+                    checkAndPerformInteratomLineBreak(atom, prevNode: prevNode, nextAtoms: nextAtoms)
 
                     if prevNode != nil {
                         let interElementSpace = self.getInterElementSpace(prevNode!.type, right:atom.type)

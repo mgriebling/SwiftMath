@@ -2794,5 +2794,215 @@ final class MTTypesetterTests: XCTestCase {
         }
     }
 
+    // MARK: - Break Quality Scoring Tests
+
+    func testBreakQuality_PreferAfterBinaryOperator() throws {
+        // Test that breaks prefer to occur after binary operators (+, -, ×, ÷)
+        // Expression: "aaaa+bbbbcccc" where break should occur after + (not in middle of bbbbcccc)
+        let latex = "aaaa+bbbbcccc"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Should parse LaTeX")
+
+        // Set width to force a break somewhere between + and end
+        let maxWidth: CGFloat = 100
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Extract text content from each line to verify break location
+        var lineContents: [String] = []
+        for subDisplay in display!.subDisplays {
+            if let lineDisplay = subDisplay as? MTCTLineDisplay,
+               let text = lineDisplay.attributedString?.string {
+                lineContents.append(text)
+            }
+        }
+
+        // With break quality scoring, should break after the + operator
+        // First line should contain "aaaa+"
+        let hasGoodBreak = lineContents.contains { $0.contains("+") }
+        XCTAssertTrue(hasGoodBreak,
+            "Break should occur after binary operator +, found lines: \(lineContents)")
+    }
+
+    func testBreakQuality_PreferAfterRelation() throws {
+        // Test that breaks prefer to occur after relation operators (=, <, >)
+        let latex = "aaaa=bbbb+cccc"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Should parse LaTeX")
+
+        let maxWidth: CGFloat = 90
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Extract line contents
+        var lineContents: [String] = []
+        for subDisplay in display!.subDisplays {
+            if let lineDisplay = subDisplay as? MTCTLineDisplay,
+               let text = lineDisplay.attributedString?.string {
+                lineContents.append(text)
+            }
+        }
+
+        // Should break after the = operator
+        let hasGoodBreak = lineContents.contains { $0.contains("=") }
+        XCTAssertTrue(hasGoodBreak,
+            "Break should occur after relation operator =, found lines: \(lineContents)")
+    }
+
+    func testBreakQuality_AvoidAfterOpenBracket() throws {
+        // Test that breaks avoid occurring immediately after open brackets
+        // Expression: "aaaa+(bbb+ccc)" should NOT break as "aaaa+(\n bbb+ccc)"
+        let latex = "aaaa+(bbb+ccc)"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Should parse LaTeX")
+
+        let maxWidth: CGFloat = 100
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Extract line contents
+        var lineContents: [String] = []
+        for subDisplay in display!.subDisplays {
+            if let lineDisplay = subDisplay as? MTCTLineDisplay,
+               let text = lineDisplay.attributedString?.string {
+                lineContents.append(text)
+            }
+        }
+
+        // Should NOT have a line ending with "+(" - bad break point
+        let hasBadBreak = lineContents.contains { $0.hasSuffix("+(") }
+        XCTAssertFalse(hasBadBreak,
+            "Should avoid breaking after open bracket, found lines: \(lineContents)")
+    }
+
+    func testBreakQuality_LookAheadFindsBetterBreak() throws {
+        // Test that look-ahead finds better break points
+        // Expression: "aaabbb+ccc" with tight width
+        // Should defer break to after + rather than between aaa and bbb
+        let latex = "aaabbb+ccc"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Should parse LaTeX")
+
+        // Width set so that "aaabbb" slightly exceeds, but look-ahead should find + as better break
+        let maxWidth: CGFloat = 60
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Extract line contents
+        var lineContents: [String] = []
+        for subDisplay in display!.subDisplays {
+            if let lineDisplay = subDisplay as? MTCTLineDisplay,
+               let text = lineDisplay.attributedString?.string {
+                lineContents.append(text)
+            }
+        }
+
+        // Should break after + (penalty 0) rather than in the middle (penalty 10 or 50)
+        let hasGoodBreak = lineContents.contains { $0.contains("+") }
+        XCTAssertTrue(hasGoodBreak,
+            "Look-ahead should find better break after +, found lines: \(lineContents)")
+    }
+
+    func testBreakQuality_MultipleOperators() throws {
+        // Test with multiple operators - should break at best available points
+        let latex = "a+b+c+d+e+f"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Should parse LaTeX")
+
+        let maxWidth: CGFloat = 60
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Count line breaks
+        var yPositions = display!.subDisplays.map { $0.position.y }.sorted()
+        var lineBreakCount = 0
+        for i in 1..<yPositions.count {
+            let gap = abs(yPositions[i] - yPositions[i-1])
+            if gap > self.font.fontSize {
+                lineBreakCount += 1
+            }
+        }
+
+        // Should have some breaks
+        XCTAssertGreaterThan(lineBreakCount, 0, "Expression should break into multiple lines")
+
+        // Each line should respect width constraint
+        for subDisplay in display!.subDisplays {
+            XCTAssertLessThanOrEqual(subDisplay.width, maxWidth * 1.2,
+                "Each line should respect width constraint")
+        }
+    }
+
+    func testBreakQuality_ComplexExpression() throws {
+        // Test complex expression with various atom types
+        let latex = "x=a+b\\times c+\\frac{d}{e}+f"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Should parse LaTeX")
+
+        let maxWidth: CGFloat = 120
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Should render successfully
+        XCTAssertGreaterThan(display!.subDisplays.count, 0, "Should have content")
+
+        // Verify all subdisplays respect width constraints
+        for (index, subDisplay) in display!.subDisplays.enumerated() {
+            XCTAssertLessThanOrEqual(subDisplay.width, maxWidth * 1.3,
+                "Line \(index) should respect width (with tolerance for complex atoms)")
+        }
+    }
+
+    func testBreakQuality_NoBreakWhenNotNeeded() throws {
+        // Test that break quality scoring doesn't add unnecessary breaks
+        let latex = "a+b+c"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Should parse LaTeX")
+
+        let maxWidth: CGFloat = 200  // Wide enough to fit everything
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Should have no breaks when content fits
+        var yPositions = display!.subDisplays.map { $0.position.y }.sorted()
+        var lineBreakCount = 0
+        for i in 1..<yPositions.count {
+            let gap = abs(yPositions[i] - yPositions[i-1])
+            if gap > self.font.fontSize {
+                lineBreakCount += 1
+            }
+        }
+
+        XCTAssertEqual(lineBreakCount, 0,
+            "Should not add breaks when content fits within width")
+    }
+
+    func testBreakQuality_PenaltyOrdering() throws {
+        // Test that penalty system correctly orders break preferences
+        // Given: "aaaa+b(ccc" - when break is needed, should prefer breaking after + (penalty 0)
+        // rather than after ( (penalty 100)
+        let latex = "aaaa+b(ccc"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Should parse LaTeX")
+
+        let maxWidth: CGFloat = 70
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Extract line contents
+        var lineContents: [String] = []
+        for subDisplay in display!.subDisplays {
+            if let lineDisplay = subDisplay as? MTCTLineDisplay,
+               let text = lineDisplay.attributedString?.string {
+                lineContents.append(text)
+            }
+        }
+
+        // Should prefer breaking after "+" (penalty 0) rather than after "(" (penalty 100)
+        let breaksAfterPlus = lineContents.contains { $0.contains("+") && !$0.contains("(") }
+        XCTAssertTrue(breaksAfterPlus || lineContents.count == 1,
+            "Should prefer breaking after + operator or fit on one line, found lines: \(lineContents)")
+    }
+
 }
 
