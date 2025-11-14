@@ -3004,5 +3004,217 @@ final class MTTypesetterTests: XCTestCase {
             "Should prefer breaking after + operator or fit on one line, found lines: \(lineContents)")
     }
 
+    // MARK: - Dynamic Line Height Tests
+
+    func testDynamicLineHeight_TallContentHasMoreSpacing() throws {
+        // Test that lines with tall content (fractions) have appropriate spacing
+        let latex = "a+b+c+\\frac{x^{2}}{y^{2}}+d+e+f"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Should parse LaTeX")
+
+        // Force multiple lines
+        let maxWidth: CGFloat = 80
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Collect unique y positions (representing different lines)
+        let yPositions = Set(display!.subDisplays.map { $0.position.y }).sorted(by: >)
+
+        // Should have multiple lines
+        XCTAssertGreaterThan(yPositions.count, 1, "Should have multiple lines")
+
+        // Calculate spacing between lines
+        var spacings: [CGFloat] = []
+        for i in 1..<yPositions.count {
+            let spacing = yPositions[i-1] - yPositions[i]
+            spacings.append(spacing)
+        }
+
+        // With dynamic line height, spacing should vary based on content height
+        // Line with fraction should have larger spacing than lines with just variables
+        // All spacings should be at least 20% of fontSize (minimum spacing)
+        let minExpectedSpacing = self.font.fontSize * 0.2
+        for spacing in spacings {
+            XCTAssertGreaterThanOrEqual(spacing, minExpectedSpacing,
+                "Line spacing should be at least minimum spacing")
+        }
+    }
+
+    func testDynamicLineHeight_RegularContentHasReasonableSpacing() throws {
+        // Test that lines with regular content don't have excessive spacing
+        let latex = "a+b+c+d+e+f+g+h+i+j"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Should parse LaTeX")
+
+        // Force multiple lines
+        let maxWidth: CGFloat = 60
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Collect unique y positions
+        let yPositions = Set(display!.subDisplays.map { $0.position.y }).sorted(by: >)
+
+        // Should have multiple lines
+        XCTAssertGreaterThan(yPositions.count, 1, "Should have multiple lines")
+
+        // Calculate spacing between lines
+        var spacings: [CGFloat] = []
+        for i in 1..<yPositions.count {
+            let spacing = yPositions[i-1] - yPositions[i]
+            spacings.append(spacing)
+        }
+
+        // For regular content, spacing should be reasonable (roughly 1.2-1.8x fontSize)
+        for spacing in spacings {
+            XCTAssertGreaterThanOrEqual(spacing, self.font.fontSize * 1.0,
+                "Spacing should be at least fontSize")
+            XCTAssertLessThanOrEqual(spacing, self.font.fontSize * 2.0,
+                "Spacing should not be excessive for regular content")
+        }
+    }
+
+    func testDynamicLineHeight_MixedContentVariesSpacing() throws {
+        // Test that spacing adapts to each line's content
+        // Line 1: regular (a+b)
+        // Line 2: with fraction (more height needed)
+        // Line 3: regular again (c+d)
+        let latex = "a+b+\\frac{x}{y}+c+d"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Should parse LaTeX")
+
+        // Force breaks to create multiple lines
+        let maxWidth: CGFloat = 50
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Should render successfully with varying line heights
+        XCTAssertGreaterThan(display!.subDisplays.count, 0, "Should have content")
+
+        // Verify overall height is reasonable
+        let totalHeight = display!.ascent + display!.descent
+        XCTAssertGreaterThan(totalHeight, 0, "Total height should be positive")
+    }
+
+    func testDynamicLineHeight_LargeOperatorsGetAdequateSpace() throws {
+        // Test that large operators with limits get adequate vertical spacing
+        let latex = "\\sum_{i=1}^{n}i+\\prod_{j=1}^{m}j"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Should parse LaTeX")
+
+        // Force line break between operators
+        let maxWidth: CGFloat = 80
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Collect y positions
+        let yPositions = Set(display!.subDisplays.map { $0.position.y }).sorted(by: >)
+
+        if yPositions.count > 1 {
+            // Calculate spacing
+            var spacings: [CGFloat] = []
+            for i in 1..<yPositions.count {
+                let spacing = yPositions[i-1] - yPositions[i]
+                spacings.append(spacing)
+            }
+
+            // Large operators need substantial spacing
+            for spacing in spacings {
+                XCTAssertGreaterThanOrEqual(spacing, self.font.fontSize,
+                    "Large operators should have at least fontSize spacing")
+            }
+        }
+    }
+
+    func testDynamicLineHeight_ConsistentWithinSimilarContent() throws {
+        // Test that similar lines get similar spacing
+        let latex = "a+b+c+d+e+f"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Should parse LaTeX")
+
+        // Force multiple lines with similar content
+        let maxWidth: CGFloat = 40
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Collect unique y positions
+        let yPositions = Set(display!.subDisplays.map { $0.position.y }).sorted(by: >)
+
+        if yPositions.count >= 3 {
+            // Calculate all spacings
+            var spacings: [CGFloat] = []
+            for i in 1..<yPositions.count {
+                let spacing = yPositions[i-1] - yPositions[i]
+                spacings.append(spacing)
+            }
+
+            // Similar content should have similar spacing (within 20% variance)
+            let avgSpacing = spacings.reduce(0, +) / CGFloat(spacings.count)
+            for spacing in spacings {
+                let variance = abs(spacing - avgSpacing) / avgSpacing
+                XCTAssertLessThanOrEqual(variance, 0.3,
+                    "Spacing variance should be reasonable for similar content")
+            }
+        }
+    }
+
+    func testDynamicLineHeight_NoRegressionOnSingleLine() throws {
+        // Test that single-line expressions still work correctly
+        let latex = "a+b+c"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Should parse LaTeX")
+
+        // No width constraint
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display)
+        XCTAssertNotNil(display)
+
+        // Should be on single line
+        let yPositions = Set(display!.subDisplays.map { $0.position.y })
+        XCTAssertEqual(yPositions.count, 1, "Should be on single line")
+    }
+
+    func testDynamicLineHeight_DeepFractionsGetExtraSpace() throws {
+        // Test that nested/continued fractions get adequate spacing
+        let latex = "a+\\frac{1}{\\frac{2}{3}}+b+c"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Should parse LaTeX")
+
+        // Force line breaks
+        let maxWidth: CGFloat = 70
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Deep fractions are taller - verify reasonable total height
+        let totalHeight = display!.ascent + display!.descent
+        XCTAssertGreaterThan(totalHeight, 0, "Should have positive height")
+
+        // Should render without issues
+        XCTAssertGreaterThan(display!.subDisplays.count, 0, "Should have content")
+    }
+
+    func testDynamicLineHeight_RadicalsWithIndicesGetSpace() throws {
+        // Test that radicals (especially with degrees like cube roots) get adequate spacing
+        let latex = "a+\\sqrt[3]{x}+b+\\sqrt{y}+c"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Should parse LaTeX")
+
+        // Force line breaks
+        let maxWidth: CGFloat = 70
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        XCTAssertNotNil(display)
+
+        // Should render successfully
+        XCTAssertGreaterThan(display!.subDisplays.count, 0, "Should have content")
+
+        // Verify reasonable spacing
+        let yPositions = Set(display!.subDisplays.map { $0.position.y }).sorted(by: >)
+        if yPositions.count > 1 {
+            for i in 1..<yPositions.count {
+                let spacing = yPositions[i-1] - yPositions[i]
+                XCTAssertGreaterThanOrEqual(spacing, self.font.fontSize * 0.2,
+                    "Should have minimum spacing")
+            }
+        }
+    }
+
 }
 

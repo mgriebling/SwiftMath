@@ -363,7 +363,9 @@ class MTTypesetter {
     var cramped = false
     var spaced = false
     var maxWidth: CGFloat = 0  // Maximum width for line breaking, 0 means no constraint
-    
+    var currentLineStartIndex: Int = 0  // Index in displayAtoms where current line starts
+    var minimumLineSpacing: CGFloat = 0  // Minimum spacing between lines (will be set based on fontSize)
+
     static func createLineForMathList(_ mathList:MTMathList?, font:MTFont?, style:MTLineStyle) -> MTMathListDisplay? {
         let finalizedList = mathList?.finalized
         // default is not cramped, no width constraint
@@ -416,6 +418,9 @@ class MTTypesetter {
         self.currentAtoms = [MTMathAtom]()
         self.style = style
         self.currentLineIndexRange = NSMakeRange(NSNotFound, NSNotFound);
+        self.currentLineStartIndex = 0
+        // Set minimum line spacing to 20% of fontSize for some breathing room
+        self.minimumLineSpacing = (font?.fontSize ?? 0) * 0.2
     }
     
     static func preprocessMathList(_ ml:MTMathList?) -> [MTMathAtom] {
@@ -602,9 +607,15 @@ class MTTypesetter {
         // Flush the current line
         self.addDisplayLine()
 
-        // Move down for new line
-        currentPosition.y -= styleFont.fontSize * 1.5
+        // Calculate dynamic line height based on actual content
+        let lineHeight = calculateCurrentLineHeight()
+
+        // Move down for new line using dynamic height
+        currentPosition.y -= lineHeight
         currentPosition.x = 0
+
+        // Update line start index for next line
+        currentLineStartIndex = displayAtoms.count
 
         // Reset for new line
         currentLine = NSMutableAttributedString()
@@ -640,8 +651,41 @@ class MTTypesetter {
         if currentLine.length > 0 {
             self.addDisplayLine()
         }
-        currentPosition.y -= styleFont.fontSize * 1.5
+
+        // Calculate dynamic line height based on actual content
+        let lineHeight = calculateCurrentLineHeight()
+
+        // Move down for new line using dynamic height
+        currentPosition.y -= lineHeight
         currentPosition.x = 0
+
+        // Update line start index for next line
+        currentLineStartIndex = displayAtoms.count
+    }
+
+    /// Calculate the height of the current line based on actual display heights
+    /// Returns the total height (max ascent + max descent) plus minimum spacing
+    func calculateCurrentLineHeight() -> CGFloat {
+        // If no displays added for current line, use default spacing
+        guard currentLineStartIndex < displayAtoms.count else {
+            return styleFont.fontSize * 1.5
+        }
+
+        var maxAscent: CGFloat = 0
+        var maxDescent: CGFloat = 0
+
+        // Iterate through all displays added for the current line
+        for i in currentLineStartIndex..<displayAtoms.count {
+            let display = displayAtoms[i]
+            maxAscent = max(maxAscent, display.ascent)
+            maxDescent = max(maxDescent, display.descent)
+        }
+
+        // Total line height = max ascent + max descent + minimum spacing
+        let lineHeight = maxAscent + maxDescent + minimumLineSpacing
+
+        // Ensure we have at least the baseline fontSize spacing for readability
+        return max(lineHeight, styleFont.fontSize * 1.2)
     }
 
     /// Estimate the width of an atom including its scripts (without actually creating the displays)
@@ -1190,9 +1234,11 @@ class MTTypesetter {
                                         currentAtoms = []  // Approximate - we're splitting
                                         self.addDisplayLine()
 
-                                        // Move down for new line
-                                        currentPosition.y -= styleFont.fontSize * 1.5
+                                        // Calculate dynamic line height and move down for new line
+                                        let lineHeight = calculateCurrentLineHeight()
+                                        currentPosition.y -= lineHeight
                                         currentPosition.x = 0
+                                        currentLineStartIndex = displayAtoms.count
 
                                         // Remaining text includes everything after the earlier break
                                         let remainingText = String(firstLineText.suffix(from: earlierBreakIndex)) +
@@ -1211,9 +1257,11 @@ class MTTypesetter {
                                     currentAtoms = firstLineAtoms
                                     self.addDisplayLine()
 
-                                    // Move down for new line and reset x position
-                                    currentPosition.y -= styleFont.fontSize * 1.5
+                                    // Calculate dynamic line height and move down for new line
+                                    let lineHeight = calculateCurrentLineHeight()
+                                    currentPosition.y -= lineHeight
                                     currentPosition.x = 0
+                                    currentLineStartIndex = displayAtoms.count
 
                                     // Start the new line with the content after the break
                                     let remainingText = String(currentText.suffix(from: breakIndex))
@@ -1239,8 +1287,10 @@ class MTTypesetter {
                         // If adding this scripted atom would exceed width, break line first
                         if projectedWidth > maxWidth {
                             self.addDisplayLine()
-                            currentPosition.y -= styleFont.fontSize * 1.5
+                            let lineHeight = calculateCurrentLineHeight()
+                            currentPosition.y -= lineHeight
                             currentPosition.x = 0
+                            currentLineStartIndex = displayAtoms.count
                         }
                     }
 
@@ -1433,9 +1483,11 @@ class MTTypesetter {
                     currentAtoms = []
                     self.addDisplayLine()
 
-                    // Move down for new line
-                    currentPosition.y -= styleFont.fontSize * 1.5
+                    // Calculate dynamic line height and move down for new line
+                    let lineHeight = calculateCurrentLineHeight()
+                    currentPosition.y -= lineHeight
                     currentPosition.x = 0
+                    currentLineStartIndex = displayAtoms.count
 
                     // Remaining text includes everything after the earlier break
                     let remainingText = String(firstLineText.suffix(from: earlierBreakIndex)) +
@@ -1455,9 +1507,11 @@ class MTTypesetter {
             currentAtoms = firstLineAtoms
             self.addDisplayLine()
 
-            // Move down for new line and reset x position
-            currentPosition.y -= styleFont.fontSize * 1.5
+            // Calculate dynamic line height and move down for new line
+            let lineHeight = calculateCurrentLineHeight()
+            currentPosition.y -= lineHeight
             currentPosition.x = 0
+            currentLineStartIndex = displayAtoms.count
 
             // Start the new line with the content after the break
             let remainingText = String(currentText.suffix(from: breakIndex))

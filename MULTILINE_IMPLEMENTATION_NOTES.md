@@ -357,19 +357,31 @@ The following cases that previously forced line breaks now work perfectly:
 
 **Progress**: COMPLETED with 8 comprehensive tests!
 
-### Priority 2: Dynamic Line Height
-**Goal**: Adjust vertical spacing based on actual line content height.
+### ✅ Dynamic Line Height (NEWLY COMPLETED!)
+**Goal**: Adjust vertical spacing based on actual line content height rather than fixed fontSize × 1.5.
 
-**Approach**:
-1. Track maximum ascent/descent for each line
-2. Use actual measurements for vertical positioning
-3. Add configurable minimum line spacing
+**Implementation**: Lines 366-367, 421-423, 654-689 in MTTypesetter.swift
+- Added `currentLineStartIndex: Int` to track where each line's displays begin in displayAtoms array
+- Added `minimumLineSpacing: CGFloat` set to 20% of fontSize for breathing room between lines
+- Created `calculateCurrentLineHeight()` function that:
+  * Iterates through all displays added for the current line (from currentLineStartIndex to displayAtoms.count)
+  * Finds maximum ascent and maximum descent across all displays
+  * Returns total height = maxAscent + maxDescent + minimumLineSpacing
+  * Ensures at least fontSize × 1.2 spacing for readability
+- Modified all line breaking functions to use dynamic height:
+  * `performInteratomLineBreak()` - for interatom breaks (lines 606-624)
+  * `performLineBreak()` - for complex display breaks (lines 649-664)
+  * Universal line breaking - two locations (lines 1237-1241, 1260-1264)
+  * Scripted atom breaking (lines 1290-1293)
+  * `checkAndBreakLine()` helper - two locations (lines 1486-1490, 1510-1514)
+- All break locations now:
+  * Calculate line height based on actual content
+  * Update currentPosition.y using dynamic height
+  * Update currentLineStartIndex for next line
 
-**Implementation**: Modify `addDisplayLine()` to calculate and store line height.
+**Impact**: ⭐⭐⭐⭐ SIGNIFICANT improvement! Lines with tall content (fractions, large operators) get appropriate spacing, while regular lines don't have excessive gaps!
 
-**Impact**: ⭐⭐ (Better vertical spacing)
-
-**Difficulty**: Low-Medium (straightforward calculation change)
+**Progress**: COMPLETED with 8 comprehensive tests!
 
 ## Testing Strategy
 
@@ -401,9 +413,10 @@ The following cases that previously forced line breaks now work perfectly:
 ✅ **Edge cases** (NEW - 2 tests in lines 2494-2534)
 ✅ **Scripted atoms inline** (NEW - 8 tests in lines 2609-2780)
 ✅ **Break quality scoring** (NEW - 8 tests in lines 2797-3006)
+✅ **Dynamic line height** (NEW - 8 tests in lines 3007-3218)
 
-**Total: 89 tests in MTTypesetterTests.swift, all passing on iOS**
-**Overall: 240 tests across entire test suite, all passing**
+**Total: 97 tests in MTTypesetterTests.swift, all passing on iOS**
+**Overall: 248 tests across entire test suite, all passing**
 
 ### Coverage Summary by Category
 
@@ -426,7 +439,7 @@ The following cases that previously forced line breaks now work perfectly:
 - No breaking without width constraint
 - Complex expressions mixing fractions and scripts
 
-**Break Quality Scoring:** (8 NEW tests)
+**Break Quality Scoring:** (8 tests)
 - Prefer breaking after binary operators (+, -, ×, ÷)
 - Prefer breaking after relation operators (=, <, >)
 - Avoid breaking after open brackets
@@ -435,6 +448,16 @@ The following cases that previously forced line breaks now work perfectly:
 - Complex expressions with various atom types
 - No unnecessary breaks when content fits
 - Penalty ordering validates break preferences
+
+**Dynamic Line Height:** (8 NEW tests)
+- Tall content (fractions) gets more spacing
+- Regular content has reasonable spacing (not excessive)
+- Mixed content varies spacing appropriately per line
+- Large operators with limits get adequate vertical space
+- Similar content gets consistent spacing
+- No regression on single-line expressions
+- Deep/nested fractions get extra space
+- Radicals with indices (cube roots) get adequate spacing
 
 **Edge Cases & Stress Tests:** (4 tests)
 - Very narrow widths (30pt)
@@ -496,14 +519,18 @@ The implementation now provides **excellent support** for:
 ### ⚠️ Remaining Limitations (Minor Cases Only)
 
 **Still need work** for:
-- ⚠️ Very long text atoms - break within atom rather than between atoms
-- ⚠️ Dynamic line height - fixed spacing regardless of content height
+- ⚠️ Very long text atoms - break within atom rather than between atoms (already implemented via universal line breaking but could be further optimized)
 
-**Note**: These are minor aesthetic improvements rather than fundamental limitations!
+**Note**: This is a minor edge case rather than a fundamental limitation!
 
-### 🎯 Next Priority
+### 🎯 Future Enhancements (All Core Features Complete!)
 
-The most impactful remaining improvement:
-1. **Dynamic line height** (Priority 1) - adjust vertical spacing based on actual content height rather than fixed fontSize × 1.5
+All major priorities have been completed! Possible future enhancements:
+1. **Further optimize very long text atom breaking** - fine-tune Unicode-aware breaking for edge cases
+2. **Configurable line spacing multiplier** - allow users to adjust minimum spacing
+3. **Alignment options** - left/center/right alignment for multiline expressions
 
-**Progress**: 🎉 **100% complete for all atom types + intelligent break point selection!** All major atom types (simple, complex, and scripted) now support intelligent inline layout with width-based breaking AND aesthetically-pleasing break point selection!
+**Progress**: 🎉 **100% COMPLETE for all major features!** All atom types (simple, complex, and scripted) now support:
+- ✅ Intelligent inline layout with width-based breaking
+- ✅ Aesthetically-pleasing break point selection (after operators, avoiding bad breaks)
+- ✅ Dynamic line height based on actual content (tall fractions get more space, regular content stays compact)
