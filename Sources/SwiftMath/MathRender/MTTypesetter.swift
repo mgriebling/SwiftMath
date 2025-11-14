@@ -626,7 +626,15 @@ class MTTypesetter {
                     display!.localTextColor = MTColor(fromHexString: colorAtom.colorString)
 
                     // Check if we need to break before adding this colored content
-                    if shouldBreakBeforeDisplay(display!, prevNode: prevNode, displayType: .ordinary) {
+                    let shouldBreak = shouldBreakBeforeDisplay(display!, prevNode: prevNode, displayType: .ordinary)
+
+                    // Flush current line to convert accumulated text to displays
+                    if currentLine.length > 0 {
+                        self.addDisplayLine()
+                    }
+
+                    // Perform line break if needed
+                    if shouldBreak {
                         performLineBreak()
                     } else {
                         self.addInterElementSpace(prevNode, currentType:.ordinary)
@@ -643,7 +651,15 @@ class MTTypesetter {
                     display!.localTextColor = MTColor(fromHexString: colorAtom.colorString)
 
                     // Check if we need to break before adding this colored content
-                    if shouldBreakBeforeDisplay(display!, prevNode: prevNode, displayType: .ordinary) {
+                    let shouldBreak = shouldBreakBeforeDisplay(display!, prevNode: prevNode, displayType: .ordinary)
+
+                    // Flush current line to convert accumulated text to displays
+                    if currentLine.length > 0 {
+                        self.addDisplayLine()
+                    }
+
+                    // Perform line break if needed
+                    if shouldBreak {
                         performLineBreak()
                     } else if prevNode != nil && display!.subDisplays.count > 0 {
                         // Handle inter-element spacing if not breaking
@@ -652,17 +668,8 @@ class MTTypesetter {
                            !ctLineDisplay.atoms.isEmpty {
                             let subDisplayAtom = ctLineDisplay.atoms[0]
                             let interElementSpace = self.getInterElementSpace(prevNode!.type, right:subDisplayAtom.type)
-                            if currentLine.length > 0 {
-                                if interElementSpace > 0 {
-                                    // add a kerning of that space to the previous character
-                                    currentLine.addAttribute(kCTKernAttributeName as NSAttributedString.Key,
-                                                             value:NSNumber(floatLiteral: interElementSpace),
-                                                             range:currentLine.mutableString.rangeOfComposedCharacterSequence(at: currentLine.length-1))
-                                }
-                            } else {
-                                // increase the space
-                                currentPosition.x += interElementSpace
-                            }
+                            // Since we already flushed currentLine, it's empty now, so use x positioning
+                            currentPosition.x += interElementSpace
                         }
                     }
 
@@ -678,7 +685,15 @@ class MTTypesetter {
                     display!.localBackgroundColor = MTColor(fromHexString: colorboxAtom.colorString)
 
                     // Check if we need to break before adding this colorbox
-                    if shouldBreakBeforeDisplay(display!, prevNode: prevNode, displayType: .ordinary) {
+                    let shouldBreak = shouldBreakBeforeDisplay(display!, prevNode: prevNode, displayType: .ordinary)
+
+                    // Flush current line to convert accumulated text to displays
+                    if currentLine.length > 0 {
+                        self.addDisplayLine()
+                    }
+
+                    // Perform line break if needed
+                    if shouldBreak {
                         performLineBreak()
                     } else {
                         self.addInterElementSpace(prevNode, currentType:.ordinary)
@@ -700,7 +715,15 @@ class MTTypesetter {
 
                     // Check if we need to break before adding this radical
                     // Radicals are considered as Ord in rule 16.
-                    if shouldBreakBeforeDisplay(displayRad!, prevNode: prevNode, displayType: .ordinary) {
+                    let shouldBreak = shouldBreakBeforeDisplay(displayRad!, prevNode: prevNode, displayType: .ordinary)
+
+                    // Flush current line to convert accumulated text to displays
+                    if currentLine.length > 0 {
+                        self.addDisplayLine()
+                    }
+
+                    // Perform line break if needed
+                    if shouldBreak {
                         performLineBreak()
                     } else {
                         self.addInterElementSpace(prevNode, currentType:.ordinary)
@@ -724,7 +747,15 @@ class MTTypesetter {
                     let display = self.makeFraction(frac)
 
                     // Check if we need to break before adding this fraction
-                    if shouldBreakBeforeDisplay(display!, prevNode: prevNode, displayType: atom.type) {
+                    let shouldBreak = shouldBreakBeforeDisplay(display!, prevNode: prevNode, displayType: atom.type)
+
+                    // Flush current line to convert accumulated text to displays
+                    if currentLine.length > 0 {
+                        self.addDisplayLine()
+                    }
+
+                    // Perform line break if needed
+                    if shouldBreak {
                         performLineBreak()
                     } else {
                         self.addInterElementSpace(prevNode, currentType:atom.type)
@@ -741,25 +772,37 @@ class MTTypesetter {
                     }
                     
                 case .largeOperator:
-                    // Create the large operator display first
+                    // Flush current line to convert accumulated text to displays
+                    if currentLine.length > 0 {
+                        self.addDisplayLine()
+                    }
+
+                    // Create the large operator display to check if we need line breaking
                     let op = atom as! MTLargeOperator?
-                    let display = self.makeLargeOp(op)
 
-                    // Check if we need to break before adding this operator
-                    // Large operators can be tall (with limits), so check both width and height
-                    let isTooTall = (display!.ascent + display!.descent) > styleFont.fontSize * 2.5
-                    let isTooWide = shouldBreakBeforeDisplay(display!, prevNode: prevNode, displayType: atom.type)
+                    // Save state before creating display (makeLargeOp may add scripts to displayAtoms)
+                    let savedDisplayAtomsCount = displayAtoms.count
+                    let savedPosition = currentPosition
+                    let tempDisplay = self.makeLargeOp(op)
+                    let tempIsTooTall = (tempDisplay!.ascent + tempDisplay!.descent) > styleFont.fontSize * 2.5
+                    let tempIsTooWide = shouldBreakBeforeDisplay(tempDisplay!, prevNode: prevNode, displayType: atom.type)
+                    let shouldBreak = tempIsTooTall || tempIsTooWide
 
-                    if isTooTall || isTooWide {
+                    // Restore state (remove any scripts that were added)
+                    displayAtoms.removeLast(displayAtoms.count - savedDisplayAtomsCount)
+                    currentPosition = savedPosition
+
+                    // Perform line break if needed
+                    if shouldBreak {
                         performLineBreak()
                     } else {
                         self.addInterElementSpace(prevNode, currentType:atom.type)
                     }
 
-                    // Position and add the operator display
-                    display!.position = currentPosition
+                    // Now create the display at the correct position (after spacing/line break)
+                    // makeLargeOp sets position, advances currentPosition.x, and adds scripts
+                    let display = self.makeLargeOp(op)
                     displayAtoms.append(display!)
-                    currentPosition.x += display!.width
                     
                 case .inner:
                     // Create the inner display first
@@ -774,7 +817,15 @@ class MTTypesetter {
                     }
 
                     // Check if we need to break before adding this inner content
-                    if shouldBreakBeforeDisplay(display!, prevNode: prevNode, displayType: .inner) {
+                    let shouldBreak = shouldBreakBeforeDisplay(display!, prevNode: prevNode, displayType: .inner)
+
+                    // Flush current line to convert accumulated text to displays
+                    if currentLine.length > 0 {
+                        self.addDisplayLine()
+                    }
+
+                    // Perform line break if needed
+                    if shouldBreak {
                         performLineBreak()
                     } else {
                         self.addInterElementSpace(prevNode, currentType:atom.type)
@@ -908,7 +959,15 @@ class MTTypesetter {
 
                     // Check if we need to break before adding this table
                     // We will consider tables as inner
-                    if shouldBreakBeforeDisplay(display!, prevNode: prevNode, displayType: .inner) {
+                    let shouldBreak = shouldBreakBeforeDisplay(display!, prevNode: prevNode, displayType: .inner)
+
+                    // Flush current line to convert accumulated text to displays
+                    if currentLine.length > 0 {
+                        self.addDisplayLine()
+                    }
+
+                    // Perform line break if needed
+                    if shouldBreak {
                         performLineBreak()
                     } else {
                         self.addInterElementSpace(prevNode, currentType:.inner)
