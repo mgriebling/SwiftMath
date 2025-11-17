@@ -557,7 +557,10 @@ class MTTypesetter {
                 // starts with a letter, they're part of the same word - don't break!
                 // Example: "...é" + "quivaut" should not break
                 // But "...km " + "équivaut" can break (has space)
-                if lastChar.isLetter && firstChar.isLetter {
+                // IMPORTANT: Only apply this to multi-character atoms (text words), not single
+                // letters (math variables). In math "4ac" splits as "4","a","c" - these are
+                // separate and CAN be broken between.
+                if lastChar.isLetter && firstChar.isLetter && atom.nucleus.count > 1 {
                     // Don't break - this would split a word
                     return false
                 }
@@ -565,9 +568,14 @@ class MTTypesetter {
         }
 
         // Calculate what the width would be if we add this atom
+        // IMPORTANT: Use currentPosition.x instead of getCurrentLineWidth()
+        // because currentLine only measures the current text segment, but after
+        // superscripts/subscripts, the line may be split into multiple segments.
+        // currentPosition.x tracks the actual visual horizontal position.
         let currentLineWidth = getCurrentLineWidth()
+        let visualLineWidth = currentPosition.x + currentLineWidth
         let atomWidth = calculateAtomWidth(atom, prevNode: prevNode)
-        let projectedWidth = currentLineWidth + atomWidth
+        let projectedWidth = visualLineWidth + atomWidth
 
         // If we're well within the limit, no need to break
         if projectedWidth <= maxWidth {
@@ -1213,14 +1221,22 @@ class MTTypesetter {
                         let attrString = currentLine.mutableCopy() as! NSMutableAttributedString
                         attrString.addAttribute(kCTFontAttributeName as NSAttributedString.Key, value:styleFont.ctFont as Any, range:NSMakeRange(0, attrString.length))
                         let ctLine = CTLineCreateWithAttributedString(attrString)
-                        let lineWidth = CGFloat(CTLineGetTypographicBounds(ctLine, nil, nil, nil))
+                        let segmentWidth = CGFloat(CTLineGetTypographicBounds(ctLine, nil, nil, nil))
 
-                        if lineWidth > maxWidth {
+                        // IMPORTANT: Account for currentPosition.x to get the true visual line width
+                        // After superscripts/subscripts, currentPosition.x > 0 because previous segments
+                        // have been rendered and flushed
+                        let visualLineWidth = currentPosition.x + segmentWidth
+
+                        if visualLineWidth > maxWidth {
                             // Line is too wide - need to find a break point
                             let currentText = currentLine.string
 
                             // Use Unicode-aware line breaking with number protection
-                            if let breakIndex = findBestBreakPoint(in: currentText, font: styleFont.ctFont, maxWidth: maxWidth) {
+                            // IMPORTANT: Use remaining width, not full maxWidth, because currentPosition.x
+                            // may be > 0 if we've already rendered segments on this visual line
+                            let remainingWidth = max(0, maxWidth - currentPosition.x)
+                            if let breakIndex = findBestBreakPoint(in: currentText, font: styleFont.ctFont, maxWidth: remainingWidth) {
                                 // Split the line at the suggested break point
                                 let breakOffset = currentText.distance(from: currentText.startIndex, to: breakIndex)
 
@@ -1228,14 +1244,14 @@ class MTTypesetter {
                                 let firstLine = NSMutableAttributedString(string: String(currentText.prefix(breakOffset)))
                                 firstLine.addAttribute(kCTFontAttributeName as NSAttributedString.Key, value:styleFont.ctFont as Any, range:NSMakeRange(0, firstLine.length))
 
-                                // Check if first line still exceeds maxWidth - need to find earlier break point
+                                // Check if first line still exceeds remaining width - need to find earlier break point
                                 let firstLineCT = CTLineCreateWithAttributedString(firstLine)
                                 let firstLineWidth = CGFloat(CTLineGetTypographicBounds(firstLineCT, nil, nil, nil))
 
-                                if firstLineWidth > maxWidth {
+                                if firstLineWidth > remainingWidth {
                                     // Need to break earlier - find previous break point
                                     let firstLineText = firstLine.string
-                                    if let earlierBreakIndex = findBestBreakPoint(in: firstLineText, font: styleFont.ctFont, maxWidth: maxWidth) {
+                                    if let earlierBreakIndex = findBestBreakPoint(in: firstLineText, font: styleFont.ctFont, maxWidth: remainingWidth) {
                                         let earlierOffset = firstLineText.distance(from: firstLineText.startIndex, to: earlierBreakIndex)
                                         let earlierLine = NSMutableAttributedString(string: String(firstLineText.prefix(earlierOffset)))
                                         earlierLine.addAttribute(kCTFontAttributeName as NSAttributedString.Key, value:styleFont.ctFont as Any, range:NSMakeRange(0, earlierLine.length))

@@ -225,6 +225,39 @@ class MTMathUILabelLineWrappingTests: XCTestCase {
         XCTAssertLessThan(constrainedSize.width, 250, "Width should respect constraint")
     }
 
+    func testMixedTextMathNoTruncation() {
+        // Test for truncation bug: content should wrap, not be lost
+        // Input: \(\text{Calculer le discriminant }\Delta=b^{2}-4ac\text{ avec }a=1\text{, }b=-1\text{, }c=-5\)
+        let label = MTMathUILabel()
+        label.latex = "\\(\\text{Calculer le discriminant }\\Delta=b^{2}-4ac\\text{ avec }a=1\\text{, }b=-1\\text{, }c=-5\\)"
+        label.font = MTFontManager.fontManager.defaultFont
+        label.labelMode = .text
+
+        // Set width constraint that should cause wrapping
+        label.preferredMaxLayoutWidth = 235
+        let constrainedSize = label.intrinsicContentSize
+
+        // Verify the label can render without errors
+        label.frame = CGRect(origin: .zero, size: constrainedSize)
+        #if os(macOS)
+        label.layout()
+        #else
+        label.layoutSubviews()
+        #endif
+
+        XCTAssertNotNil(label.displayList, "Display list should be created")
+        XCTAssertNil(label.error, "Should have no rendering error")
+
+        // Verify content is not truncated - should wrap to multiple lines
+        XCTAssertGreaterThan(constrainedSize.height, 30, "Should wrap to multiple lines (not truncate)")
+
+        // Check that we have multiple display elements (wrapped content)
+        if let displayList = label.displayList {
+            print("Display has \(displayList.subDisplays.count) subdisplays")
+            XCTAssertGreaterThan(displayList.subDisplays.count, 1, "Should have multiple display elements from wrapping")
+        }
+    }
+
     func testNumberProtection_FrenchDecimal() {
         let label = MTMathUILabel()
         // French decimal number should NOT be broken

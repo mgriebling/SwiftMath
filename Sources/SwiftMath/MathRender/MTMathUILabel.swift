@@ -278,24 +278,9 @@ public class MTMathUILabel : MTView {
         let effectiveWidth = _preferredMaxLayoutWidth > 0 ? _preferredMaxLayoutWidth : bounds.size.width
         let availableWidth = effectiveWidth - contentInsets.left - contentInsets.right
 
-        print("🔧 MTMathUILabel _layoutSubviews:")
-        print("   preferredMaxLayoutWidth: \(_preferredMaxLayoutWidth)")
-        print("   bounds.size.width: \(bounds.size.width)")
-        print("   effectiveWidth: \(effectiveWidth)")
-        print("   availableWidth: \(availableWidth)")
-        print("   LaTeX: \(_latex.prefix(60))...")
-
         // print("Pre list = \(_mathList!)")
         _displayList = MTTypesetter.createLineForMathList(_mathList, font: self.font, style: currentStyle, maxWidth: availableWidth)
         _displayList!.textColor = textColor
-
-        print("   Display subDisplays count: \(_displayList!.subDisplays.count)")
-        for (index, subDisplay) in _displayList!.subDisplays.enumerated() {
-            print("   Display \(index): type=\(type(of: subDisplay)), x=\(subDisplay.position.x), width=\(subDisplay.width)")
-            if let lineDisplay = subDisplay as? MTCTLineDisplay {
-                print("     Content: '\(lineDisplay.attributedString?.string ?? "")'")
-            }
-        }
         // print("Post list = \(_mathList!)")
         var textX = CGFloat(0)
         switch self.textAlignment {
