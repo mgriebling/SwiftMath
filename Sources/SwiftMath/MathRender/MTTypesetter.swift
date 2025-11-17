@@ -542,6 +542,28 @@ class MTTypesetter {
         // Don't break if current line is empty
         guard currentLine.length > 0 else { return false }
 
+        // CRITICAL: Don't break in the middle of words
+        // When "équivaut" is decomposed as "é" (accent) + "quivaut" (ordinary),
+        // we must not break between them even if the line exceeds maxWidth.
+        // Check if currentLine ends with a letter and next atom starts with a letter
+        // This prevents breaking mid-word (like "é|quivaut")
+        if atom.type == .ordinary && !atom.nucleus.isEmpty {
+            let lineText = currentLine.string
+            if !lineText.isEmpty {
+                let lastChar = lineText.last!
+                let firstChar = atom.nucleus.first!
+
+                // If line ends with a letter (no trailing space/punctuation) and next atom
+                // starts with a letter, they're part of the same word - don't break!
+                // Example: "...é" + "quivaut" should not break
+                // But "...km " + "équivaut" can break (has space)
+                if lastChar.isLetter && firstChar.isLetter {
+                    // Don't break - this would split a word
+                    return false
+                }
+            }
+        }
+
         // Calculate what the width would be if we add this atom
         let currentLineWidth = getCurrentLineWidth()
         let atomWidth = calculateAtomWidth(atom, prevNode: prevNode)
@@ -1085,8 +1107,9 @@ class MTTypesetter {
                         let current = NSAttributedString(string:normalizedString)
                         currentLine.append(current)
 
-                        // Check if we should break the line
-                        self.checkAndBreakLine()
+                        // Don't check for line breaks here - accented characters are part of words
+                        // and breaking after each one would split words like "équivaut" into "é" + "quivaut"
+                        // Line breaking is handled in the regular .ordinary case below
 
                         // Add to atom list
                         if currentLineIndexRange.location == NSNotFound {
@@ -1337,11 +1360,20 @@ class MTTypesetter {
         let typesetter = CTTypesetterCreateWithAttributedString(attrString as CFAttributedString)
         let suggestedBreak = CTTypesetterSuggestLineBreak(typesetter, 0, Double(maxWidth))
 
-        guard suggestedBreak > 0 && suggestedBreak < text.count else {
+        guard suggestedBreak > 0 else {
             return nil
         }
 
-        let breakIndex = text.index(text.startIndex, offsetBy: suggestedBreak)
+        // IMPORTANT: CTTypesetterSuggestLineBreak returns a UTF-16 code unit offset,
+        // but Swift String.Index works with Unicode extended grapheme clusters.
+        // We must convert from UTF-16 space to String.Index properly to avoid
+        // breaking in the middle of Unicode characters (like "é" in "équivaut").
+
+        // Convert UTF-16 offset to String.Index
+        guard let utf16Index = text.utf16.index(text.utf16.startIndex, offsetBy: suggestedBreak, limitedBy: text.utf16.endIndex),
+              let breakIndex = String.Index(utf16Index, within: text) else {
+            return nil
+        }
 
         // Conservative check: verify we're not breaking within a number
         if isBreakingSafeForNumbers(text: text, breakIndex: breakIndex) {

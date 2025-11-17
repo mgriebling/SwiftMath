@@ -192,6 +192,39 @@ class MTMathUILabelLineWrappingTests: XCTestCase {
         XCTAssertNil(label.error, "Should have no rendering error")
     }
 
+    func testUnicodeWordBreaking_EquivautCase() {
+        // Specific test for the reported issue: "équivaut" should not break at "é"
+        let label = MTMathUILabel()
+        label.latex = "\\(\\text{Rappelons la conversion : 1 km équivaut à 1000 m.}\\)"
+        label.font = MTFontManager.fontManager.defaultFont
+        label.labelMode = .text
+
+        // Set the exact width constraint from the bug report
+        label.preferredMaxLayoutWidth = 235
+        let constrainedSize = label.intrinsicContentSize
+
+        // Verify the label can render without errors
+        label.frame = CGRect(origin: .zero, size: constrainedSize)
+        #if os(macOS)
+        label.layout()
+        #else
+        label.layoutSubviews()
+        #endif
+
+        XCTAssertNotNil(label.displayList, "Display list should be created")
+        XCTAssertNil(label.error, "Should have no rendering error")
+
+        // Verify that the text wrapped (multiple lines)
+        XCTAssertGreaterThan(constrainedSize.height, 20, "Should have wrapped to multiple lines")
+
+        // The critical check: ensure "équivaut" is not broken in the middle
+        // We can't easily check the exact line breaks, but we can verify:
+        // 1. The rendering succeeded without crashes
+        // 2. The display has reasonable dimensions
+        XCTAssertGreaterThan(constrainedSize.width, 100, "Width should be reasonable")
+        XCTAssertLessThan(constrainedSize.width, 250, "Width should respect constraint")
+    }
+
     func testNumberProtection_FrenchDecimal() {
         let label = MTMathUILabel()
         // French decimal number should NOT be broken
