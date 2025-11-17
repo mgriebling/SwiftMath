@@ -244,6 +244,7 @@ public class MTMathUILabel : MTView {
     override public func draw(_ dirtyRect: MTRect) {
         super.draw(dirtyRect)
         if self.mathList == nil { return }
+        if self.font == nil { return }
 
         // drawing code
         let context = MTGraphicsGetCurrentContext()!
@@ -253,48 +254,64 @@ public class MTMathUILabel : MTView {
     }
     
     func _layoutSubviews() {
-        if _mathList != nil {
-            // Use the effective width for layout
-            let effectiveWidth = _preferredMaxLayoutWidth > 0 ? _preferredMaxLayoutWidth : bounds.size.width
-            let availableWidth = effectiveWidth - contentInsets.left - contentInsets.right
-
-            print("🔧 MTMathUILabel _layoutSubviews:")
-            print("   preferredMaxLayoutWidth: \(_preferredMaxLayoutWidth)")
-            print("   bounds.size.width: \(bounds.size.width)")
-            print("   effectiveWidth: \(effectiveWidth)")
-            print("   availableWidth: \(availableWidth)")
-            print("   LaTeX: \(_latex.prefix(60))...")
-
-            // print("Pre list = \(_mathList!)")
-            _displayList = MTTypesetter.createLineForMathList(_mathList, font: font, style: currentStyle, maxWidth: availableWidth)
-            _displayList!.textColor = textColor
-
-            print("   Display subDisplays count: \(_displayList!.subDisplays.count)")
-            for (index, subDisplay) in _displayList!.subDisplays.enumerated() {
-                print("   Display \(index): type=\(type(of: subDisplay)), x=\(subDisplay.position.x), width=\(subDisplay.width)")
-                if let lineDisplay = subDisplay as? MTCTLineDisplay {
-                    print("     Content: '\(lineDisplay.attributedString?.string ?? "")'")
-                }
-            }
-            // print("Post list = \(_mathList!)")
-            var textX = CGFloat(0)
-            switch self.textAlignment {
-                case .left:   textX = contentInsets.left
-                case .center: textX = (bounds.size.width - contentInsets.left - contentInsets.right - _displayList!.width) / 2 + contentInsets.left
-                case .right:  textX = bounds.size.width - _displayList!.width - contentInsets.right
-            }
-            let availableHeight = bounds.size.height - contentInsets.bottom - contentInsets.top
-
-            // center things vertically
-            var height = _displayList!.ascent + _displayList!.descent
-            if height < fontSize/2 {
-                height = fontSize/2  // set height to half the font size
-            }
-            let textY = (availableHeight - height) / 2 + _displayList!.descent + contentInsets.bottom
-            _displayList!.position = CGPointMake(textX, textY)
-        } else {
+        guard _mathList != nil && self.font != nil else {
             _displayList = nil
+            errorLabel?.frame = self.bounds
+            self.setNeedsDisplay()
+            return
         }
+        // Ensure we have a valid font before attempting to typeset
+        if self.font == nil {
+            // No valid font - try to get default font
+            if let defaultFont = MTFontManager.fontManager.defaultFont {
+                self._font = defaultFont
+            } else {
+                // Cannot typeset without a font, clear display list
+                _displayList = nil
+                errorLabel?.frame = self.bounds
+                self.setNeedsDisplay()
+                return
+            }
+        }
+
+        // Use the effective width for layout
+        let effectiveWidth = _preferredMaxLayoutWidth > 0 ? _preferredMaxLayoutWidth : bounds.size.width
+        let availableWidth = effectiveWidth - contentInsets.left - contentInsets.right
+
+        print("🔧 MTMathUILabel _layoutSubviews:")
+        print("   preferredMaxLayoutWidth: \(_preferredMaxLayoutWidth)")
+        print("   bounds.size.width: \(bounds.size.width)")
+        print("   effectiveWidth: \(effectiveWidth)")
+        print("   availableWidth: \(availableWidth)")
+        print("   LaTeX: \(_latex.prefix(60))...")
+
+        // print("Pre list = \(_mathList!)")
+        _displayList = MTTypesetter.createLineForMathList(_mathList, font: self.font, style: currentStyle, maxWidth: availableWidth)
+        _displayList!.textColor = textColor
+
+        print("   Display subDisplays count: \(_displayList!.subDisplays.count)")
+        for (index, subDisplay) in _displayList!.subDisplays.enumerated() {
+            print("   Display \(index): type=\(type(of: subDisplay)), x=\(subDisplay.position.x), width=\(subDisplay.width)")
+            if let lineDisplay = subDisplay as? MTCTLineDisplay {
+                print("     Content: '\(lineDisplay.attributedString?.string ?? "")'")
+            }
+        }
+        // print("Post list = \(_mathList!)")
+        var textX = CGFloat(0)
+        switch self.textAlignment {
+            case .left:   textX = contentInsets.left
+            case .center: textX = (bounds.size.width - contentInsets.left - contentInsets.right - _displayList!.width) / 2 + contentInsets.left
+            case .right:  textX = bounds.size.width - _displayList!.width - contentInsets.right
+        }
+        let availableHeight = bounds.size.height - contentInsets.bottom - contentInsets.top
+
+        // center things vertically
+        var height = _displayList!.ascent + _displayList!.descent
+        if height < fontSize/2 {
+            height = fontSize/2  // set height to half the font size
+        }
+        let textY = (availableHeight - height) / 2 + _displayList!.descent + contentInsets.bottom
+        _displayList!.position = CGPointMake(textX, textY)
         errorLabel?.frame = self.bounds
         self.setNeedsDisplay()
     }
@@ -303,6 +320,17 @@ public class MTMathUILabel : MTView {
         guard _mathList != nil else {
             // No content - return no-intrinsic-size marker
             return CGSize(width: -1, height: -1)
+        }
+
+        // Ensure we have a valid font before attempting to typeset
+        if self.font == nil {
+            // No valid font - try to get default font
+            if let defaultFont = MTFontManager.fontManager.defaultFont {
+                self._font = defaultFont
+            } else {
+                // Cannot typeset without a font
+                return CGSize(width: -1, height: -1)
+            }
         }
 
         // Determine the maximum width to use
@@ -314,7 +342,7 @@ public class MTMathUILabel : MTView {
         }
 
         var displayList:MTMathListDisplay? = nil
-        displayList = MTTypesetter.createLineForMathList(_mathList, font: font, style: currentStyle, maxWidth: maxWidth)
+        displayList = MTTypesetter.createLineForMathList(_mathList, font: self.font, style: currentStyle, maxWidth: maxWidth)
 
         guard displayList != nil else {
             // Failed to create display list

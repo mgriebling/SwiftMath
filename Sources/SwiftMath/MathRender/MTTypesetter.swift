@@ -73,12 +73,18 @@ func getInterElementSpaceArrayIndexForType(_ type:MTMathAtomType, row:Bool) -> I
                 // They have the same spacing as ordinary except with ordinary.
                 return 8;
             } else {
-                assert(false, "Interelement space undefined for radical on the right. Treat radical as ordinary.")
-                return Int.max
+                // Treat radical as ordinary on the right side
+                return 0
             }
-        default:
-            assert(false, "Interelement space undefined for type \(type)")
-            return Int.max
+        // Numbers, variables, and unary operators are treated as ordinary
+        case .number, .variable, .unaryOperator:
+            return 0
+        // Decorative types (accent, underline, overline) are treated as ordinary
+        case .accent, .underline, .overline:
+            return 0
+        // Special types that don't typically participate in spacing are treated as ordinary
+        case .boundary, .space, .style, .table:
+            return 0
     }
 }
 
@@ -958,30 +964,12 @@ class MTTypesetter {
                         self.addDisplayLine()
                     }
 
-                    // Create the large operator display to check if we need line breaking
-                    let op = atom as! MTLargeOperator?
+                    // Add inter-element spacing before operator
+                    self.addInterElementSpace(prevNode, currentType:atom.type)
 
-                    // Save state before creating display (makeLargeOp may add scripts to displayAtoms)
-                    let savedDisplayAtomsCount = displayAtoms.count
-                    let savedPosition = currentPosition
-                    let tempDisplay = self.makeLargeOp(op)
-                    let tempIsTooTall = (tempDisplay!.ascent + tempDisplay!.descent) > styleFont.fontSize * 2.5
-                    let tempIsTooWide = shouldBreakBeforeDisplay(tempDisplay!, prevNode: prevNode, displayType: atom.type)
-                    let shouldBreak = tempIsTooTall || tempIsTooWide
-
-                    // Restore state (remove any scripts that were added)
-                    displayAtoms.removeLast(displayAtoms.count - savedDisplayAtomsCount)
-                    currentPosition = savedPosition
-
-                    // Perform line break if needed
-                    if shouldBreak {
-                        performLineBreak()
-                    } else {
-                        self.addInterElementSpace(prevNode, currentType:atom.type)
-                    }
-
-                    // Now create the display at the correct position (after spacing/line break)
+                    // Create and position the large operator display
                     // makeLargeOp sets position, advances currentPosition.x, and adds scripts
+                    let op = atom as! MTLargeOperator?
                     let display = self.makeLargeOp(op)
                     displayAtoms.append(display!)
                     
