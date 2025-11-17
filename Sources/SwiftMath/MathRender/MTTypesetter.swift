@@ -1726,10 +1726,11 @@ class MTTypesetter {
     }
     
     func fractionStyle() -> MTLineStyle {
-        if style == .scriptOfScript {
-            return .scriptOfScript
-        }
-        return style.inc()
+        // Keep fractions at the same style level instead of incrementing.
+        // This ensures that fraction numerators/denominators have the same
+        // font size as regular text, preventing them from appearing too small
+        // in inline mode or when nested.
+        return style
     }
     
     func makeFraction(_ frac:MTFraction?) -> MTDisplay? {
@@ -2041,7 +2042,9 @@ class MTTypesetter {
     // MARK: - Large Operators
     
     func makeLargeOp(_ op:MTLargeOperator!) -> MTDisplay?  {
-        let limits = op.limits && style == .display
+        // Show limits above/below in both display and text (inline) modes
+        // Only show limits to the side in script modes to keep them compact
+        let limits = op.limits && (style == .display || style == .text)
         var delta = CGFloat(0)
         if op.nucleus.count == 1 {
             var glyph = self.findGlyphForCharacterAtIndex(op.nucleus.startIndex, inString:op.nucleus)
@@ -2086,7 +2089,8 @@ class MTTypesetter {
             currentPosition.x += display!.width
             return display;
         }
-        if op.limits && style == .display {
+        // Show limits above/below in both display and text (inline) modes
+        if op.limits && (style == .display || style == .text) {
             // make limits
             var superScript:MTMathListDisplay? = nil, subScript:MTMathListDisplay? = nil
             if op.superScript != nil {

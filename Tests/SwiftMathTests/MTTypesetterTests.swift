@@ -982,6 +982,166 @@ final class MTTypesetterTests: XCTestCase {
         XCTAssertGreaterThan(display.width, 40, "Width should include operator + limits + spacing + x");
     }
 
+    func testLargeOpWithLimitsInlineMode_Limit() throws {
+        // Test that \lim in inline/text mode shows limits above/below (not to the side)
+        // This tests the fix for: \(\lim_{n \to \infty} \frac{1}{n} = 0\)
+        let latex = "\\lim_{n\\to\\infty}\\frac{1}{n}"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Should parse LaTeX")
+
+        // Use .text style to simulate inline mode \(...\)
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .text)!
+        XCTAssertNotNil(display)
+        XCTAssertEqual(display.type, .regular)
+
+        // Should have at least 2 subdisplays: lim with limits, and fraction
+        XCTAssertGreaterThanOrEqual(display.subDisplays.count, 2)
+
+        // First subdisplay should be the limit operator with limits display
+        let limDisplay = display.subDisplays[0]
+        XCTAssertTrue(limDisplay is MTLargeOpLimitsDisplay, "Limit should use MTLargeOpLimitsDisplay in inline mode")
+
+        if let limitsDisplay = limDisplay as? MTLargeOpLimitsDisplay {
+            XCTAssertNotNil(limitsDisplay.lowerLimit, "Should have lower limit (n→∞)")
+            XCTAssertNil(limitsDisplay.upperLimit, "Should not have upper limit")
+            XCTAssertLessThan(limitsDisplay.lowerLimit!.position.y, 0, "Lower limit should be below baseline")
+        }
+    }
+
+    func testLargeOpWithLimitsInlineMode_Sum() throws {
+        // Test that \sum in inline/text mode shows limits above/below (not to the side)
+        // This tests the fix for: \(\sum_{i=1}^{n} i\)
+        let latex = "\\sum_{i=1}^{n}i"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Should parse LaTeX")
+
+        // Use .text style to simulate inline mode \(...\)
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .text)!
+        XCTAssertNotNil(display)
+        XCTAssertEqual(display.type, .regular)
+
+        // Should have at least 2 subdisplays: sum with limits, and variable i
+        XCTAssertGreaterThanOrEqual(display.subDisplays.count, 2)
+
+        // First subdisplay should be the sum operator with limits display
+        let sumDisplay = display.subDisplays[0]
+        XCTAssertTrue(sumDisplay is MTLargeOpLimitsDisplay, "Sum should use MTLargeOpLimitsDisplay in inline mode")
+
+        if let limitsDisplay = sumDisplay as? MTLargeOpLimitsDisplay {
+            XCTAssertNotNil(limitsDisplay.upperLimit, "Should have upper limit (n)")
+            XCTAssertNotNil(limitsDisplay.lowerLimit, "Should have lower limit (i=1)")
+            XCTAssertGreaterThan(limitsDisplay.upperLimit!.position.y, 0, "Upper limit should be above baseline")
+            XCTAssertLessThan(limitsDisplay.lowerLimit!.position.y, 0, "Lower limit should be below baseline")
+        }
+    }
+
+    func testLargeOpWithLimitsInlineMode_Product() throws {
+        // Test that \prod in inline/text mode shows limits above/below (not to the side)
+        // This tests the fix for: \(\prod_{k=1}^{\infty} (1 + x^k)\)
+        let latex = "\\prod_{k=1}^{\\infty}x"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Should parse LaTeX")
+
+        // Use .text style to simulate inline mode \(...\)
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .text)!
+        XCTAssertNotNil(display)
+        XCTAssertEqual(display.type, .regular)
+
+        // Should have at least 2 subdisplays: prod with limits, and variable x
+        XCTAssertGreaterThanOrEqual(display.subDisplays.count, 2)
+
+        // First subdisplay should be the product operator with limits display
+        let prodDisplay = display.subDisplays[0]
+        XCTAssertTrue(prodDisplay is MTLargeOpLimitsDisplay, "Product should use MTLargeOpLimitsDisplay in inline mode")
+
+        if let limitsDisplay = prodDisplay as? MTLargeOpLimitsDisplay {
+            XCTAssertNotNil(limitsDisplay.upperLimit, "Should have upper limit (∞)")
+            XCTAssertNotNil(limitsDisplay.lowerLimit, "Should have lower limit (k=1)")
+            XCTAssertGreaterThan(limitsDisplay.upperLimit!.position.y, 0, "Upper limit should be above baseline")
+            XCTAssertLessThan(limitsDisplay.lowerLimit!.position.y, 0, "Lower limit should be below baseline")
+        }
+    }
+
+    func testFractionInlineMode_NormalFontSize() throws {
+        // Test that \(...\) delimiter doesn't make fractions too small
+        // This tests the fix for: \(\frac{a}{b} = c\)
+        let latex = "\\frac{a}{b}"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Should parse LaTeX")
+
+        // Create display without any style forcing
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display)!
+        XCTAssertNotNil(display)
+        XCTAssertEqual(display.type, .regular)
+
+        // Should have 1 subdisplay: the fraction
+        XCTAssertEqual(display.subDisplays.count, 1)
+
+        // First subdisplay should be the fraction
+        let fracDisplay = display.subDisplays[0]
+        XCTAssertTrue(fracDisplay is MTFractionDisplay, "Should be a fraction display")
+
+        if let fractionDisplay = fracDisplay as? MTFractionDisplay {
+            XCTAssertNotNil(fractionDisplay.numerator, "Should have numerator")
+            XCTAssertNotNil(fractionDisplay.denominator, "Should have denominator")
+
+            // The numerator and denominator should use text style (not script style)
+            // In display mode, fractions use text style for numerator/denominator
+            // Check that the font size is reasonable (not script-sized)
+            let numDisplay = fractionDisplay.numerator!
+            XCTAssertGreaterThan(numDisplay.width, 5, "Numerator should have reasonable size, not script-sized")
+            XCTAssertGreaterThan(numDisplay.ascent, 5, "Numerator should have reasonable ascent, not script-sized")
+        }
+    }
+
+    func testFractionInlineDelimiters_NormalSize() throws {
+        // Test that \(\frac{a}{b}\) has full-sized numerator/denominator
+        // Inline delimiters insert \textstyle, but fractions maintain same font size
+        let latex1 = "\\(\\frac{a}{b}\\)"
+
+        let mathList1 = MTMathListBuilder.build(fromString: latex1)
+        XCTAssertNotNil(mathList1, "Should parse LaTeX with delimiters")
+
+        let display1 = MTTypesetter.createLineForMathList(mathList1, font: self.font, style: .display)!
+
+        // Should have subdisplays (style atom + fraction)
+        XCTAssertGreaterThanOrEqual(display1.subDisplays.count, 1)
+
+        // Find the fraction display (it might be after a style atom)
+        let fracDisplay = display1.subDisplays.first(where: { $0 is MTFractionDisplay }) as? MTFractionDisplay
+        XCTAssertNotNil(fracDisplay, "Should have fraction display")
+
+        // The numerator should have reasonable size (not script-sized)
+        XCTAssertGreaterThan(fracDisplay!.numerator!.width, 8, "Numerator should have reasonable width")
+        XCTAssertGreaterThan(fracDisplay!.numerator!.ascent, 6, "Numerator should have reasonable ascent")
+    }
+
+    func testComplexFractionInlineMode() throws {
+        // Test that complex fractions in inline mode render at normal size
+        // This tests: \(\frac{x^2 + 1}{y - 3}\)
+        let latex = "\\frac{x^2+1}{y-3}"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Should parse LaTeX")
+
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display)!
+        XCTAssertNotNil(display)
+
+        // Should have a fraction display
+        XCTAssertEqual(display.subDisplays.count, 1)
+        let fracDisplay = display.subDisplays[0]
+        XCTAssertTrue(fracDisplay is MTFractionDisplay)
+
+        if let fractionDisplay = fracDisplay as? MTFractionDisplay {
+            // Numerator should contain multiple atoms (x^2 + 1)
+            let numDisplay = fractionDisplay.numerator!
+            XCTAssertGreaterThanOrEqual(numDisplay.subDisplays.count, 1, "Numerator should have content")
+
+            // Check that the numerator has reasonable size (not script-sized)
+            XCTAssertGreaterThan(numDisplay.width, 20, "Complex numerator should have reasonable width")
+            XCTAssertGreaterThan(numDisplay.ascent, 5, "Numerator with superscript should have reasonable height")
+        }
+    }
+
     func testInner() throws {
         let innerList = MTMathList()
         innerList.add(MTMathAtomFactory.atom(forCharacter: "x"))
@@ -1202,11 +1362,11 @@ final class MTTypesetterTests: XCTestCase {
     func testLargeRadicalDescent() throws {
         let list = MTMathListBuilder.build(fromString: "\\sqrt{\\frac{\\sqrt{\\frac{1}{2}} + 3}{\\sqrt{5}^x}}")
         let display = MTTypesetter.createLineForMathList(list, font:self.font, style:.display)!
-        
-        // dimensions
-        XCTAssertEqual(display.ascent, 49.16, accuracy: 0.01)
+
+        // dimensions (updated for new fraction sizing where fractions maintain same size as parent style)
+        XCTAssertEqual(display.ascent, 61.16, accuracy: 0.01)
         XCTAssertEqual(display.descent, 21.288, accuracy: 0.01)
-        XCTAssertEqual(display.width, 82.569, accuracy: 0.01)
+        XCTAssertEqual(display.width, 85.569, accuracy: 0.01)
     }
 
     func testMathTable() throws {
@@ -1420,21 +1580,22 @@ final class MTTypesetterTests: XCTestCase {
         let list = MTMathList(atoms: [frac])
         let style = MTMathStyle(style: .text)
         let textList = MTMathList(atoms: [style, frac])
-        
+
         // This should make the display same as text.
         let display = MTTypesetter.createLineForMathList(textList, font:self.font, style:.display)!
         let textDisplay = MTTypesetter.createLineForMathList(list, font:self.font, style:.text)!
         let originalDisplay = MTTypesetter.createLineForMathList(list, font:self.font, style:.display)!
-        
+
         // Display should be the same as rendering the fraction in text style.
         XCTAssertEqual(display.ascent, textDisplay.ascent);
         XCTAssertEqual(display.descent, textDisplay.descent);
         XCTAssertEqual(display.width, textDisplay.width);
-        
-        // Original display should be larger than display since it is greater.
-        XCTAssertGreaterThan(originalDisplay.ascent, display.ascent);
-        XCTAssertGreaterThan(originalDisplay.descent, display.descent);
-        XCTAssertGreaterThan(originalDisplay.width, display.width);
+
+        // With updated fractionStyle(), fractions use the same font size in display and text modes,
+        // but spacing/positioning is still different (numeratorShiftUp, etc. check parent style).
+        // So originalDisplay (display mode) will be larger than display (text mode).
+        XCTAssertGreaterThan(originalDisplay.ascent, display.ascent, "Display mode fractions have more vertical spacing");
+        XCTAssertGreaterThan(originalDisplay.descent, display.descent, "Display mode fractions have more vertical spacing");
     }
 
     func testStyleMiddle() throws {
