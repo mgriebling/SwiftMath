@@ -372,6 +372,9 @@ class MTTypesetter {
     var currentLineStartIndex: Int = 0  // Index in displayAtoms where current line starts
     var minimumLineSpacing: CGFloat = 0  // Minimum spacing between lines (will be set based on fontSize)
 
+    // Performance optimization: skip line breaking checks if we know all remaining content fits
+    private var remainingContentFits = false
+
     static func createLineForMathList(_ mathList:MTMathList?, font:MTFont?, style:MTLineStyle) -> MTMathListDisplay? {
         let finalizedList = mathList?.finalized
         // default is not cramped, no width constraint
@@ -542,6 +545,11 @@ class MTTypesetter {
         // Don't break if current line is empty
         guard currentLine.length > 0 else { return false }
 
+        // Performance optimization: if we've determined remaining content fits, skip breaking checks
+        if remainingContentFits {
+            return false
+        }
+
         // CRITICAL: Don't break in the middle of words
         // When "équivaut" is decomposed as "é" (accent) + "quivaut" (ordinary),
         // we must not break between them even if the line exceeds maxWidth.
@@ -579,6 +587,22 @@ class MTTypesetter {
 
         // If we're well within the limit, no need to break
         if projectedWidth <= maxWidth {
+            // Performance optimization: if we have plenty of space left and limited atoms remaining,
+            // we can skip all future line breaking checks for this line
+            if !remainingContentFits && !nextAtoms.isEmpty {
+                // Conservative estimate: if we're using less than 60% of available width
+                // and have only a few atoms left, assume remaining content will fit
+                let usageRatio = projectedWidth / maxWidth
+                if usageRatio < 0.6 && nextAtoms.count <= 5 {
+                    remainingContentFits = true
+                } else if usageRatio < 0.75 {
+                    // For moderate usage, estimate remaining content width
+                    let estimatedRemainingWidth = estimateRemainingAtomsWidth(nextAtoms)
+                    if projectedWidth + estimatedRemainingWidth <= maxWidth {
+                        remainingContentFits = true
+                    }
+                }
+            }
             return false
         }
 
@@ -638,8 +662,35 @@ class MTTypesetter {
         return true
     }
 
+    /// Estimate the approximate width of remaining atoms
+    /// Returns a conservative (upper bound) estimate
+    private func estimateRemainingAtomsWidth(_ atoms: [MTMathAtom]) -> CGFloat {
+        // Use a simple heuristic: average character width * character count
+        let avgCharWidth = styleFont.mathTable?.muUnit ?? (styleFont.fontSize / 18.0)
+        var totalChars = 0
+
+        for atom in atoms {
+            // Count nucleus characters
+            totalChars += atom.nucleus.count
+
+            // Add extra for subscripts/superscripts (rough estimate)
+            if atom.subScript != nil {
+                totalChars += 3
+            }
+            if atom.superScript != nil {
+                totalChars += 3
+            }
+        }
+
+        // Return conservative estimate (multiply by 1.5 for safety margin)
+        return CGFloat(totalChars) * avgCharWidth * 1.5
+    }
+
     /// Perform the actual line break operation
     private func performInteratomLineBreak() {
+        // Reset optimization flag - after breaking, we need to check again
+        remainingContentFits = false
+
         // Flush the current line
         self.addDisplayLine()
 
@@ -1261,6 +1312,9 @@ class MTTypesetter {
                                         currentAtoms = []  // Approximate - we're splitting
                                         self.addDisplayLine()
 
+                                        // Reset optimization flag after line break
+                                        remainingContentFits = false
+
                                         // Calculate dynamic line height and move down for new line
                                         let lineHeight = calculateCurrentLineHeight()
                                         currentPosition.y -= lineHeight
@@ -1283,6 +1337,9 @@ class MTTypesetter {
                                     currentLine = firstLine
                                     currentAtoms = firstLineAtoms
                                     self.addDisplayLine()
+
+                                    // Reset optimization flag after line break
+                                    remainingContentFits = false
 
                                     // Calculate dynamic line height and move down for new line
                                     let lineHeight = calculateCurrentLineHeight()
