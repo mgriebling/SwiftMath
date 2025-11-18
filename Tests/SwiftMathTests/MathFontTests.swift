@@ -76,7 +76,6 @@ final class MathFontTests: XCTestCase {
         executionGroup.notify(queue: .main) { [weak self] in
             guard let self = self else { return }
             XCTAssertEqual(self.testCount, totalCases)
-            print("\(self.testCount) completed =================")
         }
         executionGroup.wait()
     }

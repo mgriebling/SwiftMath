@@ -253,7 +253,6 @@ class MTMathUILabelLineWrappingTests: XCTestCase {
 
         // Check that we have multiple display elements (wrapped content)
         if let displayList = label.displayList {
-            print("Display has \(displayList.subDisplays.count) subdisplays")
             XCTAssertGreaterThan(displayList.subDisplays.count, 1, "Should have multiple display elements from wrapping")
         }
     }
