@@ -185,6 +185,7 @@ public class MTMathUILabel : MTView {
     public var preferredMaxLayoutWidth: CGFloat {
         set {
             _preferredMaxLayoutWidth = newValue
+            _displayList = nil  // Clear cached display list when width constraint changes
             self.invalidateIntrinsicContentSize()
             self.setNeedsLayout()
         }
@@ -246,10 +247,18 @@ public class MTMathUILabel : MTView {
         if self.mathList == nil { return }
         if self.font == nil { return }
 
+        // Ensure display list is created before drawing
+        if _displayList == nil {
+            _layoutSubviews()
+        }
+        
+        guard let displayList = _displayList else { return }
+
         // drawing code
         let context = MTGraphicsGetCurrentContext()!
         context.saveGState()
-        displayList!.draw(context)
+        
+        displayList.draw(context)
         context.restoreGState()
     }
     
@@ -278,10 +287,9 @@ public class MTMathUILabel : MTView {
         let effectiveWidth = _preferredMaxLayoutWidth > 0 ? _preferredMaxLayoutWidth : bounds.size.width
         let availableWidth = effectiveWidth - contentInsets.left - contentInsets.right
 
-        // print("Pre list = \(_mathList!)")
         _displayList = MTTypesetter.createLineForMathList(_mathList, font: self.font, style: currentStyle, maxWidth: availableWidth)
+        
         _displayList!.textColor = textColor
-        // print("Post list = \(_mathList!)")
         var textX = CGFloat(0)
         switch self.textAlignment {
             case .left:   textX = contentInsets.left
@@ -296,6 +304,7 @@ public class MTMathUILabel : MTView {
             height = fontSize/2  // set height to half the font size
         }
         let textY = (availableHeight - height) / 2 + _displayList!.descent + contentInsets.bottom
+        
         _displayList!.position = CGPointMake(textX, textY)
         errorLabel?.frame = self.bounds
         self.setNeedsDisplay()
@@ -362,7 +371,6 @@ public class MTMathUILabel : MTView {
     func setNeedsLayout() { self.needsLayout = true }
     public override var fittingSize: CGSize { _sizeThatFits(CGSizeZero) }
     public override var intrinsicContentSize: CGSize { _sizeThatFits(CGSizeZero) }
-    override public var isFlipped: Bool { false }
     override public func layout() {
         self._layoutSubviews()
         super.layout()

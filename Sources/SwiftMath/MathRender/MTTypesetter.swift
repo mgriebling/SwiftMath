@@ -733,6 +733,76 @@ class MTTypesetter {
         return projectedWidth > maxWidth
     }
 
+    /// Adjust the current position to avoid overlap between the new display and previous line's displays
+    /// This is called when adding displays to a line below the first line
+    ///
+    /// Coordinate formulas (from test expectations):
+    /// - Bottom of display = position.y + descent
+    /// - Top of display = position.y - ascent  
+    /// - No overlap when: prevBottom <= currTop + spacing
+    /// - Which means: prevBottom <= (currPosition - currAscent) + spacing
+    /// - Rearranging: currPosition >= prevBottom + currAscent - spacing
+    ///
+    /// Recursively adjust positions of a display and all its nested sub-displays
+    /// Note: For MTRadicalDisplay and MTFractionDisplay, their position setters automatically
+    /// update child positions (radicand/degree, numerator/denominator), so we don't need
+    /// to manually adjust those. We only need to adjust subdisplays within MTMathListDisplay.
+    private func adjustDisplayPosition(_ display: MTDisplay, by delta: CGFloat) {
+        display.position.y += delta
+        
+        // If it's a MTMathListDisplay, adjust all its subdisplays too
+        if let mathListDisplay = display as? MTMathListDisplay {
+            for subDisplay in mathListDisplay.subDisplays {
+                adjustDisplayPosition(subDisplay, by: delta)
+            }
+        }
+        
+        // Note: No special handling needed for MTRadicalDisplay or MTFractionDisplay
+        // Their position setters handle updating child positions automatically
+    }
+    
+    /// Adjust position to avoid overlap with previous line
+    /// In CoreText's Y-up coordinate system:
+    /// - Positive Y = upward, Negative Y = downward
+    /// - Top of display = position + ascent (higher Y)
+    /// - Bottom of display = position - descent (lower Y)
+    /// - No overlap when: prevBottom >= currTop (with spacing)
+    private func adjustPositionToAvoidOverlap(_ display: MTDisplay) {
+        // Find all displays on previous lines and calculate their minimum bottom edge
+        // In Y-up: Bottom = position - descent (lower Y value)
+        var minBottomEdge: CGFloat = CGFloat.greatestFiniteMagnitude
+        
+        for i in 0..<currentLineStartIndex {
+            let prevDisplay = displayAtoms[i]
+            let bottomEdge = prevDisplay.position.y - prevDisplay.descent
+            minBottomEdge = min(minBottomEdge, bottomEdge)
+        }
+        
+        // Calculate where current top would be
+        // In Y-up: Top = position + ascent (higher Y value)
+        let currentTop = currentPosition.y + display.ascent
+        
+        // Check for overlap: prevBottom should be <= currTop (with spacing)
+        // We need prevBottom - spacing >= currTop for no overlap
+        let tolerance: CGFloat = 0.5
+        let maxAllowedTop = minBottomEdge - tolerance
+        
+        if currentTop > maxAllowedTop {
+            // Current top is too high, adjust position downward (more negative)
+            // We need: position + ascent = maxAllowedTop
+            // So: position = maxAllowedTop - ascent
+            let requiredPosition = maxAllowedTop - display.ascent
+            let delta = requiredPosition - currentPosition.y
+            
+            currentPosition.y = requiredPosition
+            
+            // Update all displays on this line, including nested subdisplays
+            for i in currentLineStartIndex..<displayAtoms.count {
+                adjustDisplayPosition(displayAtoms[i], by: delta)
+            }
+        }
+    }
+
     /// Perform line break for complex displays
     func performLineBreak() {
         if currentLine.length > 0 {
@@ -1000,6 +1070,12 @@ class MTTypesetter {
                     // Position and add the radical display
                     displayRad!.position = currentPosition
                     displayAtoms.append(displayRad!)
+                    
+                    // Check for overlap if we're not on the first line
+                    if currentLineStartIndex > 0 {
+                        adjustPositionToAvoidOverlap(displayRad!)
+                    }
+                    
                     currentPosition.x += displayRad!.width
 
                     // add super scripts || subscripts
@@ -1032,6 +1108,12 @@ class MTTypesetter {
                     // Position and add the fraction display
                     display!.position = currentPosition
                     displayAtoms.append(display!)
+                    
+                    // Check for overlap if we're not on the first line
+                    if currentLineStartIndex > 0 {
+                        adjustPositionToAvoidOverlap(display!)
+                    }
+                    
                     currentPosition.x += display!.width
 
                     // add super scripts || subscripts
