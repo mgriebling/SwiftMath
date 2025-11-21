@@ -2187,18 +2187,8 @@ final class MTMathListBuilderTests: XCTestCase {
         ]
 
         for (latex, desc) in testCases {
-            print("Testing: \(desc)")
-            print("  LaTeX: \(latex)")
             var error: NSError? = nil
             let list = MTMathListBuilder.build(fromString: latex, error: &error)
-
-            if let err = error {
-                print("  ERROR: \(err.localizedDescription)")
-            } else if list == nil {
-                print("  List is nil but no error")
-            } else {
-                print("  SUCCESS: Got \(list!.atoms.count) atoms")
-            }
 
             let unwrappedList = try XCTUnwrap(list, "Should parse: \(desc)")
             XCTAssertNil(error, "Should not error on \(desc): \(error?.localizedDescription ?? "")")
@@ -2474,18 +2464,8 @@ final class MTMathListBuilderTests: XCTestCase {
         ]
 
         for (latex, desc) in testCases {
-            print("Testing: \(desc)")
-            print("  LaTeX: \(latex)")
             var error: NSError? = nil
             let list = MTMathListBuilder.build(fromString: latex, error: &error)
-
-            if let err = error {
-                print("  ERROR: \(err.localizedDescription)")
-            } else if list == nil {
-                print("  List is nil but no error")
-            } else {
-                print("  SUCCESS: Got \(list!.atoms.count) atoms")
-            }
 
             let unwrappedList = try XCTUnwrap(list, "Should parse: \(desc)")
             XCTAssertNil(error, "Should not error on \(desc): \(error?.localizedDescription ?? "")")
@@ -2521,18 +2501,8 @@ final class MTMathListBuilderTests: XCTestCase {
         ]
 
         for (latex, desc) in testCases {
-            print("Testing: \(desc)")
-            print("  LaTeX: \(latex)")
             var error: NSError? = nil
             let list = MTMathListBuilder.build(fromString: latex, error: &error)
-
-            if let err = error {
-                print("  ERROR: \(err.localizedDescription)")
-            } else if list == nil {
-                print("  List is nil but no error")
-            } else {
-                print("  SUCCESS: Got \(list!.atoms.count) atoms")
-            }
 
             let unwrappedList = try XCTUnwrap(list, "Should parse: \(desc)")
             XCTAssertNil(error, "Should not error on \(desc): \(error?.localizedDescription ?? "")")

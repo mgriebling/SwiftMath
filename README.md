@@ -193,7 +193,7 @@ struct MathView: NSViewRepresentable {
 
 ### Automatic Line Wrapping
 
-`SwiftMath` supports automatic line wrapping for text and simple math expressions. When the content exceeds the available width, it will wrap at word boundaries to fit within the constrained space.
+`SwiftMath` supports automatic line wrapping (multiline display) for mathematical content. The implementation uses **interatom line breaking** which breaks equations at atom boundaries (between mathematical elements) rather than within them, preserving the semantic structure of the mathematics.
 
 #### Using Line Wrapping with UIKit/AppKit
 
@@ -201,18 +201,17 @@ For direct `MTMathUILabel` usage, set the `preferredMaxLayoutWidth` property:
 
 ```swift
 let label = MTMathUILabel()
-label.latex = "\\(\\text{Remember the conversion: 1 km equals 1000 meters.}\\)"
+label.latex = "\\text{Calculer le discriminant }\\Delta=b^{2}-4ac\\text{ avec }a=1\\text{, }b=-1\\text{, }c=-5"
 label.font = MTFontManager.fontManager.defaultFont
-label.labelMode = .text
 
 // Enable line wrapping by setting a maximum width
-label.preferredMaxLayoutWidth = 300
+label.preferredMaxLayoutWidth = 235
 ```
 
 You can also use `sizeThatFits` to calculate the size with a width constraint:
 
 ```swift
-let constrainedSize = label.sizeThatFits(CGSize(width: 300, height: .greatestFiniteMagnitude))
+let constrainedSize = label.sizeThatFits(CGSize(width: 235, height: .greatestFiniteMagnitude))
 ```
 
 #### Using Line Wrapping with SwiftUI
@@ -222,63 +221,216 @@ The `MathView` examples above include `sizeThatFits()` which automatically enabl
 ```swift
 VStack(alignment: .leading, spacing: 8) {
     MathView(
-        equation: "\\(\\text{Remember the conversion: 1 km equals 1000 meters.}\\)",
+        equation: "\\text{Calculer le discriminant }\\Delta=b^{2}-4ac\\text{ avec }a=1\\text{, }b=-1\\text{, }c=-5",
         fontSize: 17,
         labelMode: .text
     )
 }
-.frame(maxWidth: 300)  // The text will wrap to fit within 300pt
+.frame(maxWidth: 235)  // The equation will break across multiple lines
 ```
 
-#### Line Wrapping Behavior
+#### Line Wrapping Behavior and Capabilities
 
-- **Works for**: Text content (`\text{...}`), mixed text with simple math, and simple equations
-- **Breaks at**: Word boundaries (spaces)
-- **Preserves**: Complex math layout (fractions, superscripts, matrices remain on single lines)
-- **Respects**: Unicode text including CJK characters with proper word boundaries
+SwiftMath implements **two complementary line breaking mechanisms**:
+
+##### 1. Interatom Line Breaking (Primary)
+Breaks equations **between atoms** (mathematical elements) when content exceeds the width constraint. This is the preferred method as it maintains semantic integrity.
+
+##### 2. Universal Line Breaking (Fallback)
+For very long text within single atoms, breaks at Unicode word boundaries using Core Text with number protection (prevents splitting numbers like "3.14").
+
+#### Fully Supported Cases
+
+These atom types work perfectly with interatom line breaking:
+
+**✅ Variables and ordinary text:**
+```swift
+label.latex = "a b c d e f g h i j k l m n o p"
+label.preferredMaxLayoutWidth = 150
+// Breaks between individual variables at natural boundaries
+```
+
+**✅ Binary operators (+, -, ×, ÷):**
+```swift
+label.latex = "a+b+c+d+e+f+g+h"
+label.preferredMaxLayoutWidth = 100
+// Breaks cleanly: "a+b+c+d+"
+//                 "e+f+g+h"
+```
+
+**✅ Relations (=, <, >, ≤, ≥, etc.):**
+```swift
+label.latex = "a=1, b=2, c=3, d=4, e=5"
+label.preferredMaxLayoutWidth = 120
+// Breaks after commas and operators
+```
+
+**✅ Mixed text and simple math:**
+```swift
+label.latex = "\\text{Calculer }\\Delta=b^{2}-4ac\\text{ avec }a=1\\text{, }b=-1"
+label.preferredMaxLayoutWidth = 200
+// Breaks between text and math atoms naturally
+```
+
+**✅ Punctuation (commas, periods):**
+```swift
+label.latex = "\\text{First, second, third, fourth, fifth}"
+label.preferredMaxLayoutWidth = 150
+// Breaks at commas and spaces
+```
+
+**✅ Brackets and parentheses (simple):**
+```swift
+label.latex = "(a+b)+(c+d)+(e+f)"
+label.preferredMaxLayoutWidth = 120
+// Breaks between parenthesized groups
+```
+
+**✅ Greek letters and symbols:**
+```swift
+label.latex = "\\alpha+\\beta+\\gamma+\\delta+\\epsilon+\\zeta"
+label.preferredMaxLayoutWidth = 150
+// Breaks between Greek letters
+```
+
+**✅ Fractions (NEW!):**
+```swift
+label.latex = "a+\\frac{1}{2}+b+\\frac{3}{4}+c"
+label.preferredMaxLayoutWidth = 150
+// Fractions stay inline if they fit, break to new line only when needed
+// Example: "a + ½ + b" stays on one line if it fits
+```
+
+**✅ Radicals/Square roots (NEW!):**
+```swift
+label.latex = "x+\\sqrt{2}+y+\\sqrt{3}+z"
+label.preferredMaxLayoutWidth = 150
+// Radicals stay inline if they fit, break to new line only when needed
+// Example: "x + √2 + y" stays on one line if it fits
+```
+
+**✅ Mixed fractions and radicals (NEW!):**
+```swift
+label.latex = "a+\\frac{1}{2}+\\sqrt{3}+b"
+label.preferredMaxLayoutWidth = 200
+// Intelligently breaks between complex mathematical elements
+```
+
+#### Limited Support Cases
+
+These cases work but with some constraints:
+
+**⚠️ Atoms with superscripts/subscripts:**
+```swift
+label.latex = "a^{2}+b^{2}+c^{2}+d^{2}+e^{2}"
+label.preferredMaxLayoutWidth = 150
+// Works, but uses fallback breaking mechanism
+// May not break at the most optimal positions
+```
+**Note**: Scripted atoms (with superscripts/subscripts) trigger the universal breaking mechanism which breaks within accumulated text rather than at atom boundaries. This still works but may not be as clean as pure interatom breaking.
+
+**⚠️ Very long single text atoms:**
+```swift
+label.latex = "\\text{This is an extremely long piece of text within a single text command}"
+label.preferredMaxLayoutWidth = 200
+// Uses Unicode word boundary breaking with Core Text
+// Protects numbers from being split (e.g., "3.14" stays together)
+```
+
+#### Remaining Unsupported Cases
+
+These atom types still force line breaks (not yet optimized):
+
+**⚠️ Large operators (∑, ∫, ∏, lim):**
+```swift
+label.latex = "\\sum_{i=1}^{n} x_i + \\int_{0}^{1} f(x)dx"
+// Each operator forces a new line
+```
+
+**⚠️ Matrices and tables:**
+```swift
+label.latex = "A = \\begin{pmatrix} 1 & 2 \\\\ 3 & 4 \\end{pmatrix}"
+// Matrix always on own line
+```
+
+**⚠️ Delimited expressions (\left...\right):**
+```swift
+label.latex = "\\left(\\frac{a}{b}\\right) + c"
+// The parenthesized group forces line breaks
+```
+
+**⚠️ Colored expressions:**
+```swift
+label.latex = "a + \\color{red}{b} + c"
+// Colored portion causes line break
+```
+
+**⚠️ Math accents:**
+```swift
+label.latex = "\\hat{x} + \\tilde{y} + \\bar{z}"
+// Accents may cause line breaks
+```
+
+#### Best Practices
+
+**DO:**
+- Use interatom breaking for simple equations with operators and relations
+- Use for mixed text and math where you want natural breaks
+- Use for long sequences of variables, numbers, and operators
+- Set appropriate `preferredMaxLayoutWidth` based on your layout needs
+
+**DON'T:**
+- Expect natural breaking in expressions with large operators (∑, ∫, etc. - not yet optimized)
+- Expect natural breaking in expressions with \left...\right delimiters (not yet optimized)
+- Use extremely narrow widths (less than ~80pt) which may cause poor breaks
 
 #### Examples
 
-**Simple text wrapping:**
+**Excellent use case (discriminant formula):**
 ```swift
-// Long text will wrap to multiple lines
-label.latex = "\\(\\text{The quadratic formula is used to solve equations of the form } ax^2 + bx + c = 0\\)"
-label.preferredMaxLayoutWidth = 250
+label.latex = "\\text{Calculer le discriminant }\\Delta=b^{2}-4ac\\text{ avec }a=1\\text{, }b=-1\\text{, }c=-5"
+label.preferredMaxLayoutWidth = 235
+// ✅ Breaks naturally at good points between atoms
 ```
 
-**Simple equation with operators:**
+**Good use case (simple arithmetic):**
 ```swift
-// Long equations can break between operators if too long
-label.latex = "\\(5 + 10 + 15 + 20 + 25 + 30\\)"
+label.latex = "5+10+15+20+25+30+35+40+45+50"
 label.preferredMaxLayoutWidth = 150
-// Will wrap: "5 + 10 + 15 + 20 +"
-//            "25 + 30"
+// ✅ Breaks between operators cleanly
 ```
 
-**Mixed text and math:**
+**Excellent use case (fractions inline - NEW!):**
 ```swift
-// Text wraps but math expressions stay intact
-label.latex = "\\(\\text{Result: } 5 \\times 1000 = 5000 \\text{ meters}\\)"
+label.latex = "a+\\frac{1}{2}+b+\\frac{3}{4}+c"
 label.preferredMaxLayoutWidth = 200
-// Will wrap at spaces between text and operators
+// ✅ Fractions stay inline when they fit!
+// Breaks intelligently: "a + ½ + b" on line 1, "+ ¾ + c" on line 2
 ```
 
-**Multiple lines in SwiftUI:**
+**Excellent use case (radicals inline - NEW!):**
 ```swift
-ScrollView {
-    VStack(alignment: .leading, spacing: 12) {
-        ForEach(steps) { step in
-            MathView(
-                equation: step.description,
-                fontSize: 17,
-                labelMode: .text
-            )
-        }
-    }
-    .padding()
-}
-// Each MathView will automatically wrap based on available width
+label.latex = "x+\\sqrt{2}+y+\\sqrt{3}+z"
+label.preferredMaxLayoutWidth = 150
+// ✅ Radicals stay inline when they fit!
+// Example: "x + √2 + y" on line 1, "+ √3 + z" on line 2
 ```
+
+**Alternative for complex expressions:**
+```swift
+// Instead of trying to break this:
+label.latex = "x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}"
+// Consider it as a single display equation without width constraint
+label.preferredMaxLayoutWidth = 0  // No breaking
+```
+
+#### Technical Details
+
+- **Line spacing**: New lines are positioned at `fontSize × 1.5` below the previous line
+- **Breaking algorithm**: Greedy - breaks immediately when projected width exceeds constraint
+- **Width calculation**: Includes inter-element spacing according to TeX spacing rules
+- **Number protection**: Numbers in patterns like "3.14", "1,000", etc. are kept intact
+- **Supports locales**: English, French, Swiss number formats
 
 ### Included Features
 This is a list of formula types that the library currently supports:

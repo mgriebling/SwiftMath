@@ -22,7 +22,6 @@ final class MTFontMathTableV2Tests: XCTestCase {
                 mTable?.fractionNumeratorDisplayStyleGapMin,
                 mTable?.fractionNumeratorGapMin,
             ].compactMap{$0}
-            print("\($0.rawValue).plist: \(values)")
         }
     }
     private let executionQueue = DispatchQueue(label: "com.swiftmath.mathbundle", attributes: .concurrent)
@@ -40,7 +39,6 @@ final class MTFontMathTableV2Tests: XCTestCase {
         executionGroup.notify(queue: .main) { [weak self] in
             guard let self = self else { return }
             XCTAssertEqual(self.testCount, totalCases)
-            print("\(self.testCount) completed =================")
         }
         executionGroup.wait()
     }

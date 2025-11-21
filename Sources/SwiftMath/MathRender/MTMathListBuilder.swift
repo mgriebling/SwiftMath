@@ -271,7 +271,11 @@ public struct MTMathListBuilder {
             return nil
         }
 
-        // Optionally: Add style hint for inline mode
+        // Note: For inline mode, we insert \textstyle to match LaTeX behavior.
+        // However, fractionStyle() has been modified to keep fractions at the
+        // same font size in both display and text modes (not one level smaller).
+        // Large operators show limits above/below in text style due to the updated
+        // condition in makeLargeOp() that checks both .display and .text styles.
         if mode == .inline && list != nil && !list!.atoms.isEmpty {
             // Prepend \textstyle to force inline rendering
             let styleAtom = MTMathStyle(style: .text)
