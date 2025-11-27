@@ -24,8 +24,6 @@ final class MathImageTests: XCTestCase {
         XCTAssertNotNil(result.layoutInfo)
         if result.error == nil, let image = result.image, let imageData = image.pngData() {
             safeImage(fileName: "test", pngData: imageData)
-            let fileUrl = URL(fileURLWithPath: NSTemporaryDirectory())
-            print("completed, check \(fileUrl.path) image-test.png =================")
         }
     }
     func testSequentialMultipleImageScript() throws {
@@ -42,8 +40,6 @@ final class MathImageTests: XCTestCase {
                 XCTAssertNotNil(result.layoutInfo)
                 if result.error == nil, let image = result.image, let imageData = image.pngData() {
                     safeImage(fileName: "\(caseNumber)", pngData: imageData)
-                    //let fileUrl = URL(fileURLWithPath: NSTemporaryDirectory())
-                    print("completed image-\(caseNumber).png")
                 }
             default:
                 result = SwiftMathImageResult.useMTMathImage(latex: latex, font: mathfont, fontSize: fontsize)
@@ -51,12 +47,9 @@ final class MathImageTests: XCTestCase {
                 XCTAssertNotNil(result.image)
                 if result.error == nil, let image = result.image, let imageData = image.pngData() {
                     safeImage(fileName: "\(caseNumber)", pngData: imageData)
-                    //let fileUrl = URL(fileURLWithPath: NSTemporaryDirectory())
-                    print("completed image-\(caseNumber).png")
                 }
             }
         }
-        print("check: \(URL(fileURLWithPath: NSTemporaryDirectory()).path) ==")
     }
     
     private let executionQueue = DispatchQueue(label: "com.swiftmath.mathbundle", attributes: .concurrent)
@@ -78,8 +71,6 @@ final class MathImageTests: XCTestCase {
             }
         }
         executionGroup.notify(queue: .main) { [weak self] in
-            let fileUrl = URL(fileURLWithPath: NSTemporaryDirectory())
-            print("\(self!.testCount)/\(self!.totalCases) completed, check \(fileUrl.path) ===")
             XCTAssertEqual(self?.testCount,self?.totalCases)
         }
         executionGroup.wait()

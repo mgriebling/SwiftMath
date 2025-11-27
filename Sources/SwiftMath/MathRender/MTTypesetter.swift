@@ -73,12 +73,18 @@ func getInterElementSpaceArrayIndexForType(_ type:MTMathAtomType, row:Bool) -> I
                 // They have the same spacing as ordinary except with ordinary.
                 return 8;
             } else {
-                assert(false, "Interelement space undefined for radical on the right. Treat radical as ordinary.")
-                return Int.max
+                // Treat radical as ordinary on the right side
+                return 0
             }
-        default:
-            assert(false, "Interelement space undefined for type \(type)")
-            return Int.max
+        // Numbers, variables, and unary operators are treated as ordinary
+        case .number, .variable, .unaryOperator:
+            return 0
+        // Decorative types (accent, underline, overline) are treated as ordinary
+        case .accent, .underline, .overline:
+            return 0
+        // Special types that don't typically participate in spacing are treated as ordinary
+        case .boundary, .space, .style, .table:
+            return 0
     }
 }
 
@@ -363,7 +369,12 @@ class MTTypesetter {
     var cramped = false
     var spaced = false
     var maxWidth: CGFloat = 0  // Maximum width for line breaking, 0 means no constraint
-    
+    var currentLineStartIndex: Int = 0  // Index in displayAtoms where current line starts
+    var minimumLineSpacing: CGFloat = 0  // Minimum spacing between lines (will be set based on fontSize)
+
+    // Performance optimization: skip line breaking checks if we know all remaining content fits
+    private var remainingContentFits = false
+
     static func createLineForMathList(_ mathList:MTMathList?, font:MTFont?, style:MTLineStyle) -> MTMathListDisplay? {
         let finalizedList = mathList?.finalized
         // default is not cramped, no width constraint
@@ -416,6 +427,9 @@ class MTTypesetter {
         self.currentAtoms = [MTMathAtom]()
         self.style = style
         self.currentLineIndexRange = NSMakeRange(NSNotFound, NSNotFound);
+        self.currentLineStartIndex = 0
+        // Set minimum line spacing to 20% of fontSize for some breathing room
+        self.minimumLineSpacing = (font?.fontSize ?? 0) * 0.2
     }
     
     static func preprocessMathList(_ ml:MTMathList?) -> [MTMathAtom] {
@@ -479,13 +493,438 @@ class MTTypesetter {
         }
         self.currentPosition.x += interElementSpace
     }
+
+    // MARK: - Interatom Line Breaking
+
+    /// Calculate the width that would result from adding this atom to the current line
+    /// Returns the approximate width including inter-element spacing
+    func calculateAtomWidth(_ atom: MTMathAtom, prevNode: MTMathAtom?) -> CGFloat {
+        // Skip atoms that don't participate in normal width calculation
+        // These are handled specially in the rendering code
+        if atom.type == .space || atom.type == .style {
+            return 0
+        }
+
+        // Calculate inter-element spacing (only for types that have defined spacing)
+        var interElementSpace: CGFloat = 0
+        if prevNode != nil && prevNode!.type != .space && prevNode!.type != .style {
+            interElementSpace = getInterElementSpace(prevNode!.type, right: atom.type)
+        } else if self.spaced && prevNode?.type != .space {
+            interElementSpace = getInterElementSpace(.open, right: atom.type)
+        }
+
+        // Calculate the width of the atom's nucleus
+        let atomString = NSAttributedString(string: atom.nucleus, attributes: [
+            kCTFontAttributeName as NSAttributedString.Key: styleFont.ctFont as Any
+        ])
+        let ctLine = CTLineCreateWithAttributedString(atomString as CFAttributedString)
+        let atomWidth = CGFloat(CTLineGetTypographicBounds(ctLine, nil, nil, nil))
+
+        return interElementSpace + atomWidth
+    }
+
+    /// Calculate the current line width
+    func getCurrentLineWidth() -> CGFloat {
+        if currentLine.length == 0 {
+            return 0
+        }
+        let attrString = currentLine.mutableCopy() as! NSMutableAttributedString
+        attrString.addAttribute(kCTFontAttributeName as NSAttributedString.Key, value: styleFont.ctFont as Any, range: NSMakeRange(0, attrString.length))
+        let ctLine = CTLineCreateWithAttributedString(attrString)
+        return CGFloat(CTLineGetTypographicBounds(ctLine, nil, nil, nil))
+    }
+
+    /// Check if we should break to a new line before adding this atom
+    /// Uses look-ahead to find better break points aesthetically
+    /// Returns true if a line break was performed
+    @discardableResult
+    func checkAndPerformInteratomLineBreak(_ atom: MTMathAtom, prevNode: MTMathAtom?, nextAtoms: [MTMathAtom] = []) -> Bool {
+        // Only perform interatom breaking when maxWidth is set
+        guard maxWidth > 0 else { return false }
+
+        // Don't break if current line is empty
+        guard currentLine.length > 0 else { return false }
+
+        // Performance optimization: if we've determined remaining content fits, skip breaking checks
+        if remainingContentFits {
+            return false
+        }
+
+        // CRITICAL: Don't break in the middle of words
+        // When "équivaut" is decomposed as "é" (accent) + "quivaut" (ordinary),
+        // we must not break between them even if the line exceeds maxWidth.
+        // Check if currentLine ends with a letter and next atom starts with a letter
+        // This prevents breaking mid-word (like "é|quivaut")
+        if atom.type == .ordinary && !atom.nucleus.isEmpty {
+            let lineText = currentLine.string
+            if !lineText.isEmpty {
+                let lastChar = lineText.last!
+                let firstChar = atom.nucleus.first!
+
+                // If line ends with a letter (no trailing space/punctuation) and next atom
+                // starts with a letter, they're part of the same word - don't break!
+                // Example: "...é" + "quivaut" should not break
+                // But "...km " + "équivaut" can break (has space)
+                // IMPORTANT: Only apply this to multi-character atoms (text words), not single
+                // letters (math variables). In math "4ac" splits as "4","a","c" - these are
+                // separate and CAN be broken between.
+                if lastChar.isLetter && firstChar.isLetter && atom.nucleus.count > 1 {
+                    // Don't break - this would split a word
+                    return false
+                }
+            }
+        }
+
+        // Calculate what the width would be if we add this atom
+        // IMPORTANT: Use currentPosition.x instead of getCurrentLineWidth()
+        // because currentLine only measures the current text segment, but after
+        // superscripts/subscripts, the line may be split into multiple segments.
+        // currentPosition.x tracks the actual visual horizontal position.
+        let currentLineWidth = getCurrentLineWidth()
+        let visualLineWidth = currentPosition.x + currentLineWidth
+        let atomWidth = calculateAtomWidth(atom, prevNode: prevNode)
+        let projectedWidth = visualLineWidth + atomWidth
+
+        // If we're well within the limit, no need to break
+        if projectedWidth <= maxWidth {
+            // Performance optimization: if we have plenty of space left and limited atoms remaining,
+            // we can skip all future line breaking checks for this line
+            if !remainingContentFits && !nextAtoms.isEmpty {
+                // Conservative estimate: if we're using less than 60% of available width
+                // and have only a few atoms left, assume remaining content will fit
+                let usageRatio = projectedWidth / maxWidth
+                if usageRatio < 0.6 && nextAtoms.count <= 5 {
+                    remainingContentFits = true
+                } else if usageRatio < 0.75 {
+                    // For moderate usage, estimate remaining content width
+                    let estimatedRemainingWidth = estimateRemainingAtomsWidth(nextAtoms)
+                    if projectedWidth + estimatedRemainingWidth <= maxWidth {
+                        remainingContentFits = true
+                    }
+                }
+            }
+            return false
+        }
+
+        // We've exceeded the width. Now use break quality scoring to find the best break point.
+
+        // If we're far over the limit (>20% excess), break immediately regardless of quality
+        if projectedWidth > maxWidth * 1.2 {
+            performInteratomLineBreak()
+            return true
+        }
+
+        // We're slightly over the limit. Look ahead to see if there's a better break point coming soon.
+        let currentPenalty = calculateBreakPenalty(afterAtom: prevNode, beforeAtom: atom)
+
+        // Look ahead up to 3 atoms to find better break points
+        var bestBreakOffset = 0  // 0 = break now (before current atom)
+        var bestPenalty = currentPenalty
+
+        var cumulativeWidth = projectedWidth
+        var lookAheadPrev = atom
+
+        for (offset, nextAtom) in nextAtoms.prefix(3).enumerated() {
+            // Calculate width if we continue to this atom
+            let nextAtomWidth = calculateAtomWidth(nextAtom, prevNode: lookAheadPrev)
+            cumulativeWidth += nextAtomWidth
+
+            // If we'd be way over the limit, stop looking ahead
+            if cumulativeWidth > maxWidth * 1.3 {
+                break
+            }
+
+            // Calculate penalty for breaking before this next atom
+            let penalty = calculateBreakPenalty(afterAtom: lookAheadPrev, beforeAtom: nextAtom)
+
+            // If this is a better break point (lower penalty), remember it
+            if penalty < bestPenalty {
+                bestPenalty = penalty
+                bestBreakOffset = offset + 1  // +1 because we want to break before nextAtom
+            }
+
+            // If we found a perfect break point (penalty = 0), use it
+            if penalty == 0 {
+                break
+            }
+
+            lookAheadPrev = nextAtom
+        }
+
+        // If best break point is not at current position, defer the break
+        if bestBreakOffset > 0 {
+            // Don't break yet - continue adding atoms to find the better break point
+            return false
+        }
+
+        // Break at current position (best option available)
+        performInteratomLineBreak()
+        return true
+    }
+
+    /// Estimate the approximate width of remaining atoms
+    /// Returns a conservative (upper bound) estimate
+    private func estimateRemainingAtomsWidth(_ atoms: [MTMathAtom]) -> CGFloat {
+        // Use a simple heuristic: average character width * character count
+        let avgCharWidth = styleFont.mathTable?.muUnit ?? (styleFont.fontSize / 18.0)
+        var totalChars = 0
+
+        for atom in atoms {
+            // Count nucleus characters
+            totalChars += atom.nucleus.count
+
+            // Add extra for subscripts/superscripts (rough estimate)
+            if atom.subScript != nil {
+                totalChars += 3
+            }
+            if atom.superScript != nil {
+                totalChars += 3
+            }
+        }
+
+        // Return conservative estimate (multiply by 1.5 for safety margin)
+        return CGFloat(totalChars) * avgCharWidth * 1.5
+    }
+
+    /// Perform the actual line break operation
+    private func performInteratomLineBreak() {
+        // Reset optimization flag - after breaking, we need to check again
+        remainingContentFits = false
+
+        // Flush the current line
+        self.addDisplayLine()
+
+        // Calculate dynamic line height based on actual content
+        let lineHeight = calculateCurrentLineHeight()
+
+        // Move down for new line using dynamic height
+        currentPosition.y -= lineHeight
+        currentPosition.x = 0
+
+        // Update line start index for next line
+        currentLineStartIndex = displayAtoms.count
+
+        // Reset for new line
+        currentLine = NSMutableAttributedString()
+        currentAtoms = []
+        currentLineIndexRange = NSMakeRange(NSNotFound, NSNotFound)
+    }
+
+    /// Check if we should break before adding a complex display (fraction, radical, etc.)
+    /// Returns true if breaking is needed
+    func shouldBreakBeforeDisplay(_ display: MTDisplay, prevNode: MTMathAtom?, displayType: MTMathAtomType = .ordinary) -> Bool {
+        // No breaking if no width constraint
+        guard maxWidth > 0 else { return false }
+
+        // No breaking if line is empty
+        guard currentLine.length > 0 else { return false }
+
+        // Calculate spacing between current content and new display
+        var interElementSpace: CGFloat = 0
+        if prevNode != nil {
+            interElementSpace = getInterElementSpace(prevNode!.type, right: displayType)
+        }
+
+        // Calculate projected width
+        let currentWidth = getCurrentLineWidth()
+        let projectedWidth = currentWidth + interElementSpace + display.width
+
+        // Break only if it would exceed max width
+        return projectedWidth > maxWidth
+    }
+
+    /// Adjust the current position to avoid overlap between the new display and previous line's displays
+    /// This is called when adding displays to a line below the first line
+    ///
+    /// Coordinate formulas (from test expectations):
+    /// - Bottom of display = position.y + descent
+    /// - Top of display = position.y - ascent  
+    /// - No overlap when: prevBottom <= currTop + spacing
+    /// - Which means: prevBottom <= (currPosition - currAscent) + spacing
+    /// - Rearranging: currPosition >= prevBottom + currAscent - spacing
+    ///
+    /// Recursively adjust positions of a display and all its nested sub-displays
+    /// Note: For MTRadicalDisplay and MTFractionDisplay, their position setters automatically
+    /// update child positions (radicand/degree, numerator/denominator), so we don't need
+    /// to manually adjust those. We only need to adjust subdisplays within MTMathListDisplay.
+    private func adjustDisplayPosition(_ display: MTDisplay, by delta: CGFloat) {
+        display.position.y += delta
+        
+        // If it's a MTMathListDisplay, adjust all its subdisplays too
+        if let mathListDisplay = display as? MTMathListDisplay {
+            for subDisplay in mathListDisplay.subDisplays {
+                adjustDisplayPosition(subDisplay, by: delta)
+            }
+        }
+        
+        // Note: No special handling needed for MTRadicalDisplay or MTFractionDisplay
+        // Their position setters handle updating child positions automatically
+    }
     
+    /// Adjust position to avoid overlap with previous line
+    /// In CoreText's Y-up coordinate system:
+    /// - Positive Y = upward, Negative Y = downward
+    /// - Top of display = position + ascent (higher Y)
+    /// - Bottom of display = position - descent (lower Y)
+    /// - No overlap when: prevBottom >= currTop (with spacing)
+    private func adjustPositionToAvoidOverlap(_ display: MTDisplay) {
+        // Find all displays on previous lines and calculate their minimum bottom edge
+        // In Y-up: Bottom = position - descent (lower Y value)
+        var minBottomEdge: CGFloat = CGFloat.greatestFiniteMagnitude
+        
+        for i in 0..<currentLineStartIndex {
+            let prevDisplay = displayAtoms[i]
+            let bottomEdge = prevDisplay.position.y - prevDisplay.descent
+            minBottomEdge = min(minBottomEdge, bottomEdge)
+        }
+        
+        // Calculate where current top would be
+        // In Y-up: Top = position + ascent (higher Y value)
+        let currentTop = currentPosition.y + display.ascent
+        
+        // Check for overlap: prevBottom should be <= currTop (with spacing)
+        // We need prevBottom - spacing >= currTop for no overlap
+        let tolerance: CGFloat = 0.5
+        let maxAllowedTop = minBottomEdge - tolerance
+        
+        if currentTop > maxAllowedTop {
+            // Current top is too high, adjust position downward (more negative)
+            // We need: position + ascent = maxAllowedTop
+            // So: position = maxAllowedTop - ascent
+            let requiredPosition = maxAllowedTop - display.ascent
+            let delta = requiredPosition - currentPosition.y
+            
+            currentPosition.y = requiredPosition
+            
+            // Update all displays on this line, including nested subdisplays
+            for i in currentLineStartIndex..<displayAtoms.count {
+                adjustDisplayPosition(displayAtoms[i], by: delta)
+            }
+        }
+    }
+
+    /// Perform line break for complex displays
+    func performLineBreak() {
+        if currentLine.length > 0 {
+            self.addDisplayLine()
+        }
+
+        // Calculate dynamic line height based on actual content
+        let lineHeight = calculateCurrentLineHeight()
+
+        // Move down for new line using dynamic height
+        currentPosition.y -= lineHeight
+        currentPosition.x = 0
+
+        // Update line start index for next line
+        currentLineStartIndex = displayAtoms.count
+    }
+
+    /// Calculate the height of the current line based on actual display heights
+    /// Returns the total height (max ascent + max descent) plus minimum spacing
+    func calculateCurrentLineHeight() -> CGFloat {
+        // If no displays added for current line, use default spacing
+        guard currentLineStartIndex < displayAtoms.count else {
+            return styleFont.fontSize * 1.5
+        }
+
+        var maxAscent: CGFloat = 0
+        var maxDescent: CGFloat = 0
+
+        // Iterate through all displays added for the current line
+        for i in currentLineStartIndex..<displayAtoms.count {
+            let display = displayAtoms[i]
+            maxAscent = max(maxAscent, display.ascent)
+            maxDescent = max(maxDescent, display.descent)
+        }
+
+        // Total line height = max ascent + max descent + minimum spacing
+        let lineHeight = maxAscent + maxDescent + minimumLineSpacing
+
+        // Ensure we have at least the baseline fontSize spacing for readability
+        return max(lineHeight, styleFont.fontSize * 1.2)
+    }
+
+    /// Estimate the width of an atom including its scripts (without actually creating the displays)
+    /// This is used for width-checking decisions for atoms with super/subscripts
+    func estimateAtomWidthWithScripts(_ atom: MTMathAtom) -> CGFloat {
+        // Estimate base atom width
+        var atomWidth = CGFloat(atom.nucleus.count) * styleFont.fontSize * 0.5 // rough estimate
+
+        // If atom has scripts, estimate their contribution
+        if atom.superScript != nil || atom.subScript != nil {
+            let scriptFontSize = Self.getStyleSize(self.scriptStyle(), font: font)
+
+            var scriptWidth: CGFloat = 0
+            if let superScript = atom.superScript {
+                // Estimate superscript width
+                let superScriptAtomCount = superScript.atoms.count
+                scriptWidth = max(scriptWidth, CGFloat(superScriptAtomCount) * scriptFontSize * 0.5)
+            }
+
+            if let subScript = atom.subScript {
+                // Estimate subscript width
+                let subScriptAtomCount = subScript.atoms.count
+                scriptWidth = max(scriptWidth, CGFloat(subScriptAtomCount) * scriptFontSize * 0.5)
+            }
+
+            // Add script width plus space after script
+            atomWidth += scriptWidth + styleFont.mathTable!.spaceAfterScript
+        }
+
+        return atomWidth
+    }
+
+    /// Calculate break penalty score for breaking after a given atom type
+    /// Lower scores indicate better break points (0 = best, higher = worse)
+    func calculateBreakPenalty(afterAtom: MTMathAtom?, beforeAtom: MTMathAtom?) -> Int {
+        // No atom context - neutral penalty
+        guard let after = afterAtom else { return 50 }
+
+        let afterType = after.type
+        let beforeType = beforeAtom?.type
+
+        // Best break points (penalty = 0): After binary operators, relations, punctuation
+        if afterType == .binaryOperator {
+            return 0  // Great: break after +, -, ×, ÷
+        }
+        if afterType == .relation {
+            return 0  // Great: break after =, <, >, ≤, ≥
+        }
+        if afterType == .punctuation {
+            return 0  // Great: break after commas, semicolons
+        }
+
+        // Good break points (penalty = 10): After ordinary atoms (variables, numbers)
+        if afterType == .ordinary {
+            return 10  // Good: break after variables like a, b, c
+        }
+
+        // Bad break points (penalty = 100): After open brackets or before close brackets
+        if afterType == .open {
+            return 100  // Bad: don't break immediately after (
+        }
+        if beforeType == .close {
+            return 100  // Bad: don't break immediately before )
+        }
+
+        // Worse break points (penalty = 150): Would break operator-operand pairing
+        if afterType == .unaryOperator || afterType == .largeOperator {
+            return 150  // Worse: don't break after operators like ∑, ∫
+        }
+
+        // Neutral default
+        return 50
+    }
+
     func createDisplayAtoms(_ preprocessed:[MTMathAtom]) {
         // items should contain all the nodes that need to be layed out.
         // convert to a list of DisplayAtoms
         var prevNode:MTMathAtom? = nil
         var lastType:MTMathAtomType!
-        for atom in preprocessed {
+        for (index, atom) in preprocessed.enumerated() {
+            // Get next atoms for look-ahead (up to 3 atoms ahead)
+            let nextAtoms = Array(preprocessed.suffix(from: min(index + 1, preprocessed.count)).prefix(3))
             switch atom.type {
                 case .number, .variable,. unaryOperator:
                     // These should never appear as they should have been removed by preprocessing
@@ -519,39 +958,55 @@ class MTTypesetter {
                     continue
                     
                 case .color:
-                    // stash the existing layout
+                    // Create the colored display first (pass maxWidth for inner breaking)
+                    let colorAtom = atom as! MTMathColor
+                    let display = MTTypesetter.createLineForMathList(colorAtom.innerList, font: font, style: style, maxWidth: maxWidth)
+                    display!.localTextColor = MTColor(fromHexString: colorAtom.colorString)
+
+                    // Check if we need to break before adding this colored content
+                    let shouldBreak = shouldBreakBeforeDisplay(display!, prevNode: prevNode, displayType: .ordinary)
+
+                    // Flush current line to convert accumulated text to displays
                     if currentLine.length > 0 {
                         self.addDisplayLine()
                     }
-                    let colorAtom = atom as! MTMathColor
-                    let display = MTTypesetter.createLineForMathList(colorAtom.innerList, font: font, style: style)
-                    display!.localTextColor = MTColor(fromHexString: colorAtom.colorString)
+
+                    // Perform line break if needed
+                    if shouldBreak {
+                        performLineBreak()
+                    } else {
+                        self.addInterElementSpace(prevNode, currentType:.ordinary)
+                    }
+
                     display!.position = currentPosition
                     currentPosition.x += display!.width
                     displayAtoms.append(display!)
 
                 case .textcolor:
-                    // stash the existing layout
+                    // Create the text colored display first (pass maxWidth for inner breaking)
+                    let colorAtom = atom as! MTMathTextColor
+                    let display = MTTypesetter.createLineForMathList(colorAtom.innerList, font: font, style: style, maxWidth: maxWidth)
+                    display!.localTextColor = MTColor(fromHexString: colorAtom.colorString)
+
+                    // Check if we need to break before adding this colored content
+                    let shouldBreak = shouldBreakBeforeDisplay(display!, prevNode: prevNode, displayType: .ordinary)
+
+                    // Flush current line to convert accumulated text to displays
                     if currentLine.length > 0 {
                         self.addDisplayLine()
                     }
-                    let colorAtom = atom as! MTMathTextColor
-                    let display = MTTypesetter.createLineForMathList(colorAtom.innerList, font: font, style: style)
-                    display!.localTextColor = MTColor(fromHexString: colorAtom.colorString)
 
-                    if prevNode != nil {
-                        let subDisplay: MTDisplay = display!.subDisplays[0]
-                        let subDisplayAtom = (subDisplay as? MTCTLineDisplay)!.atoms[0]
-                        let interElementSpace = self.getInterElementSpace(prevNode!.type, right:subDisplayAtom.type)
-                        if currentLine.length > 0 {
-                            if interElementSpace > 0 {
-                                // add a kerning of that space to the previous character
-                                currentLine.addAttribute(kCTKernAttributeName as NSAttributedString.Key,
-                                                         value:NSNumber(floatLiteral: interElementSpace),
-                                                         range:currentLine.mutableString.rangeOfComposedCharacterSequence(at: currentLine.length-1))
-                            }
-                        } else {
-                            // increase the space
+                    // Perform line break if needed
+                    if shouldBreak {
+                        performLineBreak()
+                    } else if prevNode != nil && display!.subDisplays.count > 0 {
+                        // Handle inter-element spacing if not breaking
+                        if let subDisplay = display!.subDisplays.first,
+                           let ctLineDisplay = subDisplay as? MTCTLineDisplay,
+                           !ctLineDisplay.atoms.isEmpty {
+                            let subDisplayAtom = ctLineDisplay.atoms[0]
+                            let interElementSpace = self.getInterElementSpace(prevNode!.type, right:subDisplayAtom.type)
+                            // Since we already flushed currentLine, it's empty now, so use x positioning
                             currentPosition.x += interElementSpace
                         }
                     }
@@ -561,35 +1016,68 @@ class MTTypesetter {
                     displayAtoms.append(display!)
 
                 case .colorBox:
-                    // stash the existing layout
+                    // Create the colorbox display first (pass maxWidth for inner breaking)
+                    let colorboxAtom =  atom as! MTMathColorbox
+                    let display = MTTypesetter.createLineForMathList(colorboxAtom.innerList, font:font, style:style, maxWidth: maxWidth)
+
+                    display!.localBackgroundColor = MTColor(fromHexString: colorboxAtom.colorString)
+
+                    // Check if we need to break before adding this colorbox
+                    let shouldBreak = shouldBreakBeforeDisplay(display!, prevNode: prevNode, displayType: .ordinary)
+
+                    // Flush current line to convert accumulated text to displays
                     if currentLine.length > 0 {
                         self.addDisplayLine()
                     }
-                    let colorboxAtom =  atom as! MTMathColorbox
-                    let display = MTTypesetter.createLineForMathList(colorboxAtom.innerList, font:font, style:style)
-                    
-                    display!.localBackgroundColor = MTColor(fromHexString: colorboxAtom.colorString)
+
+                    // Perform line break if needed
+                    if shouldBreak {
+                        performLineBreak()
+                    } else {
+                        self.addInterElementSpace(prevNode, currentType:.ordinary)
+                    }
+
                     display!.position = currentPosition
-                    currentPosition.x += display!.width;
+                    currentPosition.x += display!.width
                     displayAtoms.append(display!)
                     
                 case .radical:
-                    // stash the existing layout
-                    if currentLine.length > 0 {
-                        self.addDisplayLine()
-                    }
+                    // Create the radical display first
                     let rad = atom as! MTRadical
-                    // Radicals are considered as Ord in rule 16.
-                    self.addInterElementSpace(prevNode, currentType:.ordinary)
                     let displayRad = self.makeRadical(rad.radicand, range:rad.indexRange)
                     if rad.degree != nil {
                         // add the degree to the radical
                         let degree = MTTypesetter.createLineForMathList(rad.degree, font:font, style:.scriptOfScript)
                         displayRad!.setDegree(degree, fontMetrics:styleFont.mathTable)
                     }
+
+                    // Check if we need to break before adding this radical
+                    // Radicals are considered as Ord in rule 16.
+                    let shouldBreak = shouldBreakBeforeDisplay(displayRad!, prevNode: prevNode, displayType: .ordinary)
+
+                    // Flush current line to convert accumulated text to displays
+                    if currentLine.length > 0 {
+                        self.addDisplayLine()
+                    }
+
+                    // Perform line break if needed
+                    if shouldBreak {
+                        performLineBreak()
+                    } else {
+                        self.addInterElementSpace(prevNode, currentType:.ordinary)
+                    }
+
+                    // Position and add the radical display
+                    displayRad!.position = currentPosition
                     displayAtoms.append(displayRad!)
-                    currentPosition.x += displayRad!.width
                     
+                    // Check for overlap if we're not on the first line
+                    if currentLineStartIndex > 0 {
+                        adjustPositionToAvoidOverlap(displayRad!)
+                    }
+                    
+                    currentPosition.x += displayRad!.width
+
                     // add super scripts || subscripts
                     if atom.subScript != nil || atom.superScript != nil {
                         self.makeScripts(atom, display:displayRad, index:UInt(rad.indexRange.location), delta:0)
@@ -598,46 +1086,88 @@ class MTTypesetter {
                     //atom.type = .ordinary;
                     
                 case .fraction:
-                    // stash the existing layout
+                    // Create the fraction display first
+                    let frac = atom as! MTFraction?
+                    let display = self.makeFraction(frac)
+
+                    // Check if we need to break before adding this fraction
+                    let shouldBreak = shouldBreakBeforeDisplay(display!, prevNode: prevNode, displayType: atom.type)
+
+                    // Flush current line to convert accumulated text to displays
                     if currentLine.length > 0 {
                         self.addDisplayLine()
                     }
-                    let frac = atom as! MTFraction?
-                    self.addInterElementSpace(prevNode, currentType:atom.type)
-                    let display = self.makeFraction(frac)
+
+                    // Perform line break if needed
+                    if shouldBreak {
+                        performLineBreak()
+                    } else {
+                        self.addInterElementSpace(prevNode, currentType:atom.type)
+                    }
+
+                    // Position and add the fraction display
+                    display!.position = currentPosition
                     displayAtoms.append(display!)
-                    currentPosition.x += display!.width;
+                    
+                    // Check for overlap if we're not on the first line
+                    if currentLineStartIndex > 0 {
+                        adjustPositionToAvoidOverlap(display!)
+                    }
+                    
+                    currentPosition.x += display!.width
+
                     // add super scripts || subscripts
                     if atom.subScript != nil || atom.superScript != nil {
                         self.makeScripts(atom, display:display, index:UInt(frac!.indexRange.location), delta:0)
                     }
                     
                 case .largeOperator:
-                    // stash the existing layout
+                    // Flush current line to convert accumulated text to displays
                     if currentLine.length > 0 {
                         self.addDisplayLine()
                     }
+
+                    // Add inter-element spacing before operator
                     self.addInterElementSpace(prevNode, currentType:atom.type)
+
+                    // Create and position the large operator display
+                    // makeLargeOp sets position, advances currentPosition.x, and adds scripts
                     let op = atom as! MTLargeOperator?
                     let display = self.makeLargeOp(op)
                     displayAtoms.append(display!)
                     
                 case .inner:
-                    // stash the existing layout
-                    if currentLine.length > 0 {
-                        self.addDisplayLine()
-                    }
-                    self.addInterElementSpace(prevNode, currentType:atom.type)
+                    // Create the inner display first
                     let inner =  atom as! MTInner?
                     var display : MTDisplay? = nil
                     if inner!.leftBoundary != nil || inner!.rightBoundary != nil {
-                        display = self.makeLeftRight(inner)
+                        // Pass maxWidth to delimited content so it can also break
+                        display = self.makeLeftRight(inner, maxWidth:maxWidth)
                     } else {
-                        display = MTTypesetter.createLineForMathList(inner!.innerList, font:font, style:style, cramped:cramped)
+                        // Pass maxWidth to inner content so it can also break
+                        display = MTTypesetter.createLineForMathList(inner!.innerList, font:font, style:style, cramped:cramped, maxWidth:maxWidth)
                     }
+
+                    // Check if we need to break before adding this inner content
+                    let shouldBreak = shouldBreakBeforeDisplay(display!, prevNode: prevNode, displayType: .inner)
+
+                    // Flush current line to convert accumulated text to displays
+                    if currentLine.length > 0 {
+                        self.addDisplayLine()
+                    }
+
+                    // Perform line break if needed
+                    if shouldBreak {
+                        performLineBreak()
+                    } else {
+                        self.addInterElementSpace(prevNode, currentType:atom.type)
+                    }
+
+                    // Position and add the inner display
                     display!.position = currentPosition
                     currentPosition.x += display!.width
                     displayAtoms.append(display!)
+
                     // add super scripts || subscripts
                     if atom.subScript != nil || atom.superScript != nil {
                         self.makeScripts(atom, display:display, index:UInt(atom.indexRange.location), delta:0)
@@ -718,8 +1248,9 @@ class MTTypesetter {
                         let current = NSAttributedString(string:normalizedString)
                         currentLine.append(current)
 
-                        // Check if we should break the line
-                        self.checkAndBreakLine()
+                        // Don't check for line breaks here - accented characters are part of words
+                        // and breaking after each one would split words like "équivaut" into "é" + "quivaut"
+                        // Line breaking is handled in the regular .ordinary case below
 
                         // Add to atom list
                         if currentLineIndexRange.location == NSNotFound {
@@ -755,16 +1286,28 @@ class MTTypesetter {
                     }
                     
                 case .table:
-                    // stash the existing layout
+                    // Create the table display first
+                    let table = atom as! MTMathTable?
+                    let display = self.makeTable(table)
+
+                    // Check if we need to break before adding this table
+                    // We will consider tables as inner
+                    let shouldBreak = shouldBreakBeforeDisplay(display!, prevNode: prevNode, displayType: .inner)
+
+                    // Flush current line to convert accumulated text to displays
                     if currentLine.length > 0 {
                         self.addDisplayLine()
                     }
-                    // We will consider tables as inner
-                    self.addInterElementSpace(prevNode, currentType:.inner)
-                    atom.type = .inner;
-                    
-                    let table = atom as! MTMathTable?
-                    let display = self.makeTable(table)
+
+                    // Perform line break if needed
+                    if shouldBreak {
+                        performLineBreak()
+                    } else {
+                        self.addInterElementSpace(prevNode, currentType:.inner)
+                    }
+                    atom.type = .inner
+
+                    display!.position = currentPosition
                     displayAtoms.append(display!)
                     currentPosition.x += display!.width
                     // A table doesn't have subscripts or superscripts
@@ -772,6 +1315,11 @@ class MTTypesetter {
                 case .ordinary, .binaryOperator, .relation, .open, .close, .placeholder, .punctuation:
                     // the rendering for all the rest is pretty similar
                     // All we need is render the character and set the interelement space.
+
+                    // INTERATOM LINE BREAKING: Check if we need to break before adding this atom
+                    // Pass nextAtoms for look-ahead to find better break points
+                    checkAndPerformInteratomLineBreak(atom, prevNode: prevNode, nextAtoms: nextAtoms)
+
                     if prevNode != nil {
                         let interElementSpace = self.getInterElementSpace(prevNode!.type, right:atom.type)
                         if currentLine.length > 0 {
@@ -806,14 +1354,22 @@ class MTTypesetter {
                         let attrString = currentLine.mutableCopy() as! NSMutableAttributedString
                         attrString.addAttribute(kCTFontAttributeName as NSAttributedString.Key, value:styleFont.ctFont as Any, range:NSMakeRange(0, attrString.length))
                         let ctLine = CTLineCreateWithAttributedString(attrString)
-                        let lineWidth = CGFloat(CTLineGetTypographicBounds(ctLine, nil, nil, nil))
+                        let segmentWidth = CGFloat(CTLineGetTypographicBounds(ctLine, nil, nil, nil))
 
-                        if lineWidth > maxWidth {
+                        // IMPORTANT: Account for currentPosition.x to get the true visual line width
+                        // After superscripts/subscripts, currentPosition.x > 0 because previous segments
+                        // have been rendered and flushed
+                        let visualLineWidth = currentPosition.x + segmentWidth
+
+                        if visualLineWidth > maxWidth {
                             // Line is too wide - need to find a break point
                             let currentText = currentLine.string
 
                             // Use Unicode-aware line breaking with number protection
-                            if let breakIndex = findBestBreakPoint(in: currentText, font: styleFont.ctFont, maxWidth: maxWidth) {
+                            // IMPORTANT: Use remaining width, not full maxWidth, because currentPosition.x
+                            // may be > 0 if we've already rendered segments on this visual line
+                            let remainingWidth = max(0, maxWidth - currentPosition.x)
+                            if let breakIndex = findBestBreakPoint(in: currentText, font: styleFont.ctFont, maxWidth: remainingWidth) {
                                 // Split the line at the suggested break point
                                 let breakOffset = currentText.distance(from: currentText.startIndex, to: breakIndex)
 
@@ -821,14 +1377,14 @@ class MTTypesetter {
                                 let firstLine = NSMutableAttributedString(string: String(currentText.prefix(breakOffset)))
                                 firstLine.addAttribute(kCTFontAttributeName as NSAttributedString.Key, value:styleFont.ctFont as Any, range:NSMakeRange(0, firstLine.length))
 
-                                // Check if first line still exceeds maxWidth - need to find earlier break point
+                                // Check if first line still exceeds remaining width - need to find earlier break point
                                 let firstLineCT = CTLineCreateWithAttributedString(firstLine)
                                 let firstLineWidth = CGFloat(CTLineGetTypographicBounds(firstLineCT, nil, nil, nil))
 
-                                if firstLineWidth > maxWidth {
+                                if firstLineWidth > remainingWidth {
                                     // Need to break earlier - find previous break point
                                     let firstLineText = firstLine.string
-                                    if let earlierBreakIndex = findBestBreakPoint(in: firstLineText, font: styleFont.ctFont, maxWidth: maxWidth) {
+                                    if let earlierBreakIndex = findBestBreakPoint(in: firstLineText, font: styleFont.ctFont, maxWidth: remainingWidth) {
                                         let earlierOffset = firstLineText.distance(from: firstLineText.startIndex, to: earlierBreakIndex)
                                         let earlierLine = NSMutableAttributedString(string: String(firstLineText.prefix(earlierOffset)))
                                         earlierLine.addAttribute(kCTFontAttributeName as NSAttributedString.Key, value:styleFont.ctFont as Any, range:NSMakeRange(0, earlierLine.length))
@@ -838,9 +1394,14 @@ class MTTypesetter {
                                         currentAtoms = []  // Approximate - we're splitting
                                         self.addDisplayLine()
 
-                                        // Move down for new line
-                                        currentPosition.y -= styleFont.fontSize * 1.5
+                                        // Reset optimization flag after line break
+                                        remainingContentFits = false
+
+                                        // Calculate dynamic line height and move down for new line
+                                        let lineHeight = calculateCurrentLineHeight()
+                                        currentPosition.y -= lineHeight
                                         currentPosition.x = 0
+                                        currentLineStartIndex = displayAtoms.count
 
                                         // Remaining text includes everything after the earlier break
                                         let remainingText = String(firstLineText.suffix(from: earlierBreakIndex)) +
@@ -859,9 +1420,14 @@ class MTTypesetter {
                                     currentAtoms = firstLineAtoms
                                     self.addDisplayLine()
 
-                                    // Move down for new line and reset x position
-                                    currentPosition.y -= styleFont.fontSize * 1.5
+                                    // Reset optimization flag after line break
+                                    remainingContentFits = false
+
+                                    // Calculate dynamic line height and move down for new line
+                                    let lineHeight = calculateCurrentLineHeight()
+                                    currentPosition.y -= lineHeight
                                     currentPosition.x = 0
+                                    currentLineStartIndex = displayAtoms.count
 
                                     // Start the new line with the content after the break
                                     let remainingText = String(currentText.suffix(from: breakIndex))
@@ -875,6 +1441,25 @@ class MTTypesetter {
                             // If no break point found, let it overflow (better than breaking mid-word)
                         }
                     }
+
+                    // Check if atom with scripts would exceed width constraint (improved script handling)
+                    if maxWidth > 0 && (atom.subScript != nil || atom.superScript != nil) && currentLine.length > 0 {
+                        // Estimate width including scripts
+                        let atomWidthWithScripts = estimateAtomWidthWithScripts(atom)
+                        let interElementSpace = self.getInterElementSpace(prevNode?.type ?? .ordinary, right: atom.type)
+                        let currentWidth = getCurrentLineWidth()
+                        let projectedWidth = currentWidth + interElementSpace + atomWidthWithScripts
+
+                        // If adding this scripted atom would exceed width, break line first
+                        if projectedWidth > maxWidth {
+                            self.addDisplayLine()
+                            let lineHeight = calculateCurrentLineHeight()
+                            currentPosition.y -= lineHeight
+                            currentPosition.x = 0
+                            currentLineStartIndex = displayAtoms.count
+                        }
+                    }
+
                     // add the atom to the current range
                     if currentLineIndexRange.location == NSNotFound {
                         currentLineIndexRange = atom.indexRange
@@ -887,7 +1472,7 @@ class MTTypesetter {
                     } else {
                         currentAtoms.append(atom)
                     }
-                    
+
                     // add super scripts || subscripts
                     if atom.subScript != nil || atom.superScript != nil {
                         // stash the existing line
@@ -930,11 +1515,20 @@ class MTTypesetter {
         let typesetter = CTTypesetterCreateWithAttributedString(attrString as CFAttributedString)
         let suggestedBreak = CTTypesetterSuggestLineBreak(typesetter, 0, Double(maxWidth))
 
-        guard suggestedBreak > 0 && suggestedBreak < text.count else {
+        guard suggestedBreak > 0 else {
             return nil
         }
 
-        let breakIndex = text.index(text.startIndex, offsetBy: suggestedBreak)
+        // IMPORTANT: CTTypesetterSuggestLineBreak returns a UTF-16 code unit offset,
+        // but Swift String.Index works with Unicode extended grapheme clusters.
+        // We must convert from UTF-16 space to String.Index properly to avoid
+        // breaking in the middle of Unicode characters (like "é" in "équivaut").
+
+        // Convert UTF-16 offset to String.Index
+        guard let utf16Index = text.utf16.index(text.utf16.startIndex, offsetBy: suggestedBreak, limitedBy: text.utf16.endIndex),
+              let breakIndex = String.Index(utf16Index, within: text) else {
+            return nil
+        }
 
         // Conservative check: verify we're not breaking within a number
         if isBreakingSafeForNumbers(text: text, breakIndex: breakIndex) {
@@ -1064,9 +1658,11 @@ class MTTypesetter {
                     currentAtoms = []
                     self.addDisplayLine()
 
-                    // Move down for new line
-                    currentPosition.y -= styleFont.fontSize * 1.5
+                    // Calculate dynamic line height and move down for new line
+                    let lineHeight = calculateCurrentLineHeight()
+                    currentPosition.y -= lineHeight
                     currentPosition.x = 0
+                    currentLineStartIndex = displayAtoms.count
 
                     // Remaining text includes everything after the earlier break
                     let remainingText = String(firstLineText.suffix(from: earlierBreakIndex)) +
@@ -1086,9 +1682,11 @@ class MTTypesetter {
             currentAtoms = firstLineAtoms
             self.addDisplayLine()
 
-            // Move down for new line and reset x position
-            currentPosition.y -= styleFont.fontSize * 1.5
+            // Calculate dynamic line height and move down for new line
+            let lineHeight = calculateCurrentLineHeight()
+            currentPosition.y -= lineHeight
             currentPosition.x = 0
+            currentLineStartIndex = displayAtoms.count
 
             // Start the new line with the content after the break
             let remainingText = String(currentText.suffix(from: breakIndex))
@@ -1315,10 +1913,11 @@ class MTTypesetter {
     }
     
     func fractionStyle() -> MTLineStyle {
-        if style == .scriptOfScript {
-            return .scriptOfScript
-        }
-        return style.inc()
+        // Keep fractions at the same style level instead of incrementing.
+        // This ensures that fraction numerators/denominators have the same
+        // font size as regular text, preventing them from appearing too small
+        // in inline mode or when nested.
+        return style
     }
     
     func makeFraction(_ frac:MTFraction?) -> MTDisplay? {
@@ -1630,7 +2229,9 @@ class MTTypesetter {
     // MARK: - Large Operators
     
     func makeLargeOp(_ op:MTLargeOperator!) -> MTDisplay?  {
-        let limits = op.limits && style == .display
+        // Show limits above/below in both display and text (inline) modes
+        // Only show limits to the side in script modes to keep them compact
+        let limits = op.limits && (style == .display || style == .text)
         var delta = CGFloat(0)
         if op.nucleus.count == 1 {
             var glyph = self.findGlyphForCharacterAtIndex(op.nucleus.startIndex, inString:op.nucleus)
@@ -1675,7 +2276,8 @@ class MTTypesetter {
             currentPosition.x += display!.width
             return display;
         }
-        if op.limits && style == .display {
+        // Show limits above/below in both display and text (inline) modes
+        if op.limits && (style == .display || style == .text) {
             // make limits
             var superScript:MTMathListDisplay? = nil, subScript:MTMathListDisplay? = nil
             if op.superScript != nil {
@@ -1711,10 +2313,10 @@ class MTTypesetter {
     static let kDelimiterFactor = CGFloat(901)
     static let kDelimiterShortfallPoints = CGFloat(5)
     
-    func makeLeftRight(_ inner: MTInner?) -> MTDisplay? {
+    func makeLeftRight(_ inner: MTInner?, maxWidth: CGFloat = 0) -> MTDisplay? {
         assert(inner!.leftBoundary != nil || inner!.rightBoundary != nil, "Inner should have a boundary to call this function");
-        
-        let innerListDisplay = MTTypesetter.createLineForMathList(inner!.innerList, font:font, style:style, cramped:cramped, spaced:true)
+
+        let innerListDisplay = MTTypesetter.createLineForMathList(inner!.innerList, font:font, style:style, cramped:cramped, spaced:true, maxWidth:maxWidth)
         let axisHeight = styleFont.mathTable!.axisHeight
         // delta is the max distance from the axis
         let delta = max(innerListDisplay!.ascent - axisHeight, innerListDisplay!.descent + axisHeight);

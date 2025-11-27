@@ -285,7 +285,7 @@ public class MTMathAtom: NSObject {
         assert(self.superScript == nil, "Cannot fuse into an atom which has a superscript: \(self)");
         assert(atom.type == self.type, "Only atoms of the same type can be fused. \(self), \(atom)");
         guard self.subScript == nil, self.superScript == nil, self.type == atom.type
-        else { print("Can't fuse these 2 atoms"); return }
+        else { return }
         
         // Update the fused atoms list
         if self.fusedAtoms.isEmpty {
