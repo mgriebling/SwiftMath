@@ -74,6 +74,16 @@ public struct MTMathListBuilder {
         case display
         /// Inline/text style - compact operators, limits to the side (e.g., $...$, \(...\))
         case inline
+
+        /// Convert MathMode to MTLineStyle for rendering
+        func toLineStyle() -> MTLineStyle {
+            switch self {
+            case .display:
+                return .display
+            case .inline:
+                return .text
+            }
+        }
     }
 
     var string: String
@@ -305,6 +315,45 @@ public struct MTMathListBuilder {
             return nil
         }
         return output
+    }
+
+    /** Construct a math list from a given string and return the detected style.
+     This method detects LaTeX delimiters like \[...\], $$...$$, $...$, \(...\)
+     and returns the appropriate rendering style (.display or .text).
+
+     If there is a parse error, returns nil for the MathList.
+
+     - Parameter string: The LaTeX string to parse
+     - Returns: A tuple containing the parsed MathList and the detected MTLineStyle
+     */
+    public static func buildWithStyle(fromString string: String) -> (mathList: MTMathList?, style: MTLineStyle) {
+        var builder = MTMathListBuilder(string: string)
+        let mathList = builder.build()
+        let style = builder.mathMode.toLineStyle()
+        return (mathList, style)
+    }
+
+    /** Construct a math list from a given string and return the detected style.
+     This method detects LaTeX delimiters like \[...\], $$...$$, $...$, \(...\)
+     and returns the appropriate rendering style (.display or .text).
+
+     If there is an error while constructing the string, this returns nil for the MathList.
+     The error is returned in the `error` parameter.
+
+     - Parameters:
+        - string: The LaTeX string to parse
+        - error: An inout parameter that will contain any parse error
+     - Returns: A tuple containing the parsed MathList and the detected MTLineStyle
+     */
+    public static func buildWithStyle(fromString string: String, error: inout NSError?) -> (mathList: MTMathList?, style: MTLineStyle) {
+        var builder = MTMathListBuilder(string: string)
+        let output = builder.build()
+        let style = builder.mathMode.toLineStyle()
+        if builder.error != nil {
+            error = builder.error
+            return (nil, style)
+        }
+        return (output, style)
     }
     
     public mutating func buildInternal(_ oneCharOnly: Bool) -> MTMathList? {

@@ -507,6 +507,25 @@ Equations without explicit delimiters continue to work as before, defaulting to 
 label.latex = "x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}"  // Works as always
 ```
 
+#### Programmatic API
+For advanced use cases where you need to parse LaTeX and determine the detected style programmatically, use the `buildWithStyle` method:
+
+```swift
+// Parse LaTeX and get both the math list and detected style
+let (mathList, style) = MTMathListBuilder.buildWithStyle(fromString: "\\[x^2 + y^2 = z^2\\]")
+
+// style will be .display for \[...\] or $$...$$
+// style will be .text for \(...\) or $...$
+
+// Create a display with the detected style
+if let mathList = mathList {
+    let display = MTTypesetter.createLineForMathList(mathList, font: myFont, style: style)
+    // Use the display for rendering
+}
+```
+
+This is particularly useful when building custom renderers or when you need to respect the user's choice of delimiter style.
+
 Note: SwiftMath only supports the commands in LaTeX's math mode. There is
 also no language support for other than west European langugages and some
 Cyrillic characters. There would be two ways to support more languages:
