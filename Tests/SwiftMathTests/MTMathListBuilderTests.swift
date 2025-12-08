@@ -1972,6 +1972,180 @@ final class MTMathListBuilderTests: XCTestCase {
         }
     }
 
+    // MARK: - Vector Arrow Command Tests
+
+    func testVectorArrowCommands() throws {
+        let commands = ["vec", "overleftarrow", "overrightarrow", "overleftrightarrow"]
+
+        for cmd in commands {
+            let str = "\\\(cmd){x}"
+            var error: NSError? = nil
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse \\\(cmd)")
+            XCTAssertNil(error, "Should not error on \\\(cmd): \(error?.localizedDescription ?? "")")
+
+            // Should create accent atom
+            XCTAssertEqual(unwrappedList.atoms.count, 1, "For \\\(cmd)")
+            let accent = try XCTUnwrap(unwrappedList.atoms[0] as? MTAccent, "For \\\(cmd)")
+            XCTAssertEqual(accent.type, .accent)
+
+            // Should have innerList with variable 'x'
+            let innerList = try XCTUnwrap(accent.innerList)
+            XCTAssertEqual(innerList.atoms.count, 1)
+            let innerAtom = innerList.atoms[0]
+            XCTAssertEqual(innerAtom.type, .variable)
+            XCTAssertEqual(innerAtom.nucleus, "x")
+        }
+    }
+
+    func testVectorArrowUnicodeValues() throws {
+        let expectedUnicode: [String: String] = [
+            "vec": "\u{20D7}",
+            "overleftarrow": "\u{20D6}",
+            "overrightarrow": "\u{20D7}",
+            "overleftrightarrow": "\u{20E1}"
+        ]
+
+        for (cmd, expectedValue) in expectedUnicode {
+            let str = "\\\(cmd){a}"
+            let list = try XCTUnwrap(MTMathListBuilder.build(fromString: str))
+            let accent = try XCTUnwrap(list.atoms[0] as? MTAccent)
+
+            XCTAssertEqual(accent.nucleus, expectedValue,
+                           "\\\(cmd) should map to Unicode \(expectedValue)")
+        }
+    }
+
+    func testVectorArrowMultiCharacter() throws {
+        let testCases = [
+            ("vec", "AB"),
+            ("overleftarrow", "xyz"),
+            ("overrightarrow", "ABC"),
+            ("overleftrightarrow", "velocity")
+        ]
+
+        for (cmd, content) in testCases {
+            let str = "\\\(cmd){\(content)}"
+            var error: NSError? = nil
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse \\\(cmd){\(content)}")
+            XCTAssertNil(error, "Should not error: \(error?.localizedDescription ?? "")")
+
+            let accent = try XCTUnwrap(unwrappedList.atoms[0] as? MTAccent)
+            let innerList = try XCTUnwrap(accent.innerList)
+            XCTAssertEqual(innerList.atoms.count, content.count,
+                           "Should parse all \(content.count) characters")
+        }
+    }
+
+    func testVectorArrowLatexRoundTrip() throws {
+        let testCases = [
+            ("\\vec{x}", "\\vec{x}"),
+            ("\\overleftarrow{AB}", "\\overleftarrow{AB}"),
+            // Note: \overrightarrow maps to same Unicode as \vec, so it converts to \vec
+            ("\\overrightarrow{v}", "\\vec{v}"),
+            ("\\overleftrightarrow{AC}", "\\overleftrightarrow{AC}")
+        ]
+
+        for (input, expected) in testCases {
+            let list = try XCTUnwrap(MTMathListBuilder.build(fromString: input))
+            let output = MTMathListBuilder.mathListToString(list)
+            XCTAssertEqual(output, expected,
+                           "LaTeX round-trip failed for \(input)")
+        }
+    }
+
+    func testVectorArrowWithScripts() throws {
+        let testCases = [
+            "\\vec{v}_0",
+            "\\overrightarrow{AB}^2",
+            "\\overleftarrow{F}_x^y",
+            "\\overleftrightarrow{PQ}_{parallel}"
+        ]
+
+        for input in testCases {
+            var error: NSError? = nil
+            let list = MTMathListBuilder.build(fromString: input, error: &error)
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse \(input)")
+            XCTAssertNil(error, "Should not error: \(error?.localizedDescription ?? "")")
+
+            let accent = try XCTUnwrap(unwrappedList.atoms[0] as? MTAccent)
+
+            // Check for scripts
+            let hasSubscript = accent.subScript != nil
+            let hasSuperscript = accent.superScript != nil
+            XCTAssertTrue(hasSubscript || hasSuperscript,
+                          "Should have at least one script for \(input)")
+        }
+    }
+
+    func testVectorArrowInExpressions() throws {
+        let testCases = [
+            "$\\vec{a} \\cdot \\vec{b}$",  // Dot product
+            "$\\overrightarrow{AB} + \\overrightarrow{BC}$",  // Vector addition
+            "$\\overleftarrow{F} = m\\vec{a}$",  // Newton's law
+            "$\\overleftrightarrow{AC} \\parallel \\overleftrightarrow{BD}$"  // Parallel lines
+        ]
+
+        for input in testCases {
+            var error: NSError? = nil
+            let list = MTMathListBuilder.build(fromString: input, error: &error)
+
+            XCTAssertNotNil(list, "Should parse: \(input)")
+            XCTAssertNil(error, "Should not error: \(error?.localizedDescription ?? "")")
+
+            // Verify at least one accent exists
+            var foundAccent = false
+            for atom in list!.atoms {
+                if atom.type == .accent {
+                    foundAccent = true
+                    break
+                }
+            }
+            XCTAssertTrue(foundAccent, "Should have accent in: \(input)")
+        }
+    }
+
+    func testMultiCharacterArrowAccentParsing() throws {
+        // Test the reported bug: \overrightarrow{DA} should parse correctly
+        let testCases = [
+            ("\\overrightarrow{DA}", "DA", "\u{20D7}"),
+            ("\\overleftarrow{AB}", "AB", "\u{20D6}"),
+            ("\\overleftrightarrow{XY}", "XY", "\u{20E1}"),
+            ("\\vec{AB}", "AB", "\u{20D7}")
+        ]
+
+        for (latex, expectedContent, expectedUnicode) in testCases {
+            var error: NSError? = nil
+            let list = MTMathListBuilder.build(fromString: latex, error: &error)
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse \(latex)")
+            XCTAssertNil(error, "Should not error: \(error?.localizedDescription ?? "")")
+
+            // Should create single accent atom
+            XCTAssertEqual(unwrappedList.atoms.count, 1, "Should have 1 atom for \(latex)")
+            let accent = try XCTUnwrap(unwrappedList.atoms[0] as? MTAccent, "Should be MTAccent for \(latex)")
+
+            // Check accent unicode value
+            XCTAssertEqual(accent.nucleus, expectedUnicode, "\(latex) should have correct Unicode")
+
+            // Check innerList contains all characters
+            let innerList = try XCTUnwrap(accent.innerList, "\(latex) should have innerList")
+            XCTAssertEqual(innerList.atoms.count, expectedContent.count,
+                           "\(latex) should have \(expectedContent.count) characters in innerList")
+
+            // Verify each character
+            for (i, expectedChar) in expectedContent.enumerated() {
+                let atom = innerList.atoms[i]
+                XCTAssertEqual(atom.nucleus, String(expectedChar),
+                               "\(latex) character \(i) should be \(expectedChar)")
+            }
+        }
+    }
+
     func testDelimiterPairs() throws {
         let delimiterPairs = [
             ("langle", "rangle"),

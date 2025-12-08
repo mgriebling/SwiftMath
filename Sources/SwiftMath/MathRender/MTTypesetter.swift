@@ -1210,11 +1210,13 @@ class MTTypesetter {
                     }
                     
                 case .accent:
-                    if maxWidth > 0 {
-                        // When line wrapping is enabled, render the accent properly but inline
-                        // to avoid premature line flushing
+                    let accent = atom as! MTAccent
 
-                        let accent = atom as! MTAccent
+                    // Check if we can use Unicode composition for inline rendering
+                    // Unicode combining characters only work for single characters, not multi-character expressions
+                    if maxWidth > 0 && canUseUnicodeComposition(accent) {
+                        // When line wrapping is enabled and accent is simple, use Unicode composition
+                        // to render inline without line breaks
 
                         // Get the base character from innerList
                         var baseChar = ""
@@ -1263,7 +1265,12 @@ class MTTypesetter {
                         // Treat accent as ordinary for spacing purposes
                         atom.type = .ordinary
                     } else {
-                        // Original behavior when no width constraint
+                        // Use font-based rendering for:
+                        // - Multi-character expressions (e.g., \overrightarrow{DA})
+                        // - Arrow accents that need stretching
+                        // - Complex expressions with scripts
+                        // - When line wrapping is disabled
+
                         // Check if we need to break the line due to width constraints
                         self.checkAndBreakLine()
                         // stash the existing layout
@@ -1274,7 +1281,6 @@ class MTTypesetter {
                         self.addInterElementSpace(prevNode, currentType:.ordinary)
                         atom.type = .ordinary;
 
-                        let accent = atom as! MTAccent?
                         let display = self.makeAccent(accent)
                         displayAtoms.append(display!)
                         currentPosition.x += display!.width;
@@ -2481,20 +2487,151 @@ class MTTypesetter {
         return curGlyph;
     }
     
+    /// Gets the proper glyph name for arrow accents that have stretchy variants in the font.
+    /// Returns different glyphs based on the LaTeX command used:
+    /// - \vec: use combining character glyph (uni20D7) for small fixed-size arrow
+    /// - \overrightarrow: use non-combining arrow (arrowright) which can be stretched
+    func getArrowAccentGlyphName(_ accent: MTAccent) -> String? {
+        // Check if this is a stretchy arrow accent (set by the factory based on LaTeX command)
+        let useStretchy = accent.isStretchy
+
+        // Map Unicode combining characters to appropriate glyph names
+        switch accent.nucleus {
+        case "\u{20D6}":  // Combining left arrow above
+            return useStretchy ? "arrowleft" : "uni20D6"
+        case "\u{20D7}":  // Combining right arrow above (\vec or \overrightarrow)
+            return useStretchy ? "arrowright" : "uni20D7"
+        case "\u{20E1}":  // Combining left right arrow above
+            return useStretchy ? "arrowboth" : "uni20E1"
+        default:
+            return nil
+        }
+    }
+
     func makeAccent(_ accent:MTAccent?) -> MTDisplay? {
         var accentee = MTTypesetter.createLineForMathList(accent!.innerList, font:font, style:style, cramped:true)
         if accent!.nucleus.isEmpty {
             // no accent!
             return accentee
         }
-        let end = accent!.nucleus.index(before: accent!.nucleus.endIndex)
-        var accentGlyph = self.findGlyphForCharacterAtIndex(end, inString:accent!.nucleus)
+
+        var accentGlyph: CGGlyph
+        let isArrowAccent = getArrowAccentGlyphName(accent!) != nil
+
+        // Check if this is an arrow accent that needs special glyph lookup
+        if let arrowGlyphName = getArrowAccentGlyphName(accent!) {
+            // For arrow accents, use non-combining arrow glyphs (e.g., "arrowright")
+            // These have larger horizontal variants than the combining versions
+            accentGlyph = styleFont.get(glyphWithName: arrowGlyphName)
+        } else {
+            // For regular accents, use Unicode character lookup
+            let end = accent!.nucleus.index(before: accent!.nucleus.endIndex)
+            accentGlyph = self.findGlyphForCharacterAtIndex(end, inString:accent!.nucleus)
+        }
+
         let accenteeWidth = accentee!.width;
         var glyphAscent=CGFloat(0), glyphDescent=CGFloat(0), glyphWidth=CGFloat(0)
-        accentGlyph = self.findVariantGlyph(accentGlyph, withMaxWidth:accenteeWidth, maxWidth:&glyphAscent, glyphDescent:&glyphDescent, glyphWidth:&glyphWidth)
-        let delta = min(accentee!.ascent, styleFont.mathTable!.accentBaseHeight);
-        let skew = self.getSkew(accent, accenteeWidth:accenteeWidth, accentGlyph:accentGlyph)
-        let height = accentee!.ascent - delta;  // This is always positive since delta <= height.
+
+        // For arrow accents, adjust requested width based on LaTeX command:
+        // - Non-stretchy (\vec): request small width (1.0) to get first non-zero variant
+        // - Stretchy (\overrightarrow): add 10% padding for better coverage
+        let requestedWidth: CGFloat
+        if isArrowAccent {
+            if accent!.isStretchy {
+                requestedWidth = accenteeWidth * 1.1  // Request extra width for stretching
+            } else {
+                requestedWidth = 1.0  // Get smallest non-zero variant (typically .h1)
+            }
+        } else {
+            requestedWidth = accenteeWidth
+        }
+
+        accentGlyph = self.findVariantGlyph(accentGlyph, withMaxWidth:requestedWidth, maxWidth:&glyphAscent, glyphDescent:&glyphDescent, glyphWidth:&glyphWidth)
+
+        // For non-stretchy arrow accents (\vec): if we got a zero-width glyph (base combining char),
+        // manually select the first variant which is the proper accent size
+        if isArrowAccent && !accent!.isStretchy && glyphWidth == 0 {
+            let variants = styleFont.mathTable!.getHorizontalVariantsForGlyph(accentGlyph)
+            if variants.count > 1, let variantNum = variants[1] {
+                // Use the first variant (.h1) which has proper width
+                accentGlyph = CGGlyph(variantNum.uint16Value)
+                var glyph = accentGlyph
+                var advances = CGSize.zero
+                CTFontGetAdvancesForGlyphs(styleFont.ctFont, .horizontal, &glyph, &advances, 1)
+                glyphWidth = advances.width
+                // Recalculate ascent and descent for the variant glyph
+                var boundingRects = CGRect.zero
+                CTFontGetBoundingRectsForGlyphs(styleFont.ctFont, .horizontal, &glyph, &boundingRects, 1)
+                glyphAscent = boundingRects.maxY
+                glyphDescent = -boundingRects.minY
+            }
+        }
+
+        // Arrow accents need more vertical space and should not be compressed like regular accents
+        let delta: CGFloat
+        let height: CGFloat
+        let skew: CGFloat
+
+        if isArrowAccent {
+            // Arrow accents spacing depends on whether they're stretchy or not
+            if accent!.isStretchy {
+                // Stretchy arrows (\overrightarrow): use full ascent + additional spacing
+                delta = 0  // No compression for stretchy arrows
+                let arrowSpacing = styleFont.mathTable!.upperLimitGapMin  // Use standard gap
+                height = accentee!.ascent + arrowSpacing
+            } else {
+                // Non-stretchy arrows (\vec): use tight spacing like regular accents
+                // This gives a more compact appearance suitable for single-character vectors
+                delta = min(accentee!.ascent, styleFont.mathTable!.accentBaseHeight)
+                height = accentee!.ascent - delta
+            }
+
+            // For stretchy arrow accents (\overrightarrow): if the largest glyph variant is still smaller than content width,
+            // scale it horizontally to fully cover the content
+            // Add small padding to make arrow tip extend slightly beyond content
+            // For non-stretchy accents (\vec): always center without scaling
+            if accent!.isStretchy && glyphWidth < accenteeWidth {
+                // Add padding to make arrow extend beyond content on the tip side
+                // Use approximately 0.15-0.2em extra width
+                let arrowPadding = styleFont.fontSize / 6  // Approximately 0.167em at typical font sizes
+                let targetWidth = accenteeWidth + arrowPadding
+
+                let scaleX = targetWidth / glyphWidth
+                let accentGlyphDisplay = MTGlyphDisplay(withGlpyh: accentGlyph, range: accent!.indexRange, font: styleFont)
+                accentGlyphDisplay.scaleX = scaleX  // Apply horizontal scaling
+                accentGlyphDisplay.ascent = glyphAscent
+                accentGlyphDisplay.descent = glyphDescent
+                accentGlyphDisplay.width = targetWidth  // Set width to include padding
+                accentGlyphDisplay.position = CGPointMake(0, height)  // Align to left edge
+
+                if self.isSingleCharAccentee(accent) && (accent!.subScript != nil || accent!.superScript != nil) {
+                    // Attach the super/subscripts to the accentee instead of the accent.
+                    let innerAtom = accent!.innerList!.atoms[0]
+                    innerAtom.superScript = accent!.superScript
+                    innerAtom.subScript = accent!.subScript
+                    accent?.superScript = nil
+                    accent?.subScript = nil
+                    accentee = MTTypesetter.createLineForMathList(accent!.innerList, font:font, style:style, cramped:cramped)
+                }
+
+                let display = MTAccentDisplay(withAccent:accentGlyphDisplay, accentee:accentee, range:accent!.indexRange)
+                display.width = accentee!.width
+                display.descent = accentee!.descent
+                let ascent = height + glyphAscent
+                display.ascent = max(accentee!.ascent, ascent)
+                display.position = currentPosition
+                return display
+            } else {
+                // Arrow glyph is wide enough or is non-stretchy (\vec): center it over the content
+                skew = (accenteeWidth - glyphWidth) / 2
+            }
+        } else {
+            // For regular accents: use traditional tight positioning
+            delta = min(accentee!.ascent, styleFont.mathTable!.accentBaseHeight)
+            skew = self.getSkew(accent, accenteeWidth:accenteeWidth, accentGlyph:accentGlyph)
+            height = accentee!.ascent - delta  // This is always positive since delta <= height.
+        }
+
         let accentPosition = CGPointMake(skew, height);
         let accentGlyphDisplay = MTGlyphDisplay(withGlpyh: accentGlyph, range: accent!.indexRange, font: styleFont)
         accentGlyphDisplay.ascent = glyphAscent;
@@ -2518,13 +2655,53 @@ class MTTypesetter {
         let display = MTAccentDisplay(withAccent:accentGlyphDisplay, accentee:accentee, range:accent!.indexRange)
         display.width = accentee!.width;
         display.descent = accentee!.descent;
-        let ascent = accentee!.ascent - delta + glyphAscent;
+
+        // Calculate total ascent based on positioning
+        // For arrows: height already includes spacing, so ascent = height + glyphAscent
+        // For regular accents: ascent = accentee.ascent - delta + glyphAscent (existing formula)
+        let ascent = height + glyphAscent;
         display.ascent = max(accentee!.ascent, ascent);
         display.position = currentPosition;
 
         return display;
     }
-    
+
+    /// Determines if an accent can use Unicode composition for inline rendering.
+    /// Unicode combining characters only work correctly for single base characters.
+    /// Multi-character expressions and arrow accents need font-based rendering.
+    func canUseUnicodeComposition(_ accent: MTAccent) -> Bool {
+        // Check if innerList has exactly one simple character
+        guard let innerList = accent.innerList,
+              innerList.atoms.count == 1,
+              let firstAtom = innerList.atoms.first else {
+            return false
+        }
+
+        // Only allow simple variable/number atoms
+        guard firstAtom.type == .variable || firstAtom.type == .number else {
+            return false
+        }
+
+        // Check that the atom doesn't have subscripts/superscripts
+        guard firstAtom.subScript == nil && firstAtom.superScript == nil else {
+            return false
+        }
+
+        // Exclude arrow accents - they need stretching from font glyphs
+        // These Unicode combining characters only apply to single preceding characters
+        let arrowAccents: Set<String> = [
+            "\u{20D6}",  // overleftarrow
+            "\u{20D7}",  // overrightarrow / vec
+            "\u{20E1}"   // overleftrightarrow
+        ]
+
+        if arrowAccents.contains(accent.nucleus) {
+            return false
+        }
+
+        return true
+    }
+
     // MARK: - Table
     
     let kBaseLineSkipMultiplier = CGFloat(1.2)  // default base line stretch is 12 pt for 10pt font.

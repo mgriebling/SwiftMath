@@ -101,7 +101,10 @@ public class MTMathAtomFactory {
         "check" :  "\u{030C}",
         "vec" :  "\u{20D7}",
         "widehat" :  "\u{0302}",
-        "widetilde" :  "\u{0303}"
+        "widetilde" :  "\u{0303}",
+        "overleftarrow" :  "\u{20D6}",      // Combining left arrow above
+        "overrightarrow" :  "\u{20D7}",     // Combining right arrow above (same as vec)
+        "overleftrightarrow" :  "\u{20E1}"  // Combining left right arrow above
     ]
     
     private static let accentValueLock = NSLock()
@@ -725,7 +728,13 @@ public class MTMathAtomFactory {
      */
     public static func accent(withName name: String) -> MTAccent? {
         if let accentValue = accents[name] {
-            return MTAccent(value: accentValue)
+            let accent = MTAccent(value: accentValue)
+            // Mark stretchy arrow accents (\overleftarrow, \overrightarrow, \overleftrightarrow)
+            // These should stretch to match content width
+            // \vec is NOT stretchy - it should use a small fixed-size arrow
+            let stretchyAccents: Set<String> = ["overleftarrow", "overrightarrow", "overleftrightarrow"]
+            accent.isStretchy = stretchyAccents.contains(name)
+            return accent
         }
         return nil
     }

@@ -1747,6 +1747,178 @@ final class MTTypesetterTests: XCTestCase {
         XCTAssertEqual(display.width, 44.86, accuracy: 0.01)
     }
 
+    // MARK: - Vector Arrow Rendering Tests
+
+    func testVectorArrowRendering() throws {
+        let commands = ["vec", "overleftarrow", "overrightarrow", "overleftrightarrow"]
+
+        for cmd in commands {
+            let mathList = MTMathList()
+            let accent = MTMathAtomFactory.accent(withName: cmd)
+            let inner = MTMathList()
+            inner.add(MTMathAtomFactory.atom(forCharacter: "v"))
+            accent?.innerList = inner
+            mathList.add(accent)
+
+            let display = try XCTUnwrap(
+                MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display)
+            )
+
+            // Should have accent display
+            XCTAssertEqual(display.subDisplays.count, 1)
+            let accentDisp = try XCTUnwrap(display.subDisplays[0] as? MTAccentDisplay)
+
+            // Should have accentee and accent glyph
+            XCTAssertNotNil(accentDisp.accentee, "\\\(cmd) should have accentee")
+            XCTAssertNotNil(accentDisp.accent, "\\\(cmd) should have accent glyph")
+
+            // Accent should be positioned above (y > 0 or y == 0 for some fonts)
+            XCTAssertGreaterThanOrEqual(accentDisp.accent!.position.y, 0,
+                                        "\\\(cmd) accent should be at or above accentee")
+        }
+    }
+
+    func testWideVectorArrows() throws {
+        let commands = ["overleftarrow", "overrightarrow", "overleftrightarrow"]
+
+        for cmd in commands {
+            let mathList = MTMathList()
+            let accent = MTMathAtomFactory.accent(withName: cmd)
+            accent?.innerList = MTMathAtomFactory.mathListForCharacters("ABCDEF")
+            mathList.add(accent)
+
+            let display = try XCTUnwrap(
+                MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display)
+            )
+
+            let accentDisp = try XCTUnwrap(display.subDisplays[0] as? MTAccentDisplay)
+            let accentGlyph = try XCTUnwrap(accentDisp.accent)
+            let accentee = try XCTUnwrap(accentDisp.accentee)
+
+            // Verify that the display is created correctly with both accent and accentee
+            XCTAssertGreaterThan(accentGlyph.width, 0, "\\\(cmd) accent should have width")
+            XCTAssertGreaterThan(accentee.width, 0, "\\\(cmd) accentee should have width")
+
+            // Note: Arrow stretching behavior depends on font glyph variants available
+            // The implementation uses the font's Math table to select variants
+            // Some fonts may not stretch as much as others
+        }
+    }
+
+    func testVectorArrowDimensions() throws {
+        let mathList = MTMathList()
+        let accent = MTMathAtomFactory.accent(withName: "overrightarrow")
+        let inner = MTMathList()
+        inner.add(MTMathAtomFactory.atom(forCharacter: "x"))
+        accent?.innerList = inner
+        mathList.add(accent)
+
+        let display = try XCTUnwrap(
+            MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display)
+        )
+
+        // Should have positive dimensions
+        XCTAssertGreaterThan(display.ascent, 0, "Should have positive ascent")
+        XCTAssertGreaterThanOrEqual(display.descent, 0, "Should have non-negative descent")
+        XCTAssertGreaterThan(display.width, 0, "Should have positive width")
+
+        // Ascent should be larger than normal 'x' due to arrow above
+        let normalX = MTTypesetter.createLineForMathList(
+            MTMathAtomFactory.mathListForCharacters("x"),
+            font: self.font,
+            style: .display
+        )
+        XCTAssertGreaterThan(display.ascent, normalX!.ascent,
+                             "Accent should increase ascent")
+    }
+
+    func testMultiCharacterArrowAccents() throws {
+        // Test that multi-character arrow accents render correctly
+        // This is the reported bug: arrow should be above both characters, not after the last one
+        let testCases = [
+            ("overrightarrow", "DA"),
+            ("overleftarrow", "AB"),
+            ("overleftrightarrow", "XY"),
+            ("vec", "AB")  // vec with multi-char should also work
+        ]
+
+        for (cmd, content) in testCases {
+            let mathList = MTMathList()
+            let accent = MTMathAtomFactory.accent(withName: cmd)
+            accent?.innerList = MTMathAtomFactory.mathListForCharacters(content)
+            mathList.add(accent)
+
+            let display = try XCTUnwrap(
+                MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display)
+            )
+
+            // Should create MTAccentDisplay (not inline text)
+            XCTAssertEqual(display.subDisplays.count, 1, "\\\(cmd){\(content)}")
+            let accentDisp = try XCTUnwrap(display.subDisplays[0] as? MTAccentDisplay,
+                                           "\\\(cmd){\(content)} should create MTAccentDisplay")
+
+            // Should have both accent and accentee
+            XCTAssertNotNil(accentDisp.accent, "\\\(cmd){\(content)} should have accent glyph")
+            XCTAssertNotNil(accentDisp.accentee, "\\\(cmd){\(content)} should have accentee")
+
+            // The accentee should contain both characters
+            let accentee = try XCTUnwrap(accentDisp.accentee)
+            XCTAssertGreaterThan(accentee.width, 0, "\\\(cmd){\(content)} accentee should have width")
+        }
+    }
+
+    func testSingleCharacterAccentsWithLineWrapping() throws {
+        // Test that single-character accents still work with Unicode composition when line wrapping
+        let mathList = MTMathList()
+        let accent = MTMathAtomFactory.accent(withName: "bar")
+        accent?.innerList = MTMathAtomFactory.mathListForCharacters("x")
+        mathList.add(accent)
+
+        // Create with line wrapping enabled
+        let maxWidth: CGFloat = 200
+        let display = try XCTUnwrap(
+            MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        )
+
+        // Should render successfully
+        XCTAssertGreaterThan(display.width, 0, "Should have width")
+        XCTAssertGreaterThan(display.ascent, 0, "Should have ascent")
+    }
+
+    func testMultiCharacterAccentsWithLineWrapping() throws {
+        // Test that multi-character arrow accents work correctly with line wrapping enabled
+        let mathList = MTMathList()
+        let accent = MTMathAtomFactory.accent(withName: "overrightarrow")
+        accent?.innerList = MTMathAtomFactory.mathListForCharacters("DA")
+        mathList.add(accent)
+
+        // Create with line wrapping enabled
+        let maxWidth: CGFloat = 200
+        let display = try XCTUnwrap(
+            MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
+        )
+
+        // Should render successfully with MTAccentDisplay
+        XCTAssertGreaterThan(display.width, 0, "Should have width")
+
+        // Should use MTAccentDisplay, not inline Unicode composition
+        // This verifies the fix: multi-char accents use font-based rendering
+        var foundAccentDisplay = false
+        func checkSubDisplays(_ disp: MTDisplay) {
+            if disp is MTAccentDisplay {
+                foundAccentDisplay = true
+            }
+            if let mathListDisplay = disp as? MTMathListDisplay {
+                for sub in mathListDisplay.subDisplays {
+                    checkSubDisplays(sub)
+                }
+            }
+        }
+        checkSubDisplays(display)
+
+        XCTAssertTrue(foundAccentDisplay, "Should use MTAccentDisplay for multi-character arrow accent")
+    }
+
     // MARK: - Interatom Line Breaking Tests
 
     func testInteratomLineBreaking_SimpleEquation() throws {

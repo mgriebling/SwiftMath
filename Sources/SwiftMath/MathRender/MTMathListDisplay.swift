@@ -503,10 +503,12 @@ class MTRadicalDisplay : MTDisplay {
 
 /// Rendering a glyph as a display
 class MTGlyphDisplay : MTDisplayDS {
-    
+
     var glyph:CGGlyph!
     var font:MTFont?
-    
+    /// Horizontal scale factor for stretching glyphs (1.0 = no scaling)
+    var scaleX: CGFloat = 1.0
+
     init(withGlpyh glyph:CGGlyph, range:NSRange, font:MTFont?) {
         super.init()
         self.font = font
@@ -521,10 +523,16 @@ class MTGlyphDisplay : MTDisplayDS {
         context.saveGState()
 
         self.textColor?.setFill()
-        
+
         // Make the current position the origin as all the positions of the sub atoms are relative to the origin.
-        
+
         context.translateBy(x: self.position.x, y: self.position.y - self.shiftDown);
+
+        // Apply horizontal scaling if needed (for stretchy arrows)
+        if scaleX != 1.0 {
+            context.scaleBy(x: scaleX, y: 1.0)
+        }
+
         context.textPosition = CGPoint.zero
 
         var pos = CGPoint.zero
