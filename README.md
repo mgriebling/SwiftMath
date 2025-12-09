@@ -239,6 +239,8 @@ Breaks equations **between atoms** (mathematical elements) when content exceeds 
 ##### 2. Universal Line Breaking (Fallback)
 For very long text within single atoms, breaks at Unicode word boundaries using Core Text with number protection (prevents splitting numbers like "3.14").
 
+See `MULTILINE_IMPLEMENTATION_NOTES.md` for implementation details and recent changes.
+
 #### Fully Supported Cases
 
 These atom types work perfectly with interatom line breaking:
@@ -365,10 +367,12 @@ label.latex = "a + \\color{red}{b} + c"
 // Colored portion causes line break
 ```
 
-**⚠️ Math accents:**
+**⚠️ Math accents (partial support):**
 ```swift
 label.latex = "\\hat{x} + \\tilde{y} + \\bar{z}"
-// Accents may cause line breaks
+// Common accents (\hat, \tilde, \bar) are positioned correctly in most cases.
+// Some complex grapheme clusters or font-specific metrics may still need additional polishing.
+// See MULTILINE_IMPLEMENTATION_NOTES.md for details and known edge cases.
 ```
 
 #### Best Practices
