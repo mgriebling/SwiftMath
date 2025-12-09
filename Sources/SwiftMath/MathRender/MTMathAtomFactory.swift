@@ -734,6 +734,13 @@ public class MTMathAtomFactory {
             // \vec is NOT stretchy - it should use a small fixed-size arrow
             let stretchyAccents: Set<String> = ["overleftarrow", "overrightarrow", "overleftrightarrow"]
             accent.isStretchy = stretchyAccents.contains(name)
+
+            // Mark wide accents (\widehat, \widetilde, \widecheck)
+            // These should stretch horizontally to cover content width
+            // \hat, \tilde, \check are NOT wide - they use fixed-size accents
+            let wideAccents: Set<String> = ["widehat", "widetilde", "widecheck"]
+            accent.isWide = wideAccents.contains(name)
+
             return accent
         }
         return nil

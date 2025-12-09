@@ -2445,7 +2445,7 @@ class MTTypesetter {
     }
     
     // Find the largest horizontal variant if exists, with width less than max width.
-    func findVariantGlyph(_ glyph:CGGlyph, withMaxWidth maxWidth:CGFloat, maxWidth glyphAscent:inout CGFloat, glyphDescent:inout CGFloat, glyphWidth:inout CGFloat) -> CGGlyph {
+    func findVariantGlyph(_ glyph:CGGlyph, withMaxWidth maxWidth:CGFloat, maxWidth glyphAscent:inout CGFloat, glyphDescent:inout CGFloat, glyphWidth:inout CGFloat, glyphMinY:inout CGFloat) -> CGGlyph {
         let variants = styleFont.mathTable!.getHorizontalVariantsForGlyph(glyph)
         let numVariants = variants.count
         assert(numVariants > 0, "A glyph is always it's own variant, so number of variants should be > 0");
@@ -2474,6 +2474,7 @@ class MTTypesetter {
                     glyphWidth = advances[i].width;
                     glyphAscent = ascent;
                     glyphDescent = descent;
+                    glyphMinY = bounds.minY;
                 }
                 return curGlyph;
             } else {
@@ -2481,6 +2482,7 @@ class MTTypesetter {
                 glyphWidth = advances[i].width;
                 glyphAscent = ascent;
                 glyphDescent = descent;
+                glyphMinY = bounds.minY;
             }
         }
         // We exhausted all the variants and none was larger than the width, so we return the largest
@@ -2508,6 +2510,81 @@ class MTTypesetter {
         }
     }
 
+    /// Gets the proper glyph name for wide accents that should stretch to cover content.
+    /// Returns different glyphs based on the LaTeX command used:
+    /// - \hat: use combining character for fixed-size accent
+    /// - \widehat: use non-combining circumflex which can be stretched
+    func getWideAccentGlyphName(_ accent: MTAccent) -> String? {
+        // Only apply to wide accents (set by factory based on LaTeX command)
+        guard accent.isWide else { return nil }
+
+        // Map Unicode combining characters to non-combining glyph names with stretchy variants
+        switch accent.nucleus {
+        case "\u{0302}":  // COMBINING CIRCUMFLEX ACCENT (\hat or \widehat)
+            return "circumflex"
+        case "\u{0303}":  // COMBINING TILDE (\tilde or \widetilde)
+            return "tilde"
+        case "\u{030C}":  // COMBINING CARON (\check or \widecheck)
+            return "caron"
+        default:
+            return nil
+        }
+    }
+
+    /// Counts the approximate character length of the content under a wide accent.
+    /// This is used to select the appropriate glyph variant.
+    func getWideAccentContentLength(_ accent: MTAccent) -> Int {
+        guard let innerList = accent.innerList else { return 0 }
+
+        var charCount = 0
+        for atom in innerList.atoms {
+            switch atom.type {
+            case .variable, .number:
+                // Count actual characters
+                charCount += atom.nucleus.count
+            case .ordinary, .binaryOperator, .relation:
+                // Count as single character
+                charCount += 1
+            case .fraction:
+                // Fractions count as 2 units
+                charCount += 2
+            case .radical:
+                // Radicals count as 2 units
+                charCount += 2
+            case .largeOperator:
+                // Large operators count as 2 units
+                charCount += 2
+            default:
+                // Other types count as 1 unit
+                charCount += 1
+            }
+        }
+        return charCount
+    }
+
+    /// Determines which glyph variant to use for a wide accent based on content length.
+    /// Returns a multiplier for the requested width (1.0, 1.5, 2.0, or 2.5)
+    /// Similar to KaTeX's approach of selecting variants based on character count.
+    func getWideAccentVariantMultiplier(_ accent: MTAccent) -> CGFloat {
+        let charCount = getWideAccentContentLength(accent)
+
+        // Map character count to variant width request multiplier
+        // This helps select larger glyph variants from the font's MATH table
+        // 1-2 chars: request 1.0x (smallest variant)
+        // 3-4 chars: request 1.5x (medium variant)
+        // 5-6 chars: request 2.0x (large variant)
+        // 7+ chars: request 2.5x (largest variant)
+        if charCount <= 2 {
+            return 1.0
+        } else if charCount <= 4 {
+            return 1.5
+        } else if charCount <= 6 {
+            return 2.0
+        } else {
+            return 2.5
+        }
+    }
+
     func makeAccent(_ accent:MTAccent?) -> MTDisplay? {
         var accentee = MTTypesetter.createLineForMathList(accent!.innerList, font:font, style:style, cramped:true)
         if accent!.nucleus.isEmpty {
@@ -2517,9 +2594,14 @@ class MTTypesetter {
 
         var accentGlyph: CGGlyph
         let isArrowAccent = getArrowAccentGlyphName(accent!) != nil
+        let isWideAccent = getWideAccentGlyphName(accent!) != nil
 
-        // Check if this is an arrow accent that needs special glyph lookup
-        if let arrowGlyphName = getArrowAccentGlyphName(accent!) {
+        // Check for special accent types that need non-combining glyphs
+        if let wideGlyphName = getWideAccentGlyphName(accent!) {
+            // For wide accents, use non-combining glyphs (e.g., "circumflex", "tilde")
+            // These have horizontal variants that can stretch
+            accentGlyph = styleFont.get(glyphWithName: wideGlyphName)
+        } else if let arrowGlyphName = getArrowAccentGlyphName(accent!) {
             // For arrow accents, use non-combining arrow glyphs (e.g., "arrowright")
             // These have larger horizontal variants than the combining versions
             accentGlyph = styleFont.get(glyphWithName: arrowGlyphName)
@@ -2530,13 +2612,18 @@ class MTTypesetter {
         }
 
         let accenteeWidth = accentee!.width;
-        var glyphAscent=CGFloat(0), glyphDescent=CGFloat(0), glyphWidth=CGFloat(0)
+        var glyphAscent=CGFloat(0), glyphDescent=CGFloat(0), glyphWidth=CGFloat(0), glyphMinY=CGFloat(0)
 
-        // For arrow accents, adjust requested width based on LaTeX command:
-        // - Non-stretchy (\vec): request small width (1.0) to get first non-zero variant
-        // - Stretchy (\overrightarrow): add 10% padding for better coverage
+        // Adjust requested width based on accent type:
+        // - Wide accents (\widehat): request width based on content length (variant selection)
+        // - Arrow accents (\overrightarrow): request extra width for stretching
+        // - Regular accents: request exact content width
         let requestedWidth: CGFloat
-        if isArrowAccent {
+        if isWideAccent {
+            // For wide accents, request width based on content length to select appropriate variant
+            let multiplier = getWideAccentVariantMultiplier(accent!)
+            requestedWidth = accenteeWidth * multiplier
+        } else if isArrowAccent {
             if accent!.isStretchy {
                 requestedWidth = accenteeWidth * 1.1  // Request extra width for stretching
             } else {
@@ -2546,7 +2633,7 @@ class MTTypesetter {
             requestedWidth = accenteeWidth
         }
 
-        accentGlyph = self.findVariantGlyph(accentGlyph, withMaxWidth:requestedWidth, maxWidth:&glyphAscent, glyphDescent:&glyphDescent, glyphWidth:&glyphWidth)
+        accentGlyph = self.findVariantGlyph(accentGlyph, withMaxWidth:requestedWidth, maxWidth:&glyphAscent, glyphDescent:&glyphDescent, glyphWidth:&glyphWidth, glyphMinY:&glyphMinY)
 
         // For non-stretchy arrow accents (\vec): if we got a zero-width glyph (base combining char),
         // manually select the first variant which is the proper accent size
@@ -2562,28 +2649,78 @@ class MTTypesetter {
                 // Recalculate ascent and descent for the variant glyph
                 var boundingRects = CGRect.zero
                 CTFontGetBoundingRectsForGlyphs(styleFont.ctFont, .horizontal, &glyph, &boundingRects, 1)
+                glyphMinY = boundingRects.minY
                 glyphAscent = boundingRects.maxY
                 glyphDescent = -boundingRects.minY
             }
         }
 
-        // Arrow accents need more vertical space and should not be compressed like regular accents
+        // Special accents (arrows and wide accents) need more vertical space and different positioning
         let delta: CGFloat
         let height: CGFloat
         let skew: CGFloat
 
-        if isArrowAccent {
+        if isWideAccent {
+            // Wide accents (\widehat, \widetilde): use same vertical spacing as stretchy arrows
+            delta = 0  // No compression for wide accents
+            let wideAccentSpacing = styleFont.mathTable!.upperLimitGapMin  // Same as stretchy arrows
+            // Compensate for internal glyph whitespace (minY > 0)
+            let minYCompensation = max(0, glyphMinY)
+            height = accentee!.ascent + wideAccentSpacing - minYCompensation
+
+            // For wide accents: if the largest glyph variant is still smaller than content width,
+            // scale it horizontally to fully cover the content
+            if glyphWidth < accenteeWidth {
+                // Add padding to make accent extend slightly beyond content
+                // Use ~0.1em padding (less than arrows which use ~0.167em)
+                let widePadding = styleFont.fontSize / 10  // Approximately 0.1em
+                let targetWidth = accenteeWidth + widePadding
+
+                let scaleX = targetWidth / glyphWidth
+                let accentGlyphDisplay = MTGlyphDisplay(withGlpyh: accentGlyph, range: accent!.indexRange, font: styleFont)
+                accentGlyphDisplay.scaleX = scaleX  // Apply horizontal scaling
+                accentGlyphDisplay.ascent = glyphAscent
+                accentGlyphDisplay.descent = glyphDescent
+                accentGlyphDisplay.width = targetWidth  // Set width to include padding
+                accentGlyphDisplay.position = CGPointMake(0, height)  // Align to left edge
+
+                if self.isSingleCharAccentee(accent) && (accent!.subScript != nil || accent!.superScript != nil) {
+                    // Attach the super/subscripts to the accentee instead of the accent.
+                    let innerAtom = accent!.innerList!.atoms[0]
+                    innerAtom.superScript = accent!.superScript
+                    innerAtom.subScript = accent!.subScript
+                    accent?.superScript = nil
+                    accent?.subScript = nil
+                    accentee = MTTypesetter.createLineForMathList(accent!.innerList, font:font, style:style, cramped:cramped)
+                }
+
+                let display = MTAccentDisplay(withAccent:accentGlyphDisplay, accentee:accentee, range:accent!.indexRange)
+                display.width = accentee!.width
+                display.descent = accentee!.descent
+                let ascent = height + glyphAscent
+                display.ascent = max(accentee!.ascent, ascent)
+                display.position = currentPosition
+                return display
+            } else {
+                // Wide accent glyph is wide enough: center it over the content
+                skew = (accenteeWidth - glyphWidth) / 2
+            }
+        } else if isArrowAccent {
             // Arrow accents spacing depends on whether they're stretchy or not
             if accent!.isStretchy {
                 // Stretchy arrows (\overrightarrow): use full ascent + additional spacing
                 delta = 0  // No compression for stretchy arrows
                 let arrowSpacing = styleFont.mathTable!.upperLimitGapMin  // Use standard gap
-                height = accentee!.ascent + arrowSpacing
+                // Compensate for internal glyph whitespace (minY > 0)
+                let minYCompensation = max(0, glyphMinY)
+                height = accentee!.ascent + arrowSpacing - minYCompensation
             } else {
                 // Non-stretchy arrows (\vec): use tight spacing like regular accents
                 // This gives a more compact appearance suitable for single-character vectors
                 delta = min(accentee!.ascent, styleFont.mathTable!.accentBaseHeight)
-                height = accentee!.ascent - delta
+                // Compensate for internal glyph whitespace (minY > 0)
+                let minYCompensation = max(0, glyphMinY)
+                height = accentee!.ascent - delta - minYCompensation
             }
 
             // For stretchy arrow accents (\overrightarrow): if the largest glyph variant is still smaller than content width,

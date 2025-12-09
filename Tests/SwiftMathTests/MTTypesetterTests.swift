@@ -1772,9 +1772,20 @@ final class MTTypesetterTests: XCTestCase {
             XCTAssertNotNil(accentDisp.accentee, "\\\(cmd) should have accentee")
             XCTAssertNotNil(accentDisp.accent, "\\\(cmd) should have accent glyph")
 
-            // Accent should be positioned above (y > 0 or y == 0 for some fonts)
-            XCTAssertGreaterThanOrEqual(accentDisp.accent!.position.y, 0,
-                                        "\\\(cmd) accent should be at or above accentee")
+            // Accent should be positioned such that its visual bottom is at or above accentee
+            // With minY compensation, position.y can be negative, but visual bottom (position.y + minY) should be >= 0
+            let accentVisualBottom: CGFloat
+            if let glyphDisp = accentDisp.accent as? MTGlyphDisplay,
+               let glyph = glyphDisp.glyph {
+                var glyphCopy = glyph
+                var boundingRect = CGRect.zero
+                CTFontGetBoundingRectsForGlyphs(self.font.ctFont, .horizontal, &glyphCopy, &boundingRect, 1)
+                accentVisualBottom = accentDisp.accent!.position.y + max(0, boundingRect.minY)
+            } else {
+                accentVisualBottom = accentDisp.accent!.position.y
+            }
+            XCTAssertGreaterThanOrEqual(accentVisualBottom, 0,
+                                        "\\\(cmd) accent visual bottom should be at or above accentee")
         }
     }
 
