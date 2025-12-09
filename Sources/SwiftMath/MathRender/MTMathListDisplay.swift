@@ -136,16 +136,25 @@ public class MTCTLineDisplay : MTDisplay {
         self.range = range
         self.atoms = atoms
         // We can't use typographic bounds here as the ascent and descent returned are for the font and not for the line.
-        self.width = CTLineGetTypographicBounds(line, nil, nil, nil);
+        // CRITICAL FIX for accented character clipping:
+        // Use the MAXIMUM of typographic width and visual width to account for glyph overhang.
+        // - Typographic width = advance width (how far the cursor moves)
+        // - Visual width = actual glyph extent (CGRectGetMaxX of glyph path bounds)
+        // Some glyphs (especially italic/oblique accented characters) extend beyond their advance width.
+        // Using max() ensures we account for overhang while maintaining proper spacing for normal glyphs.
+        let typographicWidth = CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil))
         if isIos6Supported() {
             let bounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
             self.ascent = max(0, CGRectGetMaxY(bounds) - 0);
             self.descent = max(0, 0 - CGRectGetMinY(bounds));
-            // TODO: Should we use this width vs the typographic width? They are slightly different. Don't know why.
-            // _width = CGRectGetMaxX(bounds);
+            // Use the maximum of visual and typographic width to handle both:
+            // 1. Overhanging glyphs (visual > typographic) - prevents clipping
+            // 2. Normal glyphs (typographic >= visual) - maintains correct spacing
+            let visualWidth = CGRectGetMaxX(bounds)
+            self.width = max(typographicWidth, visualWidth);
         } else {
             // Our own implementation of the ios6 function to get glyph path bounds.
-            self.computeDimensions(font)
+            self.computeDimensions(font, typographicWidth: typographicWidth)
         }
     }
     
@@ -160,8 +169,11 @@ public class MTCTLineDisplay : MTDisplay {
         get { super.textColor }
     }
 
-    func computeDimensions(_ font:MTFont?) {
+    func computeDimensions(_ font:MTFont?, typographicWidth: CGFloat) {
         let runs = CTLineGetGlyphRuns(line) as NSArray
+        var maxVisualWidth: CGFloat = 0
+        var currentX: CGFloat = 0
+
         for obj in runs {
             let run = obj as! CTRun?
             let numGlyphs = CTRunGetGlyphCount(run!)
@@ -178,7 +190,26 @@ public class MTCTLineDisplay : MTDisplay {
             if (descent > self.descent) {
                 self.descent = descent;
             }
+
+            // Calculate visual width using glyph extent
+            // Get the rightmost edge of this run's glyphs
+            let runVisualWidth = CGRectGetMaxX(bounds)
+            let runRightEdge = currentX + runVisualWidth
+
+            // Get advances to know where next run starts
+            var advances = [CGSize](repeating: CGSize.zero, count: numGlyphs)
+            CTRunGetAdvances(run!, CFRangeMake(0, numGlyphs), &advances)
+            for advance in advances {
+                currentX += advance.width
+            }
+
+            if (runRightEdge > maxVisualWidth) {
+                maxVisualWidth = runRightEdge
+            }
         }
+
+        // Use maximum of typographic and visual width
+        self.width = max(typographicWidth, maxVisualWidth)
     }
     
     override public func draw(_ context: CGContext) {
@@ -269,7 +300,7 @@ public class MTMathListDisplay : MTDisplay {
             if (ascent > max_ascent) {
                 max_ascent = ascent;
             }
-            
+
             let descent = max(0, 0 - (atom.position.y - atom.descent));
             if (descent > max_descent) {
                 max_descent = descent;
@@ -310,8 +341,19 @@ public class MTFractionDisplay : MTDisplay {
         self.numerator = numerator;
         self.denominator = denominator;
         self.position = position;
-        self.range = range;
-        assert(self.range.length == 1, "Fraction range length not 1 - range (\(range.location), \(range.length)")
+
+        // CRITICAL FIX: Handle invalid ranges gracefully
+        // When table cells are typeset independently with maxWidth, atoms may have
+        // ranges that are invalid in the cell's context (e.g., (0,0) or other issues)
+        // Instead of crashing with assertion, normalize the range
+        if range.length == 0 {
+            // Create a dummy range with length 1 at the given location
+            self.range = NSMakeRange(range.location, 1)
+        } else {
+            self.range = range;
+            // Still assert for debugging if range length is something unexpected
+            assert(self.range.length == 1, "Fraction range length not 1 - range (\(range.location), \(range.length)")
+        }
     }
 
     override public var ascent:CGFloat {

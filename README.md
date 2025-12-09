@@ -315,21 +315,59 @@ label.preferredMaxLayoutWidth = 150
 ```swift
 label.latex = "a+\\frac{1}{2}+\\sqrt{3}+b"
 label.preferredMaxLayoutWidth = 200
-// Intelligently breaks between complex mathematical elements
+// Breaks between complex mathematical elements
 ```
 
 #### Limited Support Cases
 
 These cases work but with some constraints:
 
-**⚠️ Atoms with superscripts/subscripts:**
+**✅ Large operators (NEW!):**
+```swift
+label.latex = "a + \\sum_{i=1}^{n} x_i + \\int_{0}^{1} f(x)dx + b"
+label.preferredMaxLayoutWidth = 200
+// Large operators stay inline when they fit!
+// Includes height checking for operators with limits
+```
+
+**✅ Delimited expressions (NEW!):**
+```swift
+label.latex = "(a+b) + \\left(\\frac{c}{d}\\right) + e"
+label.preferredMaxLayoutWidth = 200
+// Delimiters stay inline when they fit!
+// Inner content respects width constraints and wraps naturally
+```
+
+**✅ Colored expressions (NEW!):**
+```swift
+label.latex = "a + \\color{red}{b + c + d} + e"
+label.preferredMaxLayoutWidth = 200
+// Colored sections stay inline when they fit!
+// Inner content respects width constraints and wraps properly
+```
+
+**✅ Matrices/tables (NEW!):**
+```swift
+label.latex = "A = \\begin{pmatrix} 1 & 2 \\end{pmatrix} + B"
+label.preferredMaxLayoutWidth = 200
+// Small matrices stay inline when they fit!
+```
+
+**✅ Atoms with superscripts/subscripts (IMPROVED!):**
 ```swift
 label.latex = "a^{2}+b^{2}+c^{2}+d^{2}+e^{2}"
 label.preferredMaxLayoutWidth = 150
-// Works, but uses fallback breaking mechanism
-// May not break at the most optimal positions
+// Now works with width-based breaking!
+// Scripted atoms participate in smart line breaking decisions
 ```
-**Note**: Scripted atoms (with superscripts/subscripts) trigger the universal breaking mechanism which breaks within accumulated text rather than at atom boundaries. This still works but may not be as clean as pure interatom breaking.
+
+**✅ Math accents:**
+```swift
+label.latex = "\\hat{x} + \\tilde{y} + \\bar{z} + \\vec{w}"
+label.preferredMaxLayoutWidth = 150
+// Common accents (\hat, \tilde, \bar, \vec) work well
+// Vector arrows (\overrightarrow, etc.) supported with stretching
+```
 
 **⚠️ Very long single text atoms:**
 ```swift
@@ -338,42 +376,7 @@ label.preferredMaxLayoutWidth = 200
 // Uses Unicode word boundary breaking with Core Text
 // Protects numbers from being split (e.g., "3.14" stays together)
 ```
-
-#### Remaining Unsupported Cases
-
-These atom types still force line breaks (not yet optimized):
-
-**⚠️ Large operators (∑, ∫, ∏, lim):**
-```swift
-label.latex = "\\sum_{i=1}^{n} x_i + \\int_{0}^{1} f(x)dx"
-// Each operator forces a new line
-```
-
-**⚠️ Matrices and tables:**
-```swift
-label.latex = "A = \\begin{pmatrix} 1 & 2 \\\\ 3 & 4 \\end{pmatrix}"
-// Matrix always on own line
-```
-
-**⚠️ Delimited expressions (\left...\right):**
-```swift
-label.latex = "\\left(\\frac{a}{b}\\right) + c"
-// The parenthesized group forces line breaks
-```
-
-**⚠️ Colored expressions:**
-```swift
-label.latex = "a + \\color{red}{b} + c"
-// Colored portion causes line break
-```
-
-**⚠️ Math accents (partial support):**
-```swift
-label.latex = "\\hat{x} + \\tilde{y} + \\bar{z}"
-// Common accents (\hat, \tilde, \bar) are positioned correctly in most cases.
-// Some complex grapheme clusters or font-specific metrics may still need additional polishing.
-// See MULTILINE_IMPLEMENTATION_NOTES.md for details and known edge cases.
-```
+**Note**: Breaks within the text atom rather than between atoms, which is expected behavior for very long continuous text.
 
 #### Best Practices
 
@@ -409,7 +412,7 @@ label.preferredMaxLayoutWidth = 150
 label.latex = "a+\\frac{1}{2}+b+\\frac{3}{4}+c"
 label.preferredMaxLayoutWidth = 200
 // ✅ Fractions stay inline when they fit!
-// Breaks intelligently: "a + ½ + b" on line 1, "+ ¾ + c" on line 2
+// Breaks: "a + ½ + b" on line 1, "+ ¾ + c" on line 2
 ```
 
 **Excellent use case (radicals inline - NEW!):**
@@ -430,11 +433,14 @@ label.preferredMaxLayoutWidth = 0  // No breaking
 
 #### Technical Details
 
-- **Line spacing**: New lines are positioned at `fontSize × 1.5` below the previous line
-- **Breaking algorithm**: Greedy - breaks immediately when projected width exceeds constraint
+- **Line spacing**: Dynamic line height based on actual content (tall fractions get more space, regular content stays compact)
+- **Breaking algorithm**: Greedy with look-ahead and break quality scoring - prefers breaking after operators over other positions
 - **Width calculation**: Includes inter-element spacing according to TeX spacing rules
 - **Number protection**: Numbers in patterns like "3.14", "1,000", etc. are kept intact
 - **Supports locales**: English, French, Swiss number formats
+- **Advanced features**: Tokenization infrastructure with phase-based processing (preprocessing → tokenization → line fitting → display generation)
+
+For complete implementation details including recent improvements (dynamic line height, break quality scoring, early exit optimization), see [MULTILINE_IMPLEMENTATION_NOTES.md](MULTILINE_IMPLEMENTATION_NOTES.md).
 
 ### Included Features
 This is a list of formula types that the library currently supports:
@@ -455,7 +461,10 @@ This is a list of formula types that the library currently supports:
 * Ratios, proportions, percentages
 * Math spacing
 * Overline and underline
-* Math accents
+* Math accents (including `\hat`, `\tilde`, `\bar`, `\vec`, `\dot`, `\ddot`, etc.)
+* Vector arrows (`\vec`, `\overrightarrow`, `\overleftarrow`, `\overleftrightarrow` with automatic stretching)
+* Wide accents (`\widehat`, `\widetilde`)
+* Operator names (`\operatorname{name}`)
 * Matrices (including `\smallmatrix` and starred variants like `pmatrix*` with alignment)
 * Multi-line subscripts and limits (`\substack`)
 * Equation alignment
@@ -466,6 +475,7 @@ This is a list of formula types that the library currently supports:
 * Most commonly used math symbols
 * Colors for both text and background
 * **Inline and display math mode delimiters** (see below)
+* **Automatic line wrapping** (see Automatic Line Wrapping section)
 
 ### LaTeX Math Delimiters
 

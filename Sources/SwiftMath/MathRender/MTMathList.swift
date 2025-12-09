@@ -927,7 +927,23 @@ public class MTMathList : NSObject {
             let newNode = atom.finalized
             
             if NSEqualRanges(zeroRange, atom.indexRange) {
-                let index = prevNode == nil ? 0 : prevNode!.indexRange.location + prevNode!.indexRange.length
+                // CRITICAL FIX: Check if prevNode has a valid range location before using it
+                // If location is NSNotFound, treat as if there's no prevNode
+                // This prevents negative overflow when creating NSMakeRange
+                let index: Int
+                if prevNode == nil || prevNode!.indexRange.location == NSNotFound {
+                    index = 0
+                } else {
+                    // Additional safety: check for potential overflow
+                    let location = prevNode!.indexRange.location
+                    let length = prevNode!.indexRange.length
+                    // If either value is suspicious (negative or too large), reset to 0
+                    if location < 0 || length < 0 || location > Int.max - length {
+                        index = 0
+                    } else {
+                        index = location + length
+                    }
+                }
                 newNode.indexRange = NSMakeRange(index, 1)
             }
             

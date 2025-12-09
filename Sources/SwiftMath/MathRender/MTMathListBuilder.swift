@@ -769,9 +769,11 @@ public struct MTMathListBuilder {
             skipSpaces()
             if hasCharacters && string[currentCharIndex] == "[" {
                 _ = getNextCharacter() // consume '['
-                let alignmentChar = getNextCharacter()
-                if alignmentChar == "l" || alignmentChar == "r" || alignmentChar == "c" {
-                    frac.alignment = String(alignmentChar)
+                if hasCharacters {
+                    let alignmentChar = getNextCharacter()
+                    if alignmentChar == "l" || alignmentChar == "r" || alignmentChar == "c" {
+                        frac.alignment = String(alignmentChar)
+                    }
                 }
                 // Consume closing ']'
                 if hasCharacters && string[currentCharIndex] == "]" {
@@ -1243,9 +1245,11 @@ public struct MTMathListBuilder {
             skipSpaces()
             if hasCharacters && string[currentCharIndex] == "[" {
                 _ = getNextCharacter() // consume '['
-                let alignmentChar = getNextCharacter()
-                if alignmentChar == "l" || alignmentChar == "r" || alignmentChar == "c" {
-                    frac.alignment = String(alignmentChar)
+                if hasCharacters {
+                    let alignmentChar = getNextCharacter()
+                    if alignmentChar == "l" || alignmentChar == "r" || alignmentChar == "c" {
+                        frac.alignment = String(alignmentChar)
+                    }
                 }
                 // Consume closing ']'
                 if hasCharacters && string[currentCharIndex] == "]" {
@@ -1345,6 +1349,10 @@ public struct MTMathListBuilder {
             return MTLargeOperator(value: operatorName, limits: hasLimits)
         } else if command == "sqrt" {
             let rad = MTRadical()
+            guard self.hasCharacters else {
+                rad.radicand = self.buildInternal(true)
+                return rad
+            }
             let char = self.getNextCharacter()
             if char == "[" {
                 rad.degree = self.buildInternal(false, stopChar: "]")
