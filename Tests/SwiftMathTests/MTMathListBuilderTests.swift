@@ -1356,6 +1356,33 @@ final class MTMathListBuilderTests: XCTestCase {
         XCTAssertEqual(latex, "\\mathrm{x\\  y}", desc)
     }
 
+    func testOperatorName() throws {
+        let str = "\\operatorname{dim}";
+        let list = MTMathListBuilder.build(fromString: str)!
+        let desc = "Error for string:\(str)"
+
+        XCTAssertNotNil(list, desc)
+        XCTAssertEqual((list.atoms.count), 3, desc)
+        var atom = list.atoms[0];
+        XCTAssertEqual(atom.type, .variable, desc)
+        XCTAssertEqual(atom.nucleus, "d", desc)
+        XCTAssertEqual(atom.fontStyle, .roman, desc);
+
+        atom = list.atoms[1];
+        XCTAssertEqual(atom.type, .variable, desc)
+        XCTAssertEqual(atom.nucleus, "i", desc)
+        XCTAssertEqual(atom.fontStyle, .roman, desc);
+
+        atom = list.atoms[2];
+        XCTAssertEqual(atom.type, .variable, desc)
+        XCTAssertEqual(atom.nucleus, "m", desc)
+        XCTAssertEqual(atom.fontStyle, .roman, desc);
+
+        // convert it back to latex
+        let latex = MTMathListBuilder.mathListToString(list)
+        XCTAssertEqual(latex, "\\mathrm{dim}", desc)
+    }
+
     func testLimits() throws {
         // Int with no limits (default)
         var str = "\\int";

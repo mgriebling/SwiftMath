@@ -528,6 +528,7 @@ public class MTMathAtomFactory {
         "mathbfit": .boldItalic,
         "bm": .boldItalic,
         "text": .roman,
+        "operatorname": .roman,
     ]
     
     public static func fontStyleWithName(_ fontName:String) -> MTFontStyle? {
