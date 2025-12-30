@@ -1,5 +1,5 @@
 import XCTest
-@testable import SwiftMath
+@testable import SwiftUIMath
 
 //
 //  MathFontTests.swift

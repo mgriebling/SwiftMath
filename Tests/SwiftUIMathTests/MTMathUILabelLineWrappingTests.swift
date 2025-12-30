@@ -6,7 +6,7 @@
 //
 
 import XCTest
-@testable import SwiftMath
+@testable import SwiftUIMath
 
 class MTMathUILabelLineWrappingTests: XCTestCase {
 
@@ -388,8 +388,6 @@ class MTMathUILabelLineWrappingTests: XCTestCase {
         label.font = MTFontManager.fontManager.defaultFont
         label.labelMode = .text
 
-        let unconstrainedSize = label.intrinsicContentSize
-
         label.preferredMaxLayoutWidth = 200
         let constrainedSize = label.intrinsicContentSize
 
@@ -414,8 +412,6 @@ class MTMathUILabelLineWrappingTests: XCTestCase {
         label.latex = "\\(\\text{The equation is 方程式: } x^2 + y^2 = r^2 \\text{ です。}\\)"
         label.font = MTFontManager.fontManager.defaultFont
         label.labelMode = .text
-
-        let unconstrainedSize = label.intrinsicContentSize
 
         label.preferredMaxLayoutWidth = 250
         let constrainedSize = label.intrinsicContentSize

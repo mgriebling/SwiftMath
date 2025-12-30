@@ -1,5 +1,5 @@
 import XCTest
-@testable import SwiftMath
+@testable import SwiftUIMath
 
 //
 //  MathTypesetterTests.swift
@@ -2306,10 +2306,6 @@ final class MTTypesetterTests: XCTestCase {
         let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .text, maxWidth: maxWidth)
         XCTAssertNotNil(display)
 
-        // In text style, large operator should be inline-sized and stay with surrounding content
-        // Should be 1 line if it fits
-        let lineCount = display!.subDisplays.count
-
         // Verify width constraints are respected
         for (index, subDisplay) in display!.subDisplays.enumerated() {
             XCTAssertLessThanOrEqual(subDisplay.width, maxWidth * 1.2,
@@ -2348,9 +2344,6 @@ final class MTTypesetterTests: XCTestCase {
         let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .text, maxWidth: maxWidth)
         XCTAssertNotNil(display)
 
-        // In text style with wide constraint, might fit on 1-2 lines
-        let lineCount = display!.subDisplays.count
-
         XCTAssertGreaterThan(display!.subDisplays.count, 0, "Operators render")
 
         // Verify width constraints
@@ -2371,9 +2364,6 @@ final class MTTypesetterTests: XCTestCase {
         let maxWidth: CGFloat = 200
         let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
         XCTAssertNotNil(display)
-
-        // Should stay on 1 line when it fits
-        let lineCount = display!.subDisplays.count
 
         // Verify width constraints are respected
         for (index, subDisplay) in display!.subDisplays.enumerated() {
@@ -2433,9 +2423,6 @@ final class MTTypesetterTests: XCTestCase {
         let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
         XCTAssertNotNil(display)
 
-        // Should intelligently break between delimiters if needed
-        let lineCount = display!.subDisplays.count
-
         // Verify width constraints
         for (index, subDisplay) in display!.subDisplays.enumerated() {
             XCTAssertLessThanOrEqual(subDisplay.width, maxWidth * 1.2,
@@ -2454,9 +2441,6 @@ final class MTTypesetterTests: XCTestCase {
         let maxWidth: CGFloat = 200
         let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
         XCTAssertNotNil(display)
-
-        // Should stay on 1 line when it fits
-        let lineCount = display!.subDisplays.count
 
         // Verify width constraints are respected
         for (index, subDisplay) in display!.subDisplays.enumerated() {
@@ -2498,9 +2482,6 @@ final class MTTypesetterTests: XCTestCase {
         let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
         XCTAssertNotNil(display)
 
-        // Should intelligently break between colored sections if needed
-        let lineCount = display!.subDisplays.count
-
         // Verify width constraints
         for (index, subDisplay) in display!.subDisplays.enumerated() {
             XCTAssertLessThanOrEqual(subDisplay.width, maxWidth * 1.2,
@@ -2520,9 +2501,6 @@ final class MTTypesetterTests: XCTestCase {
         let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
         XCTAssertNotNil(display)
 
-        // Small 1x2 matrix should stay inline
-        let lineCount = display!.subDisplays.count
-
         // Verify width constraints are respected
         for (index, subDisplay) in display!.subDisplays.enumerated() {
             XCTAssertLessThanOrEqual(subDisplay.width, maxWidth * 1.2,
@@ -2539,9 +2517,6 @@ final class MTTypesetterTests: XCTestCase {
         let maxWidth: CGFloat = 120  // Narrow
         let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display, maxWidth: maxWidth)
         XCTAssertNotNil(display)
-
-        // Should break with narrow width
-        let lineCount = display!.subDisplays.count
 
         // Verify width constraints (matrices can be slightly wider)
         for (index, subDisplay) in display!.subDisplays.enumerated() {
@@ -2632,12 +2607,6 @@ final class MTTypesetterTests: XCTestCase {
         // Get the subdisplays to check ordering
         let subDisplays = display!.subDisplays
 
-        // Print positions and types for debugging
-        for (index, subDisplay) in subDisplays.enumerated() {
-            if let lineDisplay = subDisplay as? MTCTLineDisplay {
-            }
-        }
-
         // The expected order should be: sum (with limits), i, =, fraction
         // We need to verify that the x positions are monotonically increasing
         var previousX: CGFloat = -1
@@ -2694,17 +2663,8 @@ final class MTTypesetterTests: XCTestCase {
         // Get the subdisplays to check ordering
         let subDisplays = display!.subDisplays
 
-        // Print positions and types for debugging
-        for (index, subDisplay) in subDisplays.enumerated() {
-            if let lineDisplay = subDisplay as? MTCTLineDisplay {
-            }
-        }
-
         // Track what we find and their y positions
         var sumX: CGFloat?
-        var sumY: CGFloat?
-        var iX: CGFloat?
-        var iY: CGFloat?
         var equalsX: CGFloat?
         var equalsY: CGFloat?
         var fractionX: CGFloat?
@@ -2714,12 +2674,10 @@ final class MTTypesetterTests: XCTestCase {
             if subDisplay is MTLargeOpLimitsDisplay {
                 // Display mode: sum with limits as single display
                 sumX = subDisplay.position.x
-                sumY = subDisplay.position.y
             } else if subDisplay is MTGlyphDisplay {
                 // Text mode: sum symbol as glyph display (check if it's the sum symbol)
                 if sumX == nil {
                     sumX = subDisplay.position.x
-                    sumY = subDisplay.position.y
                 }
             } else if let lineDisplay = subDisplay as? MTCTLineDisplay,
                       let text = lineDisplay.attributedString?.string {
@@ -2728,15 +2686,8 @@ final class MTTypesetterTests: XCTestCase {
                     equalsX = subDisplay.position.x
                     equalsY = subDisplay.position.y
                 } else if text.contains("i") && text.contains("=") {
-                    // i and = together (ideal case)
-                    iX = subDisplay.position.x
-                    iY = subDisplay.position.y
                     equalsX = subDisplay.position.x  // They're together
                     equalsY = subDisplay.position.y
-                } else if text.contains("i") {
-                    // Just i
-                    iX = subDisplay.position.x
-                    iY = subDisplay.position.y
                 }
             } else if subDisplay is MTFractionDisplay {
                 fractionX = subDisplay.position.x
@@ -2781,7 +2732,7 @@ final class MTTypesetterTests: XCTestCase {
         // Check for line breaks (large y position gaps indicate line breaks)
         // Note: Superscripts/subscripts have different y positions but are on same "line"
         // Line breaks use fontSize * 1.5 spacing, so look for gaps > fontSize
-        var yPositions = display!.subDisplays.map { $0.position.y }.sorted()
+        let yPositions = display!.subDisplays.map { $0.position.y }.sorted()
         var lineBreakCount = 0
         for i in 1..<yPositions.count {
             let gap = abs(yPositions[i] - yPositions[i-1])
@@ -2921,7 +2872,7 @@ final class MTTypesetterTests: XCTestCase {
         XCTAssertNotNil(display)
 
         // Check for line breaks - should have none without width constraint
-        var yPositions = display!.subDisplays.map { $0.position.y }.sorted()
+        let yPositions = display!.subDisplays.map { $0.position.y }.sorted()
         var lineBreakCount = 0
         for i in 1..<yPositions.count {
             let gap = abs(yPositions[i] - yPositions[i-1])
@@ -3075,7 +3026,7 @@ final class MTTypesetterTests: XCTestCase {
         XCTAssertNotNil(display)
 
         // Count line breaks
-        var yPositions = display!.subDisplays.map { $0.position.y }.sorted()
+        let yPositions = display!.subDisplays.map { $0.position.y }.sorted()
         var lineBreakCount = 0
         for i in 1..<yPositions.count {
             let gap = abs(yPositions[i] - yPositions[i-1])
@@ -3125,7 +3076,7 @@ final class MTTypesetterTests: XCTestCase {
         XCTAssertNotNil(display)
 
         // Should have no breaks when content fits
-        var yPositions = display!.subDisplays.map { $0.position.y }.sorted()
+        let yPositions = display!.subDisplays.map { $0.position.y }.sorted()
         var lineBreakCount = 0
         for i in 1..<yPositions.count {
             let gap = abs(yPositions[i] - yPositions[i-1])

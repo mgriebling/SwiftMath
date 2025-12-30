@@ -6,7 +6,7 @@
 //
 
 import XCTest
-@testable import SwiftMath
+@testable import SwiftUIMath
 
 final class MathImageTests: XCTestCase {
     func safeImage(fileName: String, pngData: Data) {

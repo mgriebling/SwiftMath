@@ -6,7 +6,7 @@
 //
 
 import XCTest
-@testable import SwiftMath
+@testable import SwiftUIMath
 
 final class MTFontMathTableV2Tests: XCTestCase {
     func testMTFontV2Script() throws {
@@ -14,14 +14,6 @@ final class MTFontMathTableV2Tests: XCTestCase {
         MathFont.allCases.forEach {
             let mTable = $0.mtfont(size: size).mathTable
             XCTAssertNotNil(mTable)
-            let values = [
-                mTable?.fractionNumeratorDisplayStyleShiftUp,
-                mTable?.fractionNumeratorShiftUp,
-                mTable?.fractionDenominatorDisplayStyleShiftDown,
-                mTable?.fractionDenominatorShiftDown,
-                mTable?.fractionNumeratorDisplayStyleGapMin,
-                mTable?.fractionNumeratorGapMin,
-            ].compactMap{$0}
         }
     }
     private let executionQueue = DispatchQueue(label: "com.swiftmath.mathbundle", attributes: .concurrent)
@@ -45,35 +37,9 @@ final class MTFontMathTableV2Tests: XCTestCase {
     func helperConcurrentMTFontMathTableV2(_ count: Int, mtfont: MTFontV2, in group: DispatchGroup, on queue: DispatchQueue) {
         let workitem = DispatchWorkItem {
             let mTable = mtfont.mathTable
-            let values = [
-                mTable?.fractionNumeratorDisplayStyleShiftUp,
-                mTable?.fractionNumeratorShiftUp,
-                mTable?.fractionDenominatorDisplayStyleShiftDown,
-                mTable?.fractionDenominatorShiftDown,
-                mTable?.fractionNumeratorDisplayStyleGapMin,
-                mTable?.fractionNumeratorGapMin,
-            ].compactMap{$0}
-            // if count % 50 == 0 {
-            //     print(values) // accessed these values on global thread.
-            // }
             XCTAssertNotNil(mTable)
         }
         workitem.notify(queue: .main) { [weak self] in
-            // print("\(Thread.isMainThread ? "main" : "global") completed .....")
-            let mTable = mtfont.mathTable
-            if count % 70 == 0 {
-                let values = [
-                    mTable?.fractionNumeratorDisplayStyleShiftUp,
-                    mTable?.fractionNumeratorShiftUp,
-                    mTable?.fractionDenominatorDisplayStyleShiftDown,
-                    mTable?.fractionDenominatorShiftDown,
-                    mTable?.fractionNumeratorDisplayStyleGapMin,
-                    mTable?.fractionNumeratorGapMin,
-                ].compactMap{$0}
-                // if count % 50 == 0 {
-                //     print(values)
-                // }
-            }
             self?.testCount += 1
         }
         queue.async(group: group, execute: workitem)
