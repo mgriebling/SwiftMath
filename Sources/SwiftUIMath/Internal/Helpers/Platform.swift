@@ -1,5 +1,3 @@
-//  Derived from SwiftMath by Mike Griebling (MIT License)
-
 import SwiftUI
 
 #if canImport(UIKit)
