@@ -18,9 +18,9 @@ extension Math {
 
     private let font: Font
     private let unitsPerEm: UInt
-    private let table: Table
+    private let table: FontTable
 
-    init(font: Font, unitsPerEm: UInt, table: Table) {
+    init(font: Font, unitsPerEm: UInt, table: FontTable) {
       self.font = font
       self.unitsPerEm = unitsPerEm
       self.table = table

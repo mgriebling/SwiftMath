@@ -1,7 +1,7 @@
 import Foundation
 
 extension Math {
-  struct Table: Codable, Sendable {
+  struct FontTable: Codable, Sendable {
     struct Assembly: Codable, Sendable {
       struct Part: Codable, Sendable {
         let advance: Int

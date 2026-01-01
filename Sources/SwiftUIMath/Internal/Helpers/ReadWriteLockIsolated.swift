@@ -19,8 +19,8 @@ final class ReadWriteLockIsolated<Value>: @unchecked Sendable {
     }
   }
 
-  func withValue<T: Sendable>(
-    _ operation: @Sendable (inout Value) throws -> T
+  func withValue<T>(
+    _ operation: (inout Value) throws -> T
   ) rethrows -> T {
     try self.lock.sync {
       var value = self._value

@@ -8,7 +8,7 @@ extension Math {
 
     private struct Cache {
       var graphicsFonts: [Font.Name: CGFont] = [:]
-      var tables: [Font.Name: Table] = [:]
+      var tables: [Font.Name: FontTable] = [:]
       let fonts = NSCache<KeyBox<Font>, CTFont>()
     }
 
@@ -28,7 +28,7 @@ extension Math {
       }
     }
 
-    func table(named name: Font.Name) -> Table? {
+    func table(named name: Font.Name) -> FontTable? {
       cache.withValue { cache in
         if let table = cache.tables[name] {
           return table
@@ -67,8 +67,8 @@ extension Math {
     private func registerGraphicsFont(
       named name: Font.Name,
       cache: inout Cache
-    ) -> (CGFont, Table)? {
-      guard let graphicsFont = CGFont.named(name), let table = Table.named(name) else {
+    ) -> (CGFont, FontTable)? {
+      guard let graphicsFont = CGFont.named(name), let table = FontTable.named(name) else {
         return nil
       }
 
@@ -99,8 +99,8 @@ extension CGFont {
   }
 }
 
-extension Math.Table {
-  fileprivate static func named(_ name: Math.Font.Name) -> Math.Table? {
+extension Math.FontTable {
+  fileprivate static func named(_ name: Math.Font.Name) -> Math.FontTable? {
     guard
       let bundleURL = Bundle.module.url(forResource: "mathFonts", withExtension: "bundle"),
       let url = Bundle(url: bundleURL)?.url(forResource: name.rawValue, withExtension: "plist"),
@@ -109,6 +109,6 @@ extension Math.Table {
       return nil
     }
 
-    return try? PropertyListDecoder().decode(Math.Table.self, from: data)
+    return try? PropertyListDecoder().decode(Math.FontTable.self, from: data)
   }
 }
