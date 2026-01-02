@@ -458,13 +458,6 @@ extension Math {
       "Vmatrix*": ["Vert", "Vert"],
     ]
 
-    private enum ParseErrorCode: Int {
-      case invalidEnv = 8
-      case invalidNumColumns = 12
-    }
-
-    private static let parseErrorDomain = "ParseError"
-
     static func fontStyle(named fontName: String) -> Atom.FontStyle? {
       fontStyles[fontName]
     }
@@ -659,7 +652,7 @@ extension Math {
       withEnvironment env: String?,
       alignment: Table.ColumnAlignment? = nil,
       rows: [[AtomList]],
-      error: inout NSError?
+      error: inout ParserError?
     ) -> Atom? {
       let table = Table(environment: env ?? "")
 
@@ -713,11 +706,7 @@ extension Math {
           if table.numberOfColumns != 2 {
             let message = "\(env) environment can only have 2 columns"
             if error == nil {
-              error = NSError(
-                domain: parseErrorDomain,
-                code: ParseErrorCode.invalidNumColumns.rawValue,
-                userInfo: [NSLocalizedDescriptionKey: message]
-              )
+              error = ParserError(code: .invalidNumberOfColumns, message: message)
             }
             return nil
           }
@@ -741,11 +730,7 @@ extension Math {
           if table.numberOfColumns != 1 {
             let message = "\(env) environment can only have 1 column"
             if error == nil {
-              error = NSError(
-                domain: parseErrorDomain,
-                code: ParseErrorCode.invalidNumColumns.rawValue,
-                userInfo: [NSLocalizedDescriptionKey: message]
-              )
+              error = ParserError(code: .invalidNumberOfColumns, message: message)
             }
             return nil
           }
@@ -760,11 +745,7 @@ extension Math {
           if table.numberOfColumns != 3 {
             let message = "\(env) environment can only have 3 columns"
             if error == nil {
-              error = NSError(
-                domain: parseErrorDomain,
-                code: ParseErrorCode.invalidNumColumns.rawValue,
-                userInfo: [NSLocalizedDescriptionKey: message]
-              )
+              error = ParserError(code: .invalidNumberOfColumns, message: message)
             }
             return nil
           }
@@ -781,11 +762,7 @@ extension Math {
           if table.numberOfColumns != 1 && table.numberOfColumns != 2 {
             let message = "cases environment can have 1 or 2 columns"
             if error == nil {
-              error = NSError(
-                domain: parseErrorDomain,
-                code: ParseErrorCode.invalidNumColumns.rawValue,
-                userInfo: [NSLocalizedDescriptionKey: message]
-              )
+              error = ParserError(code: .invalidNumberOfColumns, message: message)
             }
             return nil
           }
@@ -815,11 +792,7 @@ extension Math {
           return inner
         } else {
           let message = "Unknown environment \(env)"
-          error = NSError(
-            domain: parseErrorDomain,
-            code: ParseErrorCode.invalidEnv.rawValue,
-            userInfo: [NSLocalizedDescriptionKey: message]
-          )
+          error = ParserError(code: .invalidEnvironment, message: message)
           return nil
         }
       }
