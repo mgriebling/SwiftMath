@@ -1136,7 +1136,12 @@ extension Math {
             }
           }
 
-          let table = self.buildTable(environment: env, alignment: alignment, firstList: nil, isRow: false)
+          let table = self.buildTable(
+            environment: env,
+            alignment: alignment,
+            firstList: nil,
+            isRow: false
+          )
           return table
         } else {
           return nil
@@ -1206,7 +1211,9 @@ extension Math {
         alignment = .right
       default:
         self.setError(
-          .invalidEnvironment, message: "Invalid alignment specifier: \(alignChar). Must be l, c, or r")
+          .invalidEnvironment,
+          message: "Invalid alignment specifier: \(alignChar). Must be l, c, or r"
+        )
         return nil
       }
 

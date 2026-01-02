@@ -594,6 +594,11 @@ extension Math {
       }
     }
 
+    static func remove(latexSymbol name: String) {
+      supportedLatexSymbols.withValue { $0[name] = nil }
+      textToLatexSymbolName.withValue { $0 = nil }
+    }
+
     static func operatorWithName(_ name: String, limits: Bool) -> LargeOperator {
       let op = LargeOperator(limits: limits)
       op.nucleus = name

@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import SwiftUIMath
 
 @Suite
@@ -260,7 +261,11 @@ struct AtomListTests {
 
     let copy = Math.Radical(radical)
     try assertAtomCopyMatches(copy, original: radical, context: "radical copy")
-    try assertAtomListCopyMatches(copy.radicand, original: radical.radicand, context: "radicand copy")
+    try assertAtomListCopyMatches(
+      copy.radicand,
+      original: radical.radicand,
+      context: "radicand copy"
+    )
     try assertAtomListCopyMatches(copy.degree, original: radical.degree, context: "degree copy")
   }
 
@@ -294,9 +299,21 @@ struct AtomListTests {
 
     let copy = Math.Inner(inner)
     try assertAtomCopyMatches(copy, original: inner, context: "inner atom copy")
-    try assertAtomListCopyMatches(copy.innerList, original: inner.innerList, context: "inner list copy")
-    try assertAtomCopyMatches(copy.leftBoundary!, original: inner.leftBoundary, context: "left boundary copy")
-    try assertAtomCopyMatches(copy.rightBoundary!, original: inner.rightBoundary, context: "right boundary copy")
+    try assertAtomListCopyMatches(
+      copy.innerList,
+      original: inner.innerList,
+      context: "inner list copy"
+    )
+    try assertAtomCopyMatches(
+      copy.leftBoundary!,
+      original: inner.leftBoundary,
+      context: "left boundary copy"
+    )
+    try assertAtomCopyMatches(
+      copy.rightBoundary!,
+      original: inner.rightBoundary,
+      context: "right boundary copy"
+    )
   }
 
   @Test
@@ -330,7 +347,11 @@ struct AtomListTests {
 
     let copy = Math.Overline(overline)
     try assertAtomCopyMatches(copy, original: overline, context: "overline copy")
-    try assertAtomListCopyMatches(copy.innerList, original: overline.innerList, context: "overline list copy")
+    try assertAtomListCopyMatches(
+      copy.innerList,
+      original: overline.innerList,
+      context: "overline list copy"
+    )
   }
 
   @Test
@@ -349,7 +370,11 @@ struct AtomListTests {
 
     let copy = Math.Underline(underline)
     try assertAtomCopyMatches(copy, original: underline, context: "underline copy")
-    try assertAtomListCopyMatches(copy.innerList, original: underline.innerList, context: "underline list copy")
+    try assertAtomListCopyMatches(
+      copy.innerList,
+      original: underline.innerList,
+      context: "underline list copy"
+    )
   }
 
   @Test
@@ -368,7 +393,11 @@ struct AtomListTests {
 
     let copy = Math.Accent(accent)
     try assertAtomCopyMatches(copy, original: accent, context: "accent copy")
-    try assertAtomListCopyMatches(copy.innerList, original: accent.innerList, context: "accent list copy")
+    try assertAtomListCopyMatches(
+      copy.innerList,
+      original: accent.innerList,
+      context: "accent list copy"
+    )
   }
 
   @Test
@@ -498,7 +527,12 @@ struct AtomListTests {
     try assertAtom(atom, type: .number, nucleus: "13", range: NSRange(location: 0, length: 2))
 
     atom = superscript.atoms[1]
-    try assertAtom(atom, type: .binaryOperator, nucleus: "+", range: NSRange(location: 2, length: 1))
+    try assertAtom(
+      atom,
+      type: .binaryOperator,
+      nucleus: "+",
+      range: NSRange(location: 2, length: 1)
+    )
 
     atom = superscript.atoms[2]
     try assertAtom(atom, type: .variable, nucleus: "y", range: NSRange(location: 3, length: 1))
@@ -514,7 +548,12 @@ struct AtomListTests {
     try assertAtom(atom, type: .unaryOperator, nucleus: "−", range: NSRange(location: 2, length: 1))
 
     atom = finalized.atoms[3]
-    try assertAtom(atom, type: .binaryOperator, nucleus: "+", range: NSRange(location: 4, length: 1))
+    try assertAtom(
+      atom,
+      type: .binaryOperator,
+      nucleus: "+",
+      range: NSRange(location: 4, length: 1)
+    )
 
     atom = finalized.atoms[4]
     try assertAtom(atom, type: .open, nucleus: "(", range: NSRange(location: 5, length: 1))
@@ -526,7 +565,12 @@ struct AtomListTests {
     try assertAtom(atom, type: .number, nucleus: "12.3", range: NSRange(location: 7, length: 4))
 
     atom = finalized.atoms[7]
-    try assertAtom(atom, type: .unaryOperator, nucleus: "*", range: NSRange(location: 11, length: 1))
+    try assertAtom(
+      atom,
+      type: .unaryOperator,
+      nucleus: "*",
+      range: NSRange(location: 11, length: 1)
+    )
 
     atom = finalized.atoms[8]
     try assertAtom(atom, type: .close, nucleus: ")", range: NSRange(location: 12, length: 1))
@@ -586,7 +630,11 @@ struct AtomListTests {
 
     for (index, copyAtom) in copy.atoms.enumerated() {
       let originalAtom = original.atoms[index]
-      try assertAtomCopyMatches(copyAtom, original: originalAtom, context: "\(context) atom \(index)")
+      try assertAtomCopyMatches(
+        copyAtom,
+        original: originalAtom,
+        context: "\(context) atom \(index)"
+      )
     }
   }
 }
