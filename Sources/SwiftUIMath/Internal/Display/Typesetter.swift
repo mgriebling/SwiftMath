@@ -510,8 +510,8 @@ extension Math {
 
     // MARK: - Interatom Line Breaking
 
-    /// Calculate the width that would result from adding this atom to the current line
-    /// Returns the approximate width including inter-element spacing
+    // Calculate the width that would result from adding this atom to the current line
+    // Returns the approximate width including inter-element spacing
     func calculateAtomWidth(_ atom: Atom, prevNode: Atom?) -> CGFloat {
       // Skip atoms that don't participate in normal width calculation
       // These are handled specially in the rendering code
@@ -539,7 +539,7 @@ extension Math {
       return interElementSpace + atomWidth
     }
 
-    /// Calculate the current line width
+    // Calculate the current line width
     func getCurrentLineWidth() -> CGFloat {
       if currentLine.length == 0 {
         return 0
@@ -552,9 +552,9 @@ extension Math {
       return CGFloat(CTLineGetTypographicBounds(ctLine, nil, nil, nil))
     }
 
-    /// Check if we should break to a new line before adding this atom
-    /// Uses look-ahead to find better break points aesthetically
-    /// Returns true if a line break was performed
+    // Check if we should break to a new line before adding this atom
+    // Uses look-ahead to find better break points aesthetically
+    // Returns true if a line break was performed
     @discardableResult
     func checkAndPerformInteratomLineBreak(_ atom: Atom, prevNode: Atom?, nextAtoms: [Atom] = [])
       -> Bool
@@ -682,8 +682,8 @@ extension Math {
       return true
     }
 
-    /// Estimate the approximate width of remaining atoms
-    /// Returns a conservative (upper bound) estimate
+    // Estimate the approximate width of remaining atoms
+    // Returns a conservative (upper bound) estimate
     private func estimateRemainingAtomsWidth(_ atoms: [Atom]) -> CGFloat {
       // Use a simple heuristic: average character width * character count
       let avgCharWidth = styleFont.metrics.mathUnit
@@ -706,7 +706,7 @@ extension Math {
       return CGFloat(totalChars) * avgCharWidth * 1.5
     }
 
-    /// Perform the actual line break operation
+    // Perform the actual line break operation
     private func performInteratomLineBreak() {
       // Reset optimization flag - after breaking, we need to check again
       remainingContentFits = false
@@ -730,8 +730,8 @@ extension Math {
       currentLineIndexRange = NSMakeRange(NSNotFound, NSNotFound)
     }
 
-    /// Check if we should break before adding a complex display (fraction, radical, etc.)
-    /// Returns true if breaking is needed
+    // Check if we should break before adding a complex display (fraction, radical, etc.)
+    // Returns true if breaking is needed
     func shouldBreakBeforeDisplay(
       _ display: DisplayNode, prevNode: Atom?, displayType: AtomType = .ordinary
     ) -> Bool {
@@ -755,20 +755,20 @@ extension Math {
       return projectedWidth > maxWidth
     }
 
-    /// Adjust the current position to avoid overlap between the new display and previous line's displays
-    /// This is called when adding displays to a line below the first line
-    ///
-    /// Coordinate formulas (from test expectations):
-    /// - Bottom of display = position.y + descent
-    /// - Top of display = position.y - ascent
-    /// - No overlap when: prevBottom <= currTop + spacing
-    /// - Which means: prevBottom <= (currPosition - currAscent) + spacing
-    /// - Rearranging: currPosition >= prevBottom + currAscent - spacing
-    ///
-    /// Recursively adjust positions of a display and all its nested sub-displays
-    /// Note: For DisplayRadical and DisplayFraction, their position setters automatically
-    /// update child positions (radicand/degree, numerator/denominator), so we don't need
-    /// to manually adjust those. We only need to adjust subdisplays within DisplayList.
+    // Adjust the current position to avoid overlap between the new display and previous line's displays
+    // This is called when adding displays to a line below the first line
+    //
+    // Coordinate formulas (from test expectations):
+    // - Bottom of display = position.y + descent
+    // - Top of display = position.y - ascent
+    // - No overlap when: prevBottom <= currTop + spacing
+    // - Which means: prevBottom <= (currPosition - currAscent) + spacing
+    // - Rearranging: currPosition >= prevBottom + currAscent - spacing
+    //
+    // Recursively adjust positions of a display and all its nested sub-displays
+    // Note: For DisplayRadical and DisplayFraction, their position setters automatically
+    // update child positions (radicand/degree, numerator/denominator), so we don't need
+    // to manually adjust those. We only need to adjust subdisplays within DisplayList.
     private func adjustDisplayPosition(_ display: DisplayNode, by delta: CGFloat) {
       display.position.y += delta
 
@@ -783,12 +783,12 @@ extension Math {
       // Their position setters handle updating child positions automatically
     }
 
-    /// Adjust position to avoid overlap with previous line
-    /// In CoreText's Y-up coordinate system:
-    /// - Positive Y = upward, Negative Y = downward
-    /// - Top of display = position + ascent (higher Y)
-    /// - Bottom of display = position - descent (lower Y)
-    /// - No overlap when: prevBottom >= currTop (with spacing)
+    // Adjust position to avoid overlap with previous line
+    // In CoreText's Y-up coordinate system:
+    // - Positive Y = upward, Negative Y = downward
+    // - Top of display = position + ascent (higher Y)
+    // - Bottom of display = position - descent (lower Y)
+    // - No overlap when: prevBottom >= currTop (with spacing)
     private func adjustPositionToAvoidOverlap(_ display: DisplayNode) {
       // Find all displays on previous lines and calculate their minimum bottom edge
       // In Y-up: Bottom = position - descent (lower Y value)
@@ -825,7 +825,7 @@ extension Math {
       }
     }
 
-    /// Perform line break for complex displays
+    // Perform line break for complex displays
     func performLineBreak() {
       if currentLine.length > 0 {
         self.addDisplayLine()
@@ -842,8 +842,8 @@ extension Math {
       currentLineStartIndex = displayAtoms.count
     }
 
-    /// Calculate the height of the current line based on actual display heights
-    /// Returns the total height (max ascent + max descent) plus minimum spacing
+    // Calculate the height of the current line based on actual display heights
+    // Returns the total height (max ascent + max descent) plus minimum spacing
     func calculateCurrentLineHeight() -> CGFloat {
       // If no displays added for current line, use default spacing
       guard currentLineStartIndex < displayAtoms.count else {
@@ -867,8 +867,8 @@ extension Math {
       return max(lineHeight, styleFont.font.size * 1.2)
     }
 
-    /// Estimate the width of an atom including its scripts (without actually creating the displays)
-    /// This is used for width-checking decisions for atoms with super/subscripts
+    // Estimate the width of an atom including its scripts (without actually creating the displays)
+    // This is used for width-checking decisions for atoms with super/subscripts
     func estimateAtomWidthWithScripts(_ atom: Atom) -> CGFloat {
       // Estimate base atom width
       var atomWidth = CGFloat(atom.nucleus.count) * styleFont.font.size * 0.5  // rough estimate
@@ -897,8 +897,8 @@ extension Math {
       return atomWidth
     }
 
-    /// Calculate break penalty score for breaking after a given atom type
-    /// Lower scores indicate better break points (0 = best, higher = worse)
+    // Calculate break penalty score for breaking after a given atom type
+    // Lower scores indicate better break points (0 = best, higher = worse)
     func calculateBreakPenalty(afterAtom: Atom?, beforeAtom: Atom?) -> Int {
       // No atom context - neutral penalty
       guard let after = afterAtom else { return 50 }
@@ -1576,7 +1576,7 @@ extension Math {
 
     // MARK: - Unicode-aware Line Breaking
 
-    /// Find the best break point using Core Text, with conservative number protection
+    // Find the best break point using Core Text, with conservative number protection
     func findBestBreakPoint(in text: String, font: CTFont, maxWidth: CGFloat) -> String.Index? {
       let attributes: [NSAttributedString.Key: Any] = [
         kCTFontAttributeName as NSAttributedString.Key: font
@@ -1612,7 +1612,7 @@ extension Math {
       return findPreviousSafeBreak(in: text, before: breakIndex)
     }
 
-    /// Check if breaking at this index would split a number
+    // Check if breaking at this index would split a number
     func isBreakingSafeForNumbers(text: String, breakIndex: String.Index) -> Bool {
       guard breakIndex > text.startIndex && breakIndex < text.endIndex else {
         return true
@@ -1668,7 +1668,7 @@ extension Math {
       return true  // Safe to break
     }
 
-    /// Find previous safe break point before the given index
+    // Find previous safe break point before the given index
     func findPreviousSafeBreak(in text: String, before breakIndex: String.Index) -> String.Index? {
       var currentIndex = breakIndex
 
@@ -1690,7 +1690,7 @@ extension Math {
       return nil
     }
 
-    /// Check if the current line exceeds maxWidth and break if needed
+    // Check if the current line exceeds maxWidth and break if needed
     func checkAndBreakLine() {
       guard maxWidth > 0 && currentLine.length > 0 else { return }
 
