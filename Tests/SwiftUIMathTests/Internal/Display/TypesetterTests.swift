@@ -1567,10 +1567,10 @@ struct TypesetterTests {
     }
   }
 
-    @Test
-    func variables() throws {
-        // Test all variables
-        let allSymbols = Math.AtomFactory.supportedLatexSymbolNames
+  @Test
+  func variables() throws {
+    // Test all variables
+    let allSymbols = Math.AtomFactory.supportedLatexSymbolNames
     for symName in allSymbols {
       let atom = Math.AtomFactory.atom(forLatexSymbol: symName)!
       if atom.type != .variable {
@@ -2701,9 +2701,9 @@ struct TypesetterTests {
   }
 
   @Test
-    func sumEquationWithFraction_WithWidthConstraint() throws {
-        // Test case for: \(\sum_{i=1}^{n} i = \frac{n(n+1)}{2}\) with width constraint
-        // This reproduces the issue where = appears at the end instead of in the middle
+  func sumEquationWithFraction_WithWidthConstraint() throws {
+    // Test case for: \(\sum_{i=1}^{n} i = \frac{n(n+1)}{2}\) with width constraint
+    // This reproduces the issue where = appears at the end instead of in the middle
     let latex = "\\sum_{i=1}^{n} i = \\frac{n(n+1)}{2}"
     let mathList = Math.Parser.build(fromString: latex)
     #expect(mathList != nil)
