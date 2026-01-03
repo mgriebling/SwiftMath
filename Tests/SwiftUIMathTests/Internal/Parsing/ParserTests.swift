@@ -1189,7 +1189,7 @@ struct ParserTests {
       let str = testCase.0
       var error: Math.ParserError? = nil
       let list = Math.Parser.build(fromString: str, error: &error)
-            #expect(list == nil)
+      #expect(list == nil)
       #expect(error != nil)
       let num = testCase.1
       #expect(error?.code == num)
@@ -2301,7 +2301,7 @@ struct ParserTests {
     let str = "\\dfrac{1}{2}"
     var error: Math.ParserError? = nil
     let list = Math.Parser.build(fromString: str, error: &error)
-    
+
     #expect(error == nil)
     let unwrappedList = try #require(list)
     #expect(unwrappedList.atoms.count == 1)
@@ -2336,7 +2336,7 @@ struct ParserTests {
     let str = "\\tfrac{a}{b}"
     var error: Math.ParserError? = nil
     let list = Math.Parser.build(fromString: str, error: &error)
-    
+
     #expect(error == nil)
     let unwrappedList = try #require(list)
     #expect(unwrappedList.atoms.count == 1)
@@ -2370,7 +2370,7 @@ struct ParserTests {
     let str = "y'=-\\dfrac{2}{x^{3}}"
     var error: Math.ParserError? = nil
     let list = Math.Parser.build(fromString: str, error: &error)
-    
+
     #expect(error == nil)
     let unwrappedList = try #require(list)
     #expect(unwrappedList.atoms.count >= 4)

@@ -19,6 +19,25 @@ extension Math {
       self.range = range
     }
 
+    func setDegree(_ degree: DisplayList?, fontMetrics: Math.FontMetrics) {
+      guard let degree else { return }
+      let kernBefore = fontMetrics.radicalKernBeforeDegree
+      let kernAfter = fontMetrics.radicalKernAfterDegree
+      let raise = fontMetrics.radicalDegreeBottomRaisePercent * (ascent - descent)
+
+      self.degree = degree
+
+      var shift = kernBefore + degree.width + kernAfter
+      if shift < 0 {
+        shift = 0
+      }
+      radicalShift = shift
+
+      degree.position = CGPoint(x: position.x + kernBefore, y: position.y + raise)
+      width = shift + (radicalGlyph?.width ?? 0) + (radicand?.width ?? 0)
+      updateRadicandPosition()
+    }
+
     override var position: CGPoint {
       didSet { updateRadicandPosition() }
     }

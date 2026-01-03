@@ -9,6 +9,9 @@ extension Math {
     var position: CGPoint = .zero
     var range: NSRange = NSRange(location: 0, length: 0)
     var hasScript: Bool = false
+    var textColor: PlatformColor?
+    var localTextColor: PlatformColor?
+    var localBackgroundColor: PlatformColor?
 
     func bounds() -> CGRect {
       CGRect(x: position.x, y: position.y - descent, width: width, height: ascent + descent)

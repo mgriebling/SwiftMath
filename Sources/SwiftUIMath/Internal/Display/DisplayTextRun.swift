@@ -7,7 +7,9 @@ extension Math {
     var font: Math.Font
     var atoms: [Math.Atom]
 
-    init(text: String, font: Math.Font, position: CGPoint = .zero, range: NSRange, atoms: [Math.Atom]) {
+    init(
+      text: String, font: Math.Font, position: CGPoint = .zero, range: NSRange, atoms: [Math.Atom]
+    ) {
       self.text = text
       self.font = font
       self.atoms = atoms

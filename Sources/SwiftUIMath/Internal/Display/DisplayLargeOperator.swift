@@ -12,7 +12,10 @@ extension Math {
     var lowerLimitGap: CGFloat = 0 { didSet { updateLowerLimitPosition() } }
     var extraPadding: CGFloat = 0
 
-    init(nucleus: DisplayNode?, upperLimit: DisplayList?, lowerLimit: DisplayList?, limitShift: CGFloat, extraPadding: CGFloat) {
+    init(
+      nucleus: DisplayNode?, upperLimit: DisplayList?, lowerLimit: DisplayList?,
+      limitShift: CGFloat, extraPadding: CGFloat
+    ) {
       self.upperLimit = upperLimit
       self.lowerLimit = lowerLimit
       self.nucleus = nucleus
@@ -29,7 +32,8 @@ extension Math {
       get {
         guard let nucleus else { return 0 }
         if let upperLimit {
-          return nucleus.ascent + extraPadding + upperLimit.ascent + upperLimitGap + upperLimit.descent
+          return nucleus.ascent + extraPadding + upperLimit.ascent + upperLimitGap
+            + upperLimit.descent
         }
         return nucleus.ascent
       }
@@ -40,7 +44,8 @@ extension Math {
       get {
         guard let nucleus else { return 0 }
         if let lowerLimit {
-          return nucleus.descent + extraPadding + lowerLimitGap + lowerLimit.descent + lowerLimit.ascent
+          return nucleus.descent + extraPadding + lowerLimitGap + lowerLimit.descent
+            + lowerLimit.ascent
         }
         return nucleus.descent
       }
