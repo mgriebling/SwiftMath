@@ -1,3 +1,4 @@
+import CoreGraphics
 import CoreText
 import Foundation
 
@@ -423,7 +424,9 @@ extension Math {
       return line
     }
 
-    static var placeholderColor: PlatformColor { PlatformColor.blue }
+    static var placeholderColor: CGColor {
+      CGColor(srgbRed: 0, green: 0, blue: 1, alpha: 1)
+    }
 
     init(
       withFont font: PlatformFont?, style: Style.Level, cramped: Bool, spaced: Bool,
@@ -986,7 +989,7 @@ extension Math {
           let colorAtom = atom as! Color
           let display = Typesetter.createLineForMathList(
             colorAtom.innerList, font: font, style: style, maxWidth: maxWidth)
-          display!.localTextColor = PlatformColor(fromHexString: colorAtom.colorString)
+          display!.localTextColor = CGColor.fromHexString(colorAtom.colorString)
 
           // Check if we need to break before adding this colored content
           let shouldBreak = shouldBreakBeforeDisplay(
@@ -1013,7 +1016,7 @@ extension Math {
           let colorAtom = atom as! TextColor
           let display = Typesetter.createLineForMathList(
             colorAtom.innerList, font: font, style: style, maxWidth: maxWidth)
-          display!.localTextColor = PlatformColor(fromHexString: colorAtom.colorString)
+          display!.localTextColor = CGColor.fromHexString(colorAtom.colorString)
 
           // Check if we need to break before adding this colored content
           let shouldBreak = shouldBreakBeforeDisplay(
@@ -1051,7 +1054,7 @@ extension Math {
           let display = Typesetter.createLineForMathList(
             colorboxAtom.innerList, font: font, style: style, maxWidth: maxWidth)
 
-          display!.localBackgroundColor = PlatformColor(fromHexString: colorboxAtom.colorString)
+          display!.localBackgroundColor = CGColor.fromHexString(colorboxAtom.colorString)
 
           // Check if we need to break before adding this colorbox
           let shouldBreak = shouldBreakBeforeDisplay(
@@ -1387,7 +1390,7 @@ extension Math {
             let color = Typesetter.placeholderColor
             current = NSAttributedString(
               string: atom.nucleus,
-              attributes: [kCTForegroundColorAttributeName as NSAttributedString.Key: color.cgColor]
+              attributes: [kCTForegroundColorAttributeName as NSAttributedString.Key: color]
             )
           } else {
             current = NSAttributedString(string: atom.nucleus)

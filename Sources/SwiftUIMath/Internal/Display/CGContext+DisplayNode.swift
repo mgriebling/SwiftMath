@@ -5,8 +5,8 @@ import Foundation
 extension CGContext {
   func draw(_ displayNode: Math.DisplayNode, foregroundColor: CGColor) {
     let foregroundColor =
-      displayNode.localTextColor?.cgColor
-      ?? displayNode.textColor?.cgColor
+      displayNode.localTextColor
+      ?? displayNode.textColor
       ?? foregroundColor
 
     switch displayNode {
