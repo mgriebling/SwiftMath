@@ -3,14 +3,19 @@ import Foundation
 
 extension Math {
   final class DisplayTextRun: DisplayNode {
-    var text: String
+    var attributedString: NSAttributedString
     var font: Math.Font
     var atoms: [Math.Atom]
+    var text: String { attributedString.string }
 
     init(
-      text: String, font: Math.Font, position: CGPoint = .zero, range: NSRange, atoms: [Math.Atom]
+      attributedString: NSAttributedString,
+      font: Math.Font,
+      position: CGPoint = .zero,
+      range: NSRange,
+      atoms: [Math.Atom]
     ) {
-      self.text = text
+      self.attributedString = attributedString
       self.font = font
       self.atoms = atoms
       super.init()

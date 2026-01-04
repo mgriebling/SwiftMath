@@ -1794,9 +1794,10 @@ extension Math {
        "The length of the current line: %@ does not match the length of the range (%d, %d)",
        currentLine, currentLineIndexRange.location, currentLineIndexRange.length);*/
 
-      let line = CTLineCreateWithAttributedString(currentLine)
+      let attributedString = currentLine.copy() as! NSAttributedString
+      let line = CTLineCreateWithAttributedString(attributedString)
       let displayAtom = DisplayTextRun(
-        text: currentLine.string,
+        attributedString: attributedString,
         font: styleFont.font,
         position: currentPosition,
         range: currentLineIndexRange,
@@ -2406,9 +2407,10 @@ extension Math {
         line.addAttribute(
           kCTFontAttributeName as NSAttributedString.Key, value: styleFont.ctFont,
           range: NSMakeRange(0, line.length))
-        let ctLine = CTLineCreateWithAttributedString(line)
+        let attributedString = line.copy() as! NSAttributedString
+        let ctLine = CTLineCreateWithAttributedString(attributedString)
         let displayAtom = DisplayTextRun(
-          text: line.string,
+          attributedString: attributedString,
           font: styleFont.font,
           position: currentPosition,
           range: op.indexRange,

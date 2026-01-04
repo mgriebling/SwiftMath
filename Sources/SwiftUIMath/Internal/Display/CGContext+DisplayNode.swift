@@ -49,18 +49,10 @@ extension CGContext {
   }
 
   private func draw(_ textRun: Math.DisplayTextRun, foregroundColor: CGColor) {
-    guard let platformFont = Math.PlatformFont(font: textRun.font) else {
-      return
-    }
-
-    let attributes: [NSAttributedString.Key: Any] = [
-      NSAttributedString.Key(kCTFontAttributeName as String): platformFont.ctFont,
-      NSAttributedString.Key(kCTForegroundColorAttributeName as String): foregroundColor,
-    ]
-    let attributedString = NSAttributedString(string: textRun.text, attributes: attributes)
-    let line = CTLineCreateWithAttributedString(attributedString)
+    let line = CTLineCreateWithAttributedString(textRun.attributedString)
 
     saveGState()
+    setFillColor(foregroundColor)
     textPosition = textRun.position
     CTLineDraw(line, self)
     restoreGState()
