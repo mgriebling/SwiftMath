@@ -1793,6 +1793,10 @@ extension Math {
       currentLine.addAttribute(
         kCTFontAttributeName as NSAttributedString.Key, value: styleFont.ctFont as Any,
         range: NSMakeRange(0, currentLine.length))
+      currentLine.addAttribute(
+        NSAttributedString.Key(kCTForegroundColorFromContextAttributeName as String),
+        value: true,
+        range: NSMakeRange(0, currentLine.length))
       /*assert(currentLineIndexRange.length == numCodePoints(currentLine.string),
        "The length of the current line: %@ does not match the length of the range (%d, %d)",
        currentLine, currentLineIndexRange.location, currentLineIndexRange.length);*/
@@ -2409,6 +2413,10 @@ extension Math {
         // add the font
         line.addAttribute(
           kCTFontAttributeName as NSAttributedString.Key, value: styleFont.ctFont,
+          range: NSMakeRange(0, line.length))
+        line.addAttribute(
+          NSAttributedString.Key(kCTForegroundColorFromContextAttributeName as String),
+          value: true,
           range: NSMakeRange(0, line.length))
         let attributedString = line.copy() as! NSAttributedString
         let ctLine = CTLineCreateWithAttributedString(attributedString)

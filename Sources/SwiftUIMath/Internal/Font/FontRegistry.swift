@@ -4,13 +4,13 @@ import Foundation
 
 extension Math {
   final class FontRegistry: Sendable {
-    static let shared = FontRegistry()
-
     private struct Cache {
       var graphicsFonts: [Font.Name: CGFont] = [:]
       var tables: [Font.Name: FontTable] = [:]
       let fonts = NSCache<KeyBox<Font>, CTFont>()
     }
+
+    static let shared = FontRegistry()
 
     private let cache = ReadWriteLockIsolated<Cache>(Cache())
 

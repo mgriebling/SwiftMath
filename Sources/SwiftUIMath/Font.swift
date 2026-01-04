@@ -1,4 +1,4 @@
-import Foundation
+import SwiftUI
 
 extension Math {
   public struct Font: Hashable, Sendable {
@@ -32,4 +32,14 @@ extension Math.Font.Name {
   public static let libertinus: Self = "LibertinusMath-Regular"
   public static let garamond: Self = "Garamond-Math"
   public static let leteSans: Self = "LeteSansMath"
+}
+
+extension View {
+  public func mathFont(_ font: Math.Font) -> some View {
+    environment(\.mathFont, font)
+  }
+}
+
+extension EnvironmentValues {
+  @Entry var mathFont = Math.Font(name: .latinModern, size: 20)
 }

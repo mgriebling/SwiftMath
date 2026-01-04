@@ -13,7 +13,7 @@ extension Math {
     var localTextColor: CGColor?
     var localBackgroundColor: CGColor?
 
-    func bounds() -> CGRect {
+    var bounds: CGRect {
       CGRect(x: position.x, y: position.y - descent, width: width, height: ascent + descent)
     }
   }

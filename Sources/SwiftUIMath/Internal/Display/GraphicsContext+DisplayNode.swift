@@ -6,6 +6,7 @@ extension GraphicsContext {
 
     context.translateBy(x: 0, y: size.height)
     context.scaleBy(x: 1, y: -1)
+    context.translateBy(x: 0, y: displayNode.descent)
 
     let foregroundColor = foregroundColor.resolve(in: environment).cgColor
 
