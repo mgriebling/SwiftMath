@@ -192,6 +192,44 @@ class MTMathUILabelLineWrappingTests: XCTestCase {
         XCTAssertNil(label.error, "Should have no rendering error")
     }
 
+    func testVectorArrowsWithLineWrapping() {
+        let label = MTMathUILabel()
+        label.fontSize = 20
+        #if os(macOS)
+        label.textColor = NSColor.black
+        #else
+        label.textColor = UIColor.black
+        #endif
+        label.textAlignment = .left
+
+        // Test each arrow command
+        let testCases = [
+            "\\vec{v} + \\vec{u}",
+            "\\overrightarrow{AB} + \\overrightarrow{CD}",
+            "\\overleftarrow{F_x} + \\overleftarrow{F_y}",
+            "\\overleftrightarrow{PQ} \\parallel \\overleftrightarrow{RS}"
+        ]
+
+        for latex in testCases {
+            label.latex = "\\(\(latex)\\)"
+
+            // Get size and verify layout
+            let size = label.intrinsicContentSize
+            label.frame = CGRect(origin: .zero, size: size)
+            #if os(macOS)
+            label.layout()
+            #else
+            label.layoutSubviews()
+            #endif
+
+            // Verify label has content and no errors
+            XCTAssertGreaterThan(size.width, 0, "Should have width: \(latex)")
+            XCTAssertGreaterThan(size.height, 0, "Should have height: \(latex)")
+            XCTAssertNotNil(label.displayList, "Display list should be created for: \(latex)")
+            XCTAssertNil(label.error, "Should have no rendering error for: \(latex)")
+        }
+    }
+
     func testUnicodeWordBreaking_EquivautCase() {
         // Specific test for the reported issue: "équivaut" should not break at "é"
         let label = MTMathUILabel()

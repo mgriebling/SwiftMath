@@ -565,19 +565,29 @@ public class MTUnderLine: MTMathAtom {
 
 public class MTAccent: MTMathAtom {
     public var innerList:  MTMathList?
-    
+    /// Indicates if this accent should use stretchy arrow behavior (for \overrightarrow, etc.)
+    /// vs short accent behavior (for \vec). Only applies to arrow accents.
+    public var isStretchy: Bool = false
+    /// Indicates if this accent should use wide stretching behavior (for \widehat, \widetilde)
+    /// vs regular fixed-size accent behavior (for \hat, \tilde).
+    public var isWide: Bool = false
+
     override public var finalized: MTMathAtom {
         let newAccent = super.finalized as! MTAccent
         newAccent.innerList = newAccent.innerList?.finalized
+        newAccent.isStretchy = self.isStretchy
+        newAccent.isWide = self.isWide
         return newAccent
     }
-    
+
     init(_ accent: MTAccent?) {
         super.init(accent)
         self.type = .accent
         self.innerList = MTMathList(accent?.innerList)
+        self.isStretchy = accent?.isStretchy ?? false
+        self.isWide = accent?.isWide ?? false
     }
-    
+
     init(value: String) {
         super.init()
         self.type = .accent
