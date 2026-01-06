@@ -262,6 +262,26 @@ public class MTMathAtomFactory {
         "perp" : MTMathAtom(type: .relation, value: "\u{27C2}"),
         "implies" : MTMathAtom(type: .relation, value: "\u{27F9}"),
 
+        // Turnstiles / adjunction / semantics (Relations)
+        "vdash"  : MTMathAtom(type: .relation, value: "\u{22A2}"), // ⊢ RIGHT TACK
+        "dashv"  : MTMathAtom(type: .relation, value: "\u{22A3}"), // ⊣ LEFT TACK
+        "vDash"  : MTMathAtom(type: .relation, value: "\u{22A8}"), // ⊨ TRUE / MODELS (double turnstile)
+        "Vdash"  : MTMathAtom(type: .relation, value: "\u{22A9}"), // ⊩ FORCES (double right tack)
+        "Dashv"  : MTMathAtom(type: .relation, value: "\u{2AE4}"), // ⫤ DOUBLE LEFT TACK
+
+        // Pullback / pushout corner markers (useful for marking squares)
+        "ulcorner" : MTMathAtom(type: .ordinary, value: "\u{231C}"), // ⌜
+        "urcorner" : MTMathAtom(type: .ordinary, value: "\u{231D}"), // ⌝
+        "llcorner" : MTMathAtom(type: .ordinary, value: "\u{231E}"), // ⌞
+        "lrcorner" : MTMathAtom(type: .ordinary, value: "\u{231F}"), // ⌟
+
+        // Common arrows for diagrams (monos/epis/mapsto)
+        "hookrightarrow"    : MTMathAtom(type: .relation, value: "\u{21AA}"), // ↪ (mono-ish)
+        "twoheadrightarrow" : MTMathAtom(type: .relation, value: "\u{21A0}"), // ↠ (epi)
+        "rightarrowtail"    : MTMathAtom(type: .relation, value: "\u{21A3}"), // ↣
+        "leftrightarrows"  : MTMathAtom(type: .relation, value: "\u{21C4}"), // ⇄
+        "rightleftarrows"  : MTMathAtom(type: .relation, value: "\u{21C6}"), // ⇆
+
         // operators
         "times" : MTMathAtomFactory.times(),
         "div"   : MTMathAtomFactory.divide(),
