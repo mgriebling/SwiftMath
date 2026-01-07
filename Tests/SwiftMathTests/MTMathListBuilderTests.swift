@@ -2737,5 +2737,29 @@ final class MTMathListBuilderTests: XCTestCase {
 //        }
 //    }
 
+    func testEmptyInputs() {
+        // Test 1: Completely empty string
+        let result1 = MTMathListBuilder.build(fromString: "")
+        // Empty input should return nil or empty list (both acceptable)
+        if let list = result1 {
+            XCTAssertTrue(list.atoms.isEmpty, "Empty string should produce empty atom list")
+        }
+
+        // Test 2: Just whitespace
+        let result2 = MTMathListBuilder.build(fromString: "   ")
+        if let list = result2 {
+            XCTAssertTrue(list.atoms.isEmpty, "Whitespace-only string should produce empty atom list")
+        }
+
+        // Test 3: \sqrt with no content - this should not crash
+        let result3 = MTMathListBuilder.build(fromString: "\\sqrt")
+        XCTAssertNotNil(result3, "\\sqrt with no content should not crash")
+
+        // Test 4: \cfrac[ with no alignment - this should not crash
+        let result4 = MTMathListBuilder.build(fromString: "\\cfrac[")
+        // This may return nil due to error, but it should not crash
+        // The test passes if we get here without crashing
+    }
+
 }
 

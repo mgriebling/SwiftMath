@@ -251,13 +251,29 @@ public class MTMathUILabel : MTView {
         if _displayList == nil {
             _layoutSubviews()
         }
-        
+
         guard let displayList = _displayList else { return }
 
         // drawing code
         let context = MTGraphicsGetCurrentContext()!
         context.saveGState()
-        
+
+        // CRITICAL FIX for clipping: If the displayList is wider than our bounds,
+        // expand the clipping rect to prevent content clipping.
+        // This handles cases where preferredMaxLayoutWidth is a hint but the content
+        // cannot fit within it even with line breaking.
+        let contentWidth = displayList.width + contentInsets.left + contentInsets.right
+        if contentWidth > bounds.size.width {
+            // Content is wider than bounds - expand clip rect
+            let expandedRect = CGRect(
+                x: bounds.origin.x,
+                y: bounds.origin.y,
+                width: contentWidth,
+                height: bounds.size.height
+            )
+            context.clip(to: expandedRect)
+        }
+
         displayList.draw(context)
         context.restoreGState()
     }
@@ -285,32 +301,46 @@ public class MTMathUILabel : MTView {
 
         // Use the effective width for layout
         let effectiveWidth = _preferredMaxLayoutWidth > 0 ? _preferredMaxLayoutWidth : bounds.size.width
-        let availableWidth = effectiveWidth - contentInsets.left - contentInsets.right
+        var availableWidth = effectiveWidth - contentInsets.left - contentInsets.right
+        // CRITICAL FIX: Ensure availableWidth is never negative
+        // Negative maxWidth passed to MTTypesetter can cause "Negative value is not representable" crashes
+        availableWidth = max(0, availableWidth)
 
         _displayList = MTTypesetter.createLineForMathList(_mathList, font: self.font, style: currentStyle, maxWidth: availableWidth)
-        
-        _displayList!.textColor = textColor
+
+        guard let displayList = _displayList else {
+            // Empty or invalid input - nothing to display
+            return
+        }
+
+        displayList.textColor = textColor
         var textX = CGFloat(0)
         switch self.textAlignment {
             case .left:   textX = contentInsets.left
-            case .center: textX = (bounds.size.width - contentInsets.left - contentInsets.right - _displayList!.width) / 2 + contentInsets.left
-            case .right:  textX = bounds.size.width - _displayList!.width - contentInsets.right
+            case .center: textX = (bounds.size.width - contentInsets.left - contentInsets.right - displayList.width) / 2 + contentInsets.left
+            case .right:  textX = bounds.size.width - displayList.width - contentInsets.right
         }
         let availableHeight = bounds.size.height - contentInsets.bottom - contentInsets.top
 
         // center things vertically
-        var height = _displayList!.ascent + _displayList!.descent
+        var height = displayList.ascent + displayList.descent
         if height < fontSize/2 {
             height = fontSize/2  // set height to half the font size
         }
-        let textY = (availableHeight - height) / 2 + _displayList!.descent + contentInsets.bottom
-        
-        _displayList!.position = CGPointMake(textX, textY)
+        let textY = (availableHeight - height) / 2 + displayList.descent + contentInsets.bottom
+
+        displayList.position = CGPointMake(textX, textY)
         errorLabel?.frame = self.bounds
         self.setNeedsDisplay()
     }
     
     func _sizeThatFits(_ size:CGSize) -> CGSize {
+        // Check if we have empty latex (empty string case)
+        if _latex.isEmpty {
+            // Empty latex - return zero size
+            return CGSize(width: 0, height: 0)
+        }
+
         guard _mathList != nil else {
             // No content - return no-intrinsic-size marker
             return CGSize(width: -1, height: -1)
@@ -331,8 +361,13 @@ public class MTMathUILabel : MTView {
         var maxWidth: CGFloat = 0
         if _preferredMaxLayoutWidth > 0 {
             maxWidth = _preferredMaxLayoutWidth - contentInsets.left - contentInsets.right
+            // CRITICAL FIX: Ensure maxWidth is never negative
+            // If contentInsets exceed available width, clamp to 0
+            maxWidth = max(0, maxWidth)
         } else if size.width > 0 {
             maxWidth = size.width - contentInsets.left - contentInsets.right
+            // CRITICAL FIX: Ensure maxWidth is never negative
+            maxWidth = max(0, maxWidth)
         }
 
         var displayList:MTMathListDisplay? = nil
@@ -344,13 +379,151 @@ public class MTMathUILabel : MTView {
         }
 
         var resultWidth = displayList!.width + contentInsets.left + contentInsets.right
-        let resultHeight = displayList!.ascent + displayList!.descent + contentInsets.top + contentInsets.bottom
+        var resultHeight = displayList!.ascent + displayList!.descent + contentInsets.top + contentInsets.bottom
 
-        // Ensure we don't exceed the width constraints
+        // DEBUG LOGGING for width calculation
+        let debugLogging = false  // Set to true to enable detailed logging
+        if debugLogging {
+            print("\n=== MTMathUILabel intrinsicContentSize DEBUG ===")
+            print("LaTeX: \(self.latex ?? "nil")")
+            print("preferredMaxLayoutWidth: \(_preferredMaxLayoutWidth)")
+            print("size constraint: \(size)")
+            print("maxWidth passed to typesetter: \(maxWidth)")
+            print("displayList.width: \(displayList!.width)")
+            print("displayList.ascent: \(displayList!.ascent)")
+            print("displayList.descent: \(displayList!.descent)")
+            print("Number of subDisplays: \(displayList!.subDisplays.count)")
+            // Count lines by unique Y positions
+            let yPositions = Set(displayList!.subDisplays.map { $0.position.y })
+            print("Number of lines (unique Y positions): \(yPositions.count)")
+            print("contentInsets: \(contentInsets)")
+            print("resultWidth (before clamping): \(resultWidth)")
+            print("resultHeight (before clamping): \(resultHeight)")
+        }
+
+        // CRITICAL FIX: Ensure dimensions are never negative
+        // Negative values cause crashes in NSRange calculations and SwiftUI layout
+        resultWidth = max(0, resultWidth)
+        resultHeight = max(0, resultHeight)
+
+        // CRITICAL FIX for accented character clipping:
+        // The preferredMaxLayoutWidth is a HINT for line breaking, NOT a hard constraint.
+        // If the typesetter cannot fit content within that width (even with line breaking),
+        // we MUST return the actual content width to prevent clipping.
+        //
+        // ONLY clamp in extreme cases to prevent layout explosion (>50% over or >100pt over)
         if _preferredMaxLayoutWidth > 0 && resultWidth > _preferredMaxLayoutWidth {
-            resultWidth = _preferredMaxLayoutWidth
+            let overflow = resultWidth - _preferredMaxLayoutWidth
+            let overflowPercent = (overflow / _preferredMaxLayoutWidth) * 100
+
+            if debugLogging {
+                print("  Content exceeds preferredMaxLayoutWidth:")
+                print("    preferredMaxLayoutWidth: \(_preferredMaxLayoutWidth)")
+                print("    resultWidth: \(resultWidth)")
+                print("    overflow: \(overflow) (\(String(format: "%.1f", overflowPercent))%)")
+
+                // Check line breaking
+                let yPositions = Set(displayList!.subDisplays.map { $0.position.y })
+                print("    hasMultipleLines: \(yPositions.count > 1) (yPositions: \(yPositions.count))")
+
+                // Check if any content would be clipped at different widths
+                print("    SubDisplay analysis:")
+                for (i, sub) in displayList!.subDisplays.enumerated() {
+                    let rightEdge = sub.position.x + sub.width
+                    let clippedAtPreferred = rightEdge > _preferredMaxLayoutWidth
+                    let clippedAtResult = rightEdge > resultWidth
+                    print("      Sub[\(i)]: rightEdge=\(rightEdge) clippedAt\(_preferredMaxLayoutWidth)=\(clippedAtPreferred) clippedAt\(resultWidth)=\(clippedAtResult)")
+                }
+            }
+
+            // ONLY clamp for truly excessive overflow (>50% or >100pt)
+            // This prevents layout explosion while allowing normal overflow
+            let extremeOverflowThreshold: CGFloat = max(_preferredMaxLayoutWidth * 0.5, 100.0)
+
+            if overflow > extremeOverflowThreshold {
+                // Extreme overflow - clamp to prevent layout issues
+                let clampedWidth = _preferredMaxLayoutWidth + extremeOverflowThreshold
+                if debugLogging {
+                    print("    ⚠️ EXTREME OVERFLOW - clamping from \(resultWidth) to \(clampedWidth)")
+                    print("    ⚠️ WARNING: This will cause content clipping!")
+                }
+                resultWidth = clampedWidth
+            } else {
+                // Normal overflow - keep actual content width to prevent clipping
+                if debugLogging {
+                    print("    ✓ Normal overflow - keeping actual width \(resultWidth) to prevent clipping")
+                }
+                // resultWidth stays as is - NO CLAMPING
+            }
         } else if _preferredMaxLayoutWidth == 0 && size.width > 0 && resultWidth > size.width {
-            resultWidth = size.width
+            // Similar tolerance for size.width constraint
+            let tolerance = max(size.width * 0.05, 10.0)
+            let maxAllowedWidth = size.width + tolerance
+
+            if debugLogging {
+                print("  Exceeds size.width constraint:")
+                print("    tolerance: \(tolerance)")
+                print("    maxAllowedWidth: \(maxAllowedWidth)")
+                print("    overflow amount: \(resultWidth - size.width)")
+            }
+
+            if resultWidth <= maxAllowedWidth {
+                // Within tolerance - use actual content width
+                // resultWidth stays as is
+                if debugLogging {
+                    print("    ✓ Within tolerance - keeping actual width")
+                }
+            } else {
+                if debugLogging {
+                    print("    ⚠️ CLAMPING to maxAllowedWidth (may clip content!)")
+                }
+                resultWidth = maxAllowedWidth
+            }
+        }
+
+        if debugLogging {
+            print("  Final resultWidth: \(resultWidth)")
+            print("  Final resultHeight: \(resultHeight)")
+
+            // Check if any display elements would be clipped
+            if let display = displayList {
+                print("  Display subdisplays: \(display.subDisplays.count)")
+                let yPositions = Set(display.subDisplays.map { $0.position.y }).sorted()
+                print("  Unique Y positions (lines): \(yPositions.count) -> \(yPositions)")
+
+                for (i, sub) in display.subDisplays.enumerated() {
+                    let rightEdge = sub.position.x + sub.width
+                    let clipped = rightEdge > resultWidth
+
+                    // Extract text content if this is a CTLineDisplay
+                    var textContent = ""
+                    if let ctLineDisplay = sub as? MTCTLineDisplay,
+                       let attrString = ctLineDisplay.attributedString {
+                        textContent = " text=\"\(attrString.string)\""
+                    }
+
+                    print("    Sub[\(i)]: type=\(type(of: sub)), y=\(sub.position.y), x=\(sub.position.x), width=\(sub.width), rightEdge=\(rightEdge)\(textContent)\(clipped ? " ⚠️ CLIPPED" : "")")
+
+                    // Show internal structure for MTMathListDisplay
+                    if let mathListDisplay = sub as? MTMathListDisplay, !mathListDisplay.subDisplays.isEmpty {
+                        print("      → Contains \(mathListDisplay.subDisplays.count) sub-displays:")
+                        for (j, innerSub) in mathListDisplay.subDisplays.enumerated() {
+                            var innerTextContent = ""
+                            if let innerCTLineDisplay = innerSub as? MTCTLineDisplay,
+                               let innerAttrString = innerCTLineDisplay.attributedString {
+                                innerTextContent = " text=\"\(innerAttrString.string)\""
+                            }
+                            print("        [\(j)]: type=\(type(of: innerSub)), y=\(innerSub.position.y), x=\(innerSub.position.x), width=\(innerSub.width)\(innerTextContent)")
+                        }
+                    }
+
+                    if clipped {
+                        print("      ⚠️ CLIPPING: rightEdge \(rightEdge) > resultWidth \(resultWidth)")
+                        print("      Clipped amount: \(rightEdge - resultWidth)")
+                    }
+                }
+            }
+            print("=== END DEBUG ===\n")
         }
 
         return CGSize(width: resultWidth, height: resultHeight)
