@@ -204,7 +204,32 @@ public struct MTMathListBuilder {
         "supseteq": "\u{2289}", // ⊉ Not superset or equal
         "=": "\u{2260}",        // ≠ Not equal (alternative to \neq)
     ]
-    
+
+    /// Delimiter sizing commands with their size multipliers (relative to font size).
+    /// Values represent multipliers: \big = 1.2x, \Big = 1.8x, \bigg = 2.4x, \Bigg = 3.0x
+    public static let delimiterSizeCommands: [String: CGFloat] = [
+        // Basic sizing commands
+        "big": 1.2,
+        "Big": 1.8,
+        "bigg": 2.4,
+        "Bigg": 3.0,
+        // Left variants (same sizes, just semantic distinction in LaTeX)
+        "bigl": 1.2,
+        "Bigl": 1.8,
+        "biggl": 2.4,
+        "Biggl": 3.0,
+        // Right variants
+        "bigr": 1.2,
+        "Bigr": 1.8,
+        "biggr": 2.4,
+        "Biggr": 3.0,
+        // Middle variants (used between delimiters)
+        "bigm": 1.2,
+        "Bigm": 1.8,
+        "biggm": 2.4,
+        "Biggm": 3.0,
+    ]
+
     init(string: String) {
         self.error = nil
         self.string = string
@@ -939,6 +964,27 @@ public struct MTMathListBuilder {
                 self.setError(.invalidCommand, message: errorMessage)
                 return nil
             }
+        } else if let sizeMultiplier = Self.delimiterSizeCommands[command] {
+            // Handle \big, \Big, \bigg, \Bigg and their left/right variants
+            let delim = self.readDelimiter()
+            if delim == nil {
+                let errorMessage = "Missing delimiter for \\\(command)"
+                self.setError(.missingDelimiter, message: errorMessage)
+                return nil
+            }
+            let boundary = MTMathAtomFactory.boundary(forDelimiter: delim!)
+            if boundary == nil {
+                let errorMessage = "Invalid delimiter for \\\(command): \(delim!)"
+                self.setError(.invalidDelimiter, message: errorMessage)
+                return nil
+            }
+
+            // Create an MTInner with explicit delimiter height
+            let inner = MTInner()
+            inner.leftBoundary = boundary
+            inner.innerList = MTMathList()  // Empty inner list
+            inner.delimiterHeight = sizeMultiplier
+            return inner
         } else {
             let errorMessage = "Invalid command \\\(command)"
             self.setError(.invalidCommand, message:errorMessage)

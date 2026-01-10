@@ -2322,16 +2322,26 @@ class MTTypesetter {
     func makeLeftRight(_ inner: MTInner?, maxWidth: CGFloat = 0) -> MTDisplay? {
         assert(inner!.leftBoundary != nil || inner!.rightBoundary != nil, "Inner should have a boundary to call this function");
 
-        let innerListDisplay = MTTypesetter.createLineForMathList(inner!.innerList, font:font, style:style, cramped:cramped, spaced:true, maxWidth:maxWidth)
-        let axisHeight = styleFont.mathTable!.axisHeight
-        // delta is the max distance from the axis
-        let delta = max(innerListDisplay!.ascent - axisHeight, innerListDisplay!.descent + axisHeight);
-        let d1 = (delta / 500) * MTTypesetter.kDelimiterFactor;  // This represents atleast 90% of the formula
-        let d2 = 2 * delta - MTTypesetter.kDelimiterShortfallPoints;  // This represents a shortfall of 5pt
-        // The size of the delimiter glyph should cover at least 90% of the formula or
-        // be at most 5pt short.
-        let glyphHeight = max(d1, d2);
-        
+        let glyphHeight: CGFloat
+
+        // Check if we have an explicit delimiter height (from \big, \Big, etc.)
+        if let delimiterMultiplier = inner!.delimiterHeight {
+            // delimiterHeight is a multiplier (e.g., 1.2, 1.8, 2.4, 3.0)
+            // Multiply by font size to get actual height
+            glyphHeight = styleFont.fontSize * delimiterMultiplier
+        } else {
+            // Calculate height based on inner content (for \left...\right)
+            let innerListDisplay = MTTypesetter.createLineForMathList(inner!.innerList, font:font, style:style, cramped:cramped, spaced:true, maxWidth:maxWidth)
+            let axisHeight = styleFont.mathTable!.axisHeight
+            // delta is the max distance from the axis
+            let delta = max(innerListDisplay!.ascent - axisHeight, innerListDisplay!.descent + axisHeight);
+            let d1 = (delta / 500) * MTTypesetter.kDelimiterFactor;  // This represents atleast 90% of the formula
+            let d2 = 2 * delta - MTTypesetter.kDelimiterShortfallPoints;  // This represents a shortfall of 5pt
+            // The size of the delimiter glyph should cover at least 90% of the formula or
+            // be at most 5pt short.
+            glyphHeight = max(d1, d2);
+        }
+
         var innerElements = [MTDisplay]()
         var position = CGPoint.zero
         if inner!.leftBoundary != nil && !inner!.leftBoundary!.nucleus.isEmpty {
@@ -2340,11 +2350,16 @@ class MTTypesetter {
             position.x += leftGlyph!.width
             innerElements.append(leftGlyph!)
         }
-        
-        innerListDisplay!.position = position;
-        position.x += innerListDisplay!.width;
-        innerElements.append(innerListDisplay!)
-        
+
+        // Only include inner content if not using explicit delimiter height
+        // (explicit height commands like \big produce standalone delimiters)
+        if inner!.delimiterHeight == nil {
+            let innerListDisplay = MTTypesetter.createLineForMathList(inner!.innerList, font:font, style:style, cramped:cramped, spaced:true, maxWidth:maxWidth)
+            innerListDisplay!.position = position;
+            position.x += innerListDisplay!.width;
+            innerElements.append(innerListDisplay!)
+        }
+
         if inner!.rightBoundary != nil && !inner!.rightBoundary!.nucleus.isEmpty {
             let rightGlyph = self.findGlyphForBoundary(inner!.rightBoundary!.nucleus, withHeight:glyphHeight)
             rightGlyph!.position = position;
