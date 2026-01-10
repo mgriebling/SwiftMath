@@ -2929,5 +2929,135 @@ final class MTMathListBuilderTests: XCTestCase {
         XCTAssertEqual(latex, "\\mathbb{R}", "Should round-trip correctly")
     }
 
+    // MARK: - Delimiter Sizing Commands Tests
+
+    func testBigDelimiterCommands() throws {
+        // Test \big, \Big, \bigg, \Bigg commands
+        let sizeCommands = [
+            ("big", CGFloat(1.2)),
+            ("Big", CGFloat(1.8)),
+            ("bigg", CGFloat(2.4)),
+            ("Bigg", CGFloat(3.0))
+        ]
+
+        for (command, expectedMultiplier) in sizeCommands {
+            var error: NSError? = nil
+            let str = "\\\(command)("
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse \\\(command)(")
+            XCTAssertNil(error, "Should not error on \\\(command)(: \(error?.localizedDescription ?? "")")
+            XCTAssertEqual(unwrappedList.atoms.count, 1, "\\\(command)( should have one atom")
+
+            let atom = unwrappedList.atoms[0]
+            XCTAssertEqual(atom.type, .inner, "\\\(command)( should create an inner atom")
+
+            let inner = atom as! MTInner
+            XCTAssertNotNil(inner.leftBoundary, "Should have left boundary")
+            XCTAssertEqual(inner.leftBoundary?.nucleus, "(", "Left boundary should be (")
+            XCTAssertNotNil(inner.delimiterHeight, "Should have explicit delimiter height")
+            XCTAssertEqual(inner.delimiterHeight, expectedMultiplier, "Delimiter multiplier for \\\(command) should be \(expectedMultiplier)")
+        }
+    }
+
+    func testBigDelimiterLeftRightVariants() throws {
+        // Test \bigl, \bigr, \Bigl, \Bigr, etc.
+        let variants = [
+            ("bigl", "(", CGFloat(1.2)),
+            ("bigr", ")", CGFloat(1.2)),
+            ("Bigl", "[", CGFloat(1.8)),
+            ("Bigr", "]", CGFloat(1.8)),
+            ("biggl", "\\{", CGFloat(2.4)),
+            ("biggr", "\\}", CGFloat(2.4)),
+            ("Biggl", "|", CGFloat(3.0)),
+            ("Biggr", "|", CGFloat(3.0))
+        ]
+
+        for (command, delim, expectedMultiplier) in variants {
+            var error: NSError? = nil
+            let str = "\\\(command)\(delim)"
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse \\\(command)\(delim)")
+            XCTAssertNil(error, "Should not error on \\\(command)\(delim): \(error?.localizedDescription ?? "")")
+            XCTAssertEqual(unwrappedList.atoms.count, 1, "\\\(command)\(delim) should have one atom")
+
+            let atom = unwrappedList.atoms[0]
+            XCTAssertEqual(atom.type, .inner, "\\\(command)\(delim) should create an inner atom")
+
+            let inner = atom as! MTInner
+            XCTAssertNotNil(inner.leftBoundary, "Should have left boundary")
+            XCTAssertNotNil(inner.delimiterHeight, "Should have explicit delimiter height")
+            XCTAssertEqual(inner.delimiterHeight, expectedMultiplier, "Delimiter multiplier should be \(expectedMultiplier)")
+        }
+    }
+
+    func testBigDelimiterMiddleVariants() throws {
+        // Test \bigm, \Bigm, etc. for middle delimiters like |
+        let variants = [
+            ("bigm", "|", CGFloat(1.2)),
+            ("Bigm", "|", CGFloat(1.8)),
+            ("biggm", "|", CGFloat(2.4)),
+            ("Biggm", "|", CGFloat(3.0))
+        ]
+
+        for (command, delim, expectedMultiplier) in variants {
+            var error: NSError? = nil
+            let str = "\\\(command)\(delim)"
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse \\\(command)\(delim)")
+            XCTAssertNil(error, "Should not error on \\\(command)\(delim): \(error?.localizedDescription ?? "")")
+
+            let inner = unwrappedList.atoms[0] as! MTInner
+            XCTAssertEqual(inner.delimiterHeight, expectedMultiplier, "Middle delimiter multiplier should be \(expectedMultiplier)")
+        }
+    }
+
+    func testBigDelimiterMissingDelimiter() throws {
+        // Test that missing delimiter produces an error
+        var error: NSError? = nil
+        let str = "\\big"  // No delimiter following
+        let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+        XCTAssertNil(list, "Should fail to parse \\big without delimiter")
+        XCTAssertNotNil(error, "Should produce an error")
+        XCTAssertEqual(error?.code, MTParseErrors.missingDelimiter.rawValue, "Error should be missingDelimiter")
+    }
+
+    func testBigDelimiterInvalidDelimiter() throws {
+        // Test that invalid delimiter produces an error
+        var error: NSError? = nil
+        let str = "\\big x"  // 'x' is not a valid delimiter
+        let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+        XCTAssertNil(list, "Should fail to parse \\big with invalid delimiter")
+        XCTAssertNotNil(error, "Should produce an error")
+        XCTAssertEqual(error?.code, MTParseErrors.invalidDelimiter.rawValue, "Error should be invalidDelimiter")
+    }
+
+    func testBigDelimiterInExpression() throws {
+        // Test \big in a larger expression: \big( x + y \big)
+        var error: NSError? = nil
+        let str = "\\big( x + y \\big)"
+        let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+        let unwrappedList = try XCTUnwrap(list, "Should parse expression with \\big delimiters")
+        XCTAssertNil(error, "Should not produce an error")
+
+        // Should have: inner (big(), x, +, y, inner big)
+        XCTAssertEqual(unwrappedList.atoms.count, 5, "Should have 5 atoms")
+
+        // First atom should be inner with big(
+        let firstInner = unwrappedList.atoms[0] as! MTInner
+        XCTAssertEqual(firstInner.leftBoundary?.nucleus, "(")
+        XCTAssertEqual(firstInner.delimiterHeight, 1.2)
+
+        // Last atom should be inner with big)
+        let lastInner = unwrappedList.atoms[4] as! MTInner
+        XCTAssertEqual(lastInner.leftBoundary?.nucleus, ")")
+        XCTAssertEqual(lastInner.delimiterHeight, 1.2)
+    }
+
 }
 
