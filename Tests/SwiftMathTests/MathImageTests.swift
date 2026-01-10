@@ -143,6 +143,158 @@ extension NSImage {
     }
 }
 #endif
+
+final class SymbolRenderTests: XCTestCase {
+    func saveImage(fileName: String, pngData: Data) -> URL {
+        let imageFileURL = URL(fileURLWithPath: NSTemporaryDirectory().appending("symbol-\(fileName).png"))
+        try? pngData.write(to: imageFileURL, options: [.atomicWrite])
+        print("Saved image: \(imageFileURL.path)")
+        return imageFileURL
+    }
+
+    /// Visual render test for Priority 1 symbols
+    func testPriority1SymbolRendering() throws {
+        let testCases: [(name: String, latex: String)] = [
+            // Greek variants (varkappa supported, digamma not in Latin Modern Math font)
+            ("01_greek_varkappa", #"\varkappa"#),
+
+            // Arrows
+            ("02_arrows", #"\longmapsto \quad \hookrightarrow \quad \hookleftarrow"#),
+
+            // Slanted inequalities
+            ("03_slanted_ineq", #"a \leqslant b \leqslant c \quad x \geqslant y \geqslant z"#),
+
+            // Precedence relations
+            ("04_precedence", #"a \preceq b \quad c \succeq d"#),
+
+            // Turnstile relations
+            ("05_turnstiles", #"A \vdash B \quad C \dashv D \quad E \bowtie F"#),
+
+            // Binary operators
+            ("06_diamond", #"A \diamond B \diamond C"#),
+
+            // Hebrew letters
+            ("07_hebrew", #"\aleph \quad \beth \quad \gimel \quad \daleth"#),
+
+            // Miscellaneous
+            ("08_misc", #"\varnothing \quad \Box \quad \measuredangle"#),
+
+            // Combined expression (without digamma)
+            ("09_combined", #"\varkappa \hookrightarrow \varnothing \quad a \leqslant b \preceq c"#),
+
+            // In context with other math
+            ("10_in_context", #"f: A \longmapsto B, \quad x \leqslant y \implies \Box P"#),
+        ]
+
+        var savedPaths: [URL] = []
+
+        for (name, latex) in testCases {
+            let result = SwiftMathImageResult.useMathImage(
+                latex: latex,
+                font: .latinModernFont,
+                fontSize: 30
+            )
+
+            if let error = result.error {
+                XCTFail("Failed to render '\(name)': \(error.localizedDescription)")
+                continue
+            }
+
+            guard let image = result.image, let imageData = image.pngData() else {
+                XCTFail("No image generated for '\(name)'")
+                continue
+            }
+
+            let path = saveImage(fileName: name, pngData: imageData)
+            savedPaths.append(path)
+        }
+
+        print("\n=== Priority 1 Symbol Render Test Results ===")
+        print("Generated \(savedPaths.count) test images in: \(NSTemporaryDirectory())")
+        print("Image files:")
+        for path in savedPaths {
+            print("  - \(path.lastPathComponent)")
+        }
+        print("==============================================\n")
+
+        XCTAssertEqual(savedPaths.count, testCases.count, "All test cases should generate images")
+    }
+
+    /// Visual render test for negated relation symbols
+    func testNegatedRelationRendering() throws {
+        let testCases: [(name: String, latex: String)] = [
+            // Inequality negations
+            ("11_ineq_negations", #"a \nless b \quad c \ngtr d \quad x \nleq y \quad z \ngeq w"#),
+            ("12_slant_negations", #"a \nleqslant b \quad c \ngeqslant d"#),
+            ("13_neq_variants", #"a \lneq b \quad c \gneq d \quad x \lneqq y \quad z \gneqq w"#),
+            ("14_sim_negations", #"a \lnsim b \quad c \gnsim d \quad x \lnapprox y \quad z \gnapprox w"#),
+
+            // Ordering negations
+            ("15_ordering_neg", #"a \nprec b \quad c \nsucc d \quad x \npreceq y \quad z \nsucceq w"#),
+            ("16_prec_variants", #"a \precneqq b \quad c \succneqq d"#),
+            ("17_prec_sim", #"a \precnsim b \quad c \succnsim d \quad x \precnapprox y \quad z \succnapprox w"#),
+
+            // Similarity/congruence negations
+            ("18_sim_cong", #"a \nsim b \quad c \ncong d"#),
+            ("19_mid_parallel", #"a \nmid b \quad c \nshortmid d \quad x \nparallel y \quad z \nshortparallel w"#),
+
+            // Set relation negations
+            ("20_set_neg", #"A \nsubseteq B \quad C \nsupseteq D"#),
+            ("21_set_neq", #"A \subsetneq B \quad C \supsetneq D \quad X \subsetneqq Y \quad Z \supsetneqq W"#),
+            ("22_set_var", #"A \varsubsetneq B \quad C \varsupsetneq D"#),
+            ("23_notni", #"a \notni b \quad c \nni d"#),
+
+            // Triangle negations
+            ("24_triangle", #"A \ntriangleleft B \quad C \ntriangleright D \quad X \ntrianglelefteq Y \quad Z \ntrianglerighteq W"#),
+
+            // Turnstile negations
+            ("25_turnstile_neg", #"A \nvdash B \quad C \nvDash D \quad X \nVdash Y \quad Z \nVDash W"#),
+
+            // Square subset negations
+            ("26_sq_subset", #"A \nsqsubseteq B \quad C \nsqsupseteq D"#),
+
+            // Combined expression
+            ("27_combined", #"x \nless y \nleq z \quad A \nsubseteq B \ntriangleleft C"#),
+
+            // In context with positive relations
+            ("28_with_positive", #"a \leq b \quad \text{but} \quad c \nleq d"#),
+        ]
+
+        var savedPaths: [URL] = []
+
+        for (name, latex) in testCases {
+            let result = SwiftMathImageResult.useMathImage(
+                latex: latex,
+                font: .latinModernFont,
+                fontSize: 30
+            )
+
+            if let error = result.error {
+                XCTFail("Failed to render '\(name)': \(error.localizedDescription)")
+                continue
+            }
+
+            guard let image = result.image, let imageData = image.pngData() else {
+                XCTFail("No image generated for '\(name)'")
+                continue
+            }
+
+            let path = saveImage(fileName: name, pngData: imageData)
+            savedPaths.append(path)
+        }
+
+        print("\n=== Negated Relation Render Test Results ===")
+        print("Generated \(savedPaths.count) test images in: \(NSTemporaryDirectory())")
+        print("Image files:")
+        for path in savedPaths {
+            print("  - \(path.lastPathComponent)")
+        }
+        print("=============================================\n")
+
+        XCTAssertEqual(savedPaths.count, testCases.count, "All test cases should generate images")
+    }
+}
+
 enum Latex {
     static let samples: [String] = [
         #"(a_1 + a_2)^2 = a_1^2 + 2a_1a_2 + a_2^2"#,
