@@ -143,6 +143,94 @@ extension NSImage {
     }
 }
 #endif
+final class DelimiterSizingRenderTests: XCTestCase {
+    func saveImage(fileName: String, pngData: Data) -> URL {
+        let imageFileURL = URL(fileURLWithPath: NSTemporaryDirectory().appending("delimiter-\(fileName).png"))
+        try? pngData.write(to: imageFileURL, options: [.atomicWrite])
+        print("Saved image: \(imageFileURL.path)")
+        return imageFileURL
+    }
+
+    /// Visual render test for \big, \Big, \bigg, \Bigg delimiter sizing
+    /// This test generates images to verify delimiters render at correct sizes
+    func testBigDelimiterRendering() throws {
+        // Use unique names to avoid case-insensitive filesystem issues
+        let testCases: [(name: String, latex: String)] = [
+            // Compare all four sizes with parentheses - each should be progressively larger
+            ("01_sizes_comparison", #"\big( \Big( \bigg( \Bigg( x \Bigg) \bigg) \Big) \big)"#),
+
+            // Each size individually with fraction content (use 1,2,3,4 prefix for size level)
+            ("02_size1_big_parens", #"\big( \frac{a}{b} \big)"#),
+            ("03_size2_Big_parens", #"\Big( \frac{a}{b} \Big)"#),
+            ("04_size3_bigg_parens", #"\bigg( \frac{a}{b} \bigg)"#),
+            ("05_size4_Bigg_parens", #"\Bigg( \frac{a}{b} \Bigg)"#),
+
+            // Standalone delimiters without content - pure size test
+            ("06_standalone_sizes", #"\big( \quad \Big( \quad \bigg( \quad \Bigg("#),
+
+            // Mixed in expression
+            ("07_mixed_expression", #"f\big(g(x)\big) = \Big(\sum_{i=1}^n x_i\Big)"#),
+
+            // With brackets - should show progressive sizes
+            ("08_brackets", #"\big[ \Big[ \bigg[ \Bigg[ x \Bigg] \bigg] \Big] \big]"#),
+
+            // Comparison with \left \right (auto-sizing)
+            ("09_left_right_vs_Big", #"\left( \frac{a}{b} \right) \quad \Big( \frac{a}{b} \Big)"#),
+
+            // Vertical bars
+            ("10_vertical_bars", #"\big| \Big| \bigg| \Bigg| x \Bigg| \bigg| \Big| \big|"#),
+
+            // Nested \left \right - should auto-grow with content (display style)
+            ("11_nested_left_right", #"\left( \left( \left( \left( x \right) \right) \right) \right)"#),
+
+            // Nested \left \right with actual growing content
+            ("12_nested_growing_content", #"\left( a + \left( b + \left( c + \left( d \right) \right) \right) \right)"#),
+
+            // Compare: manual sizing vs auto-sizing for same nesting
+            ("13_manual_vs_auto_nested", #"\big(\Big(\bigg(\Bigg( x \Bigg)\bigg)\Big)\big) \quad \left(\left(\left(\left( x \right)\right)\right)\right)"#),
+
+            // Nested fractions - \left \right should grow to fit
+            ("14_nested_fractions_auto", #"\left( \frac{a}{\left( \frac{b}{\left( \frac{c}{d} \right)} \right)} \right)"#),
+
+            // Same with manual sizing
+            ("15_nested_fractions_manual", #"\Bigg( \frac{a}{\Big( \frac{b}{\big( \frac{c}{d} \big)} \Big)} \Bigg)"#),
+        ]
+
+        var savedPaths: [URL] = []
+
+        for (name, latex) in testCases {
+            let result = SwiftMathImageResult.useMathImage(
+                latex: latex,
+                font: .latinModernFont,
+                fontSize: 30
+            )
+
+            if let error = result.error {
+                XCTFail("Failed to render '\(name)': \(error.localizedDescription)")
+                continue
+            }
+
+            guard let image = result.image, let imageData = image.pngData() else {
+                XCTFail("No image generated for '\(name)'")
+                continue
+            }
+
+            let path = saveImage(fileName: name, pngData: imageData)
+            savedPaths.append(path)
+        }
+
+        print("\n=== Delimiter Sizing Render Test Results ===")
+        print("Generated \(savedPaths.count) test images in: \(NSTemporaryDirectory())")
+        print("Image files:")
+        for path in savedPaths {
+            print("  - \(path.lastPathComponent)")
+        }
+        print("============================================\n")
+
+        XCTAssertEqual(savedPaths.count, testCases.count, "All test cases should generate images")
+    }
+}
+
 enum Latex {
     static let samples: [String] = [
         #"(a_1 + a_2)^2 = a_1^2 + 2a_1a_2 + a_2^2"#,
