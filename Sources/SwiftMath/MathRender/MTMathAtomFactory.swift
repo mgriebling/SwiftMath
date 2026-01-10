@@ -340,6 +340,20 @@ public class MTMathAtomFactory {
         "coth" : MTMathAtomFactory.operatorWithName( "coth", limits: false),
         "sec" : MTMathAtomFactory.operatorWithName( "sec", limits: false),
         "csc" : MTMathAtomFactory.operatorWithName( "csc", limits: false),
+        // Additional inverse trig functions
+        "arccot" : MTMathAtomFactory.operatorWithName( "arccot", limits: false),
+        "arcsec" : MTMathAtomFactory.operatorWithName( "arcsec", limits: false),
+        "arccsc" : MTMathAtomFactory.operatorWithName( "arccsc", limits: false),
+        // Additional hyperbolic functions
+        "sech" : MTMathAtomFactory.operatorWithName( "sech", limits: false),
+        "csch" : MTMathAtomFactory.operatorWithName( "csch", limits: false),
+        // Inverse hyperbolic functions
+        "arcsinh" : MTMathAtomFactory.operatorWithName( "arcsinh", limits: false),
+        "arccosh" : MTMathAtomFactory.operatorWithName( "arccosh", limits: false),
+        "arctanh" : MTMathAtomFactory.operatorWithName( "arctanh", limits: false),
+        "arccoth" : MTMathAtomFactory.operatorWithName( "arccoth", limits: false),
+        "arcsech" : MTMathAtomFactory.operatorWithName( "arcsech", limits: false),
+        "arccsch" : MTMathAtomFactory.operatorWithName( "arccsch", limits: false),
         "arg" : MTMathAtomFactory.operatorWithName( "arg", limits: false),
         "ker" : MTMathAtomFactory.operatorWithName( "ker", limits: false),
         "dim" : MTMathAtomFactory.operatorWithName( "dim", limits: false),
