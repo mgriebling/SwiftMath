@@ -59,7 +59,15 @@ public class MTMathAtomFactory {
         "lceil" : "\u{2308}",
         "rceil" : "\u{2309}",
         "lfloor" : "\u{230A}",
-        "rfloor" : "\u{230B}"
+        "rfloor" : "\u{230B}",
+        // Corner brackets (amssymb)
+        "ulcorner" : "\u{231C}",  // upper left corner
+        "urcorner" : "\u{231D}",  // upper right corner
+        "llcorner" : "\u{231E}",  // lower left corner
+        "lrcorner" : "\u{231F}",  // lower right corner
+        // Double square brackets (strachey brackets)
+        "llbracket" : "\u{27E6}",  // left double bracket
+        "rrbracket" : "\u{27E7}",  // right double bracket
     ]
     
     private static let delimValueLock = NSLock()
