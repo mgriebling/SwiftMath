@@ -528,7 +528,7 @@ public class MTMathAtomFactory {
         "mathbfit": .boldItalic,
         "bm": .boldItalic,
         "text": .roman,
-        "operatorname": .roman,
+        // Note: operatorname is handled specially in MTMathListBuilder to create proper operators
     ]
     
     public static func fontStyleWithName(_ fontName:String) -> MTFontStyle? {

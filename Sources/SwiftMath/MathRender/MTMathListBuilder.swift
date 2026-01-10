@@ -854,6 +854,29 @@ public struct MTMathListBuilder {
             }
             inner.innerList = content
             return inner
+        } else if command == "operatorname" || command == "operatorname*" {
+            // \operatorname{name} creates a custom operator with proper spacing
+            // \operatorname*{name} creates an operator with limits above/below
+            let hasLimits = command.hasSuffix("*")
+
+            // Parse the operator name
+            let content = self.buildInternal(true)
+
+            // Convert the parsed content to a string
+            var operatorName = ""
+            if let atoms = content?.atoms {
+                for atom in atoms {
+                    operatorName += atom.nucleus
+                }
+            }
+
+            if operatorName.isEmpty {
+                let errorMessage = "Missing operator name for \\operatorname"
+                self.setError(.invalidCommand, message: errorMessage)
+                return nil
+            }
+
+            return MTLargeOperator(value: operatorName, limits: hasLimits)
         } else if command == "sqrt" {
             // A sqrt command with one argument
             let rad = MTRadical()
@@ -1302,6 +1325,23 @@ public struct MTMathListBuilder {
             }
             inner.innerList = content
             return inner
+        } else if command == "operatorname" || command == "operatorname*" {
+            // \operatorname{name} creates a custom operator with proper spacing
+            // \operatorname*{name} creates an operator with limits above/below
+            let hasLimits = command.hasSuffix("*")
+
+            let content = self.buildInternal(true)
+            var operatorName = ""
+            if let atoms = content?.atoms {
+                for atom in atoms {
+                    operatorName += atom.nucleus
+                }
+            }
+            if operatorName.isEmpty {
+                self.setError(.invalidCommand, message: "Missing operator name for \\operatorname")
+                return nil
+            }
+            return MTLargeOperator(value: operatorName, limits: hasLimits)
         } else if command == "sqrt" {
             let rad = MTRadical()
             let char = self.getNextCharacter()
