@@ -413,6 +413,31 @@ final class MTMathListBuilderTests: XCTestCase {
         }
     }
 
+    func testAdditionalTrigFunctions() throws {
+        // Test additional trig/hyperbolic functions
+        let functions = [
+            "arccot", "arcsec", "arccsc",  // inverse trig
+            "sech", "csch",                  // hyperbolic
+            "arcsinh", "arccosh", "arctanh", "arccoth", "arcsech", "arccsch"  // inverse hyperbolic
+        ]
+
+        for func_ in functions {
+            let str = "\\\(func_) x"
+            var error: NSError? = nil
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+            let desc = "Error for \\\(func_)"
+
+            XCTAssertNil(error, "Should not error on \\\(func_): \(error?.localizedDescription ?? "")")
+            XCTAssertNotNil(list, desc)
+            guard let list = list else { continue }
+
+            XCTAssertEqual(list.atoms.count, 2, desc)
+            let op = list.atoms[0] as? MTLargeOperator
+            XCTAssertNotNil(op, "Should be MTLargeOperator for \\\(func_)")
+            XCTAssertEqual(op?.nucleus, func_, "Nucleus should be \(func_)")
+        }
+    }
+
     func testFrac() throws {
         let str = "\\frac1c";
         let list = MTMathListBuilder.build(fromString: str)!
