@@ -2323,14 +2323,24 @@ class MTTypesetter {
         assert(inner!.leftBoundary != nil || inner!.rightBoundary != nil, "Inner should have a boundary to call this function");
 
         let innerListDisplay = MTTypesetter.createLineForMathList(inner!.innerList, font:font, style:style, cramped:cramped, spaced:true, maxWidth:maxWidth)
-        let axisHeight = styleFont.mathTable!.axisHeight
-        // delta is the max distance from the axis
-        let delta = max(innerListDisplay!.ascent - axisHeight, innerListDisplay!.descent + axisHeight);
-        let d1 = (delta / 500) * MTTypesetter.kDelimiterFactor;  // This represents atleast 90% of the formula
-        let d2 = 2 * delta - MTTypesetter.kDelimiterShortfallPoints;  // This represents a shortfall of 5pt
-        // The size of the delimiter glyph should cover at least 90% of the formula or
-        // be at most 5pt short.
-        let glyphHeight = max(d1, d2);
+
+        // Determine the glyph height - use explicit height if set, otherwise calculate from content
+        let glyphHeight: CGFloat
+        if let explicitMultiplier = inner!.delimiterHeight {
+            // Use explicit delimiter height: multiplier * font size
+            // Standard TeX: big=1.0, Big=1.4, bigg=1.8, Bigg=2.2 times font size
+            glyphHeight = explicitMultiplier * font.fontSize
+        } else {
+            // Calculate height based on inner content (original behavior)
+            let axisHeight = styleFont.mathTable!.axisHeight
+            // delta is the max distance from the axis
+            let delta = max(innerListDisplay!.ascent - axisHeight, innerListDisplay!.descent + axisHeight);
+            let d1 = (delta / 500) * MTTypesetter.kDelimiterFactor;  // This represents atleast 90% of the formula
+            let d2 = 2 * delta - MTTypesetter.kDelimiterShortfallPoints;  // This represents a shortfall of 5pt
+            // The size of the delimiter glyph should cover at least 90% of the formula or
+            // be at most 5pt short.
+            glyphHeight = max(d1, d2)
+        }
         
         var innerElements = [MTDisplay]()
         var position = CGPoint.zero

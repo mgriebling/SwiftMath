@@ -201,3 +201,90 @@ enum Latex {
         """#
     ]
 }
+
+// MARK: - Delimiter Sizing Render Tests
+
+final class DelimiterRenderTests: XCTestCase {
+
+    private func saveImage(named name: String, pngData: Data) {
+        let imageFileURL = URL(fileURLWithPath: NSTemporaryDirectory().appending("delimiter-\(name).png"))
+        try? pngData.write(to: imageFileURL, options: [.atomicWrite])
+        print("Saved: \(imageFileURL.path)")
+    }
+
+    /// Test rendering of all delimiter size variants
+    func testDelimiterSizeRendering() throws {
+        let testCases: [(String, String)] = [
+            // Basic size comparison
+            (#"( \big( \Big( \bigg( \Bigg("#, "size_comparison_parens"),
+            (#") \big) \Big) \bigg) \Bigg)"#, "size_comparison_parens_close"),
+            (#"[ \big[ \Big[ \bigg[ \Bigg["#, "size_comparison_brackets"),
+            (#"\{ \big\{ \Big\{ \bigg\{ \Bigg\{"#, "size_comparison_braces"),
+            (#"| \big| \Big| \bigg| \Bigg|"#, "size_comparison_pipes"),
+
+            // Left/right variants
+            (#"\bigl( x \bigr)"#, "bigl_bigr_parens"),
+            (#"\Bigl[ x \Bigr]"#, "Bigl_Bigr_brackets"),
+            (#"\biggl\{ x \biggr\}"#, "biggl_biggr_braces"),
+            (#"\Biggl| x \Biggr|"#, "Biggl_Biggr_pipes"),
+
+            // Middle variants
+            (#"a \bigm| b"#, "bigm_pipe"),
+            (#"a \Bigm| b \Biggm| c"#, "Bigm_Biggm_pipes"),
+
+            // Practical usage with fractions
+            (#"\bigl( \frac{a}{b} \bigr)"#, "bigl_frac"),
+            (#"\Bigl( \frac{a}{b} \Bigr)"#, "Bigl_frac"),
+            (#"\biggl( \frac{a}{b} \biggr)"#, "biggl_frac"),
+            (#"\Biggl( \frac{a}{b} \Biggr)"#, "Biggl_frac"),
+
+            // Mixed with auto-sized delimiters
+            (#"\left( \frac{a}{b} \right) \quad \big( \frac{a}{b} \big)"#, "auto_vs_manual"),
+        ]
+
+        let font = MathFont.latinModernFont
+        let fontSize: CGFloat = 24.0
+
+        for (latex, name) in testCases {
+            let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+            XCTAssertNil(result.error, "Should render \(name) without error: \(result.error?.localizedDescription ?? "")")
+            XCTAssertNotNil(result.image, "Should produce image for \(name)")
+
+            if let image = result.image, let imageData = image.pngData() {
+                saveImage(named: name, pngData: imageData)
+            }
+        }
+    }
+
+    /// Test that delimiter sizes increase progressively
+    func testDelimiterSizeProgression() throws {
+        let font = MathFont.latinModernFont
+        let fontSize: CGFloat = 24.0
+
+        // Render each size and compare heights
+        let sizeCommands = ["big", "Big", "bigg", "Bigg"]
+        var previousHeight: CGFloat = 0
+
+        for command in sizeCommands {
+            let latex = "\\\(command)("
+            let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+            XCTAssertNil(result.error, "Should render \\\(command)( without error")
+            XCTAssertNotNil(result.image, "Should produce image for \\\(command)(")
+
+            if let layoutInfo = result.layoutInfo {
+                let currentHeight = layoutInfo.ascent + layoutInfo.descent
+
+                // Each size should be larger than the previous
+                XCTAssertGreaterThan(currentHeight, previousHeight,
+                    "\\\(command) height (\(currentHeight)) should be greater than previous (\(previousHeight))")
+                previousHeight = currentHeight
+            }
+
+            if let image = result.image, let imageData = image.pngData() {
+                saveImage(named: "progression_\(command)", pngData: imageData)
+            }
+        }
+    }
+}

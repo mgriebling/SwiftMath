@@ -2737,5 +2737,131 @@ final class MTMathListBuilderTests: XCTestCase {
 //        }
 //    }
 
+    // MARK: - Delimiter Sizing Tests
+
+    func testBigDelimiterCommands() throws {
+        // Test all basic \big family commands
+        let commands = ["big", "Big", "bigg", "Bigg"]
+        let expectedMultipliers: [String: CGFloat] = [
+            "big": 1.0,
+            "Big": 1.4,
+            "bigg": 1.8,
+            "Bigg": 2.2
+        ]
+
+        for command in commands {
+            let latex = "\\\(command)("
+            var error: NSError? = nil
+            let list = MTMathListBuilder.build(fromString: latex, error: &error)
+
+            XCTAssertNil(error, "Should parse \\\(command)( without error")
+            XCTAssertNotNil(list, "Should produce a math list for \\\(command)")
+
+            let inner = list?.atoms.first as? MTInner
+            XCTAssertNotNil(inner, "\\\(command) should produce an MTInner atom")
+            XCTAssertNotNil(inner?.leftBoundary, "\\\(command) should have a left boundary")
+            XCTAssertEqual(inner?.leftBoundary?.nucleus, "(", "\\\(command)( should have ( as left boundary")
+            XCTAssertNotNil(inner?.delimiterHeight, "\\\(command) should have explicit delimiter height")
+            XCTAssertEqual(inner?.delimiterHeight, expectedMultipliers[command], "\\\(command) should have correct multiplier")
+        }
+    }
+
+    func testBigDelimiterLeftRightVariants() throws {
+        // Test \bigl, \bigr variants
+        let testCases: [(String, String?, String?)] = [
+            ("\\bigl(", "(", nil),        // left boundary only
+            ("\\bigr)", nil, ")"),        // right boundary only
+            ("\\Bigl[", "[", nil),
+            ("\\Bigr]", nil, "]"),
+            ("\\biggl\\{", "{", nil),
+            ("\\biggr\\}", nil, "}"),
+            ("\\Biggl|", "|", nil),
+            ("\\Biggr|", nil, "|"),
+        ]
+
+        for (latex, expectedLeft, expectedRight) in testCases {
+            var error: NSError? = nil
+            let list = MTMathListBuilder.build(fromString: latex, error: &error)
+
+            XCTAssertNil(error, "Should parse \(latex) without error")
+            XCTAssertNotNil(list, "Should produce a math list for \(latex)")
+
+            let inner = list?.atoms.first as? MTInner
+            XCTAssertNotNil(inner, "\(latex) should produce an MTInner atom")
+
+            if let expectedLeft = expectedLeft {
+                XCTAssertEqual(inner?.leftBoundary?.nucleus, expectedLeft, "\(latex) left boundary should be \(expectedLeft)")
+            }
+            if let expectedRight = expectedRight {
+                XCTAssertEqual(inner?.rightBoundary?.nucleus, expectedRight, "\(latex) right boundary should be \(expectedRight)")
+            }
+        }
+    }
+
+    func testBigDelimiterMiddleVariants() throws {
+        // Test \bigm variants (middle delimiters)
+        let commands = ["bigm", "Bigm", "biggm", "Biggm"]
+
+        for command in commands {
+            let latex = "\\\(command)|"
+            var error: NSError? = nil
+            let list = MTMathListBuilder.build(fromString: latex, error: &error)
+
+            XCTAssertNil(error, "Should parse \\\(command)| without error")
+            XCTAssertNotNil(list, "Should produce a math list for \\\(command)")
+
+            let inner = list?.atoms.first as? MTInner
+            XCTAssertNotNil(inner, "\\\(command) should produce an MTInner atom")
+            XCTAssertNotNil(inner?.delimiterHeight, "\\\(command) should have explicit delimiter height")
+        }
+    }
+
+    func testBigDelimiterMissingDelimiter() throws {
+        // Test error handling when delimiter is missing
+        var error: NSError? = nil
+        let list = MTMathListBuilder.build(fromString: "\\big", error: &error)
+
+        XCTAssertNil(list, "Should fail without delimiter")
+        XCTAssertNotNil(error, "Should produce error for missing delimiter")
+        XCTAssertEqual(error?.code, MTParseErrors.missingDelimiter.rawValue, "Should be missingDelimiter error")
+    }
+
+    func testBigDelimiterInvalidDelimiter() throws {
+        // Test error handling for invalid delimiter
+        var error: NSError? = nil
+        let list = MTMathListBuilder.build(fromString: "\\big+", error: &error)
+
+        XCTAssertNil(list, "Should fail with invalid delimiter")
+        XCTAssertNotNil(error, "Should produce error for invalid delimiter")
+        XCTAssertEqual(error?.code, MTParseErrors.invalidDelimiter.rawValue, "Should be invalidDelimiter error")
+    }
+
+    func testBigDelimiterInExpression() throws {
+        // Test delimiter sizing in a complete expression
+        let latex = "\\bigl( x + y \\bigr)"
+        var error: NSError? = nil
+        let list = MTMathListBuilder.build(fromString: latex, error: &error)
+
+        XCTAssertNil(error, "Should parse complete expression without error")
+        XCTAssertNotNil(list, "Should produce a math list")
+        XCTAssertTrue(list!.atoms.count >= 2, "Should have multiple atoms")
+
+        // First atom should be the \bigl(
+        let leftInner = list?.atoms.first as? MTInner
+        XCTAssertNotNil(leftInner, "First atom should be MTInner")
+        XCTAssertEqual(leftInner?.delimiterHeight, 1.0, "\\bigl should have 1.0 multiplier")
+
+        // Should contain variable atoms for x and y
+        var hasVariables = false
+        for atom in list!.atoms {
+            if atom.type == .variable {
+                hasVariables = true
+                break
+            }
+        }
+        XCTAssertTrue(hasVariables, "Expression should contain variables")
+    }
+
 }
+
 

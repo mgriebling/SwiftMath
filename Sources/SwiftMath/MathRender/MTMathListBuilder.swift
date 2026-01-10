@@ -204,6 +204,32 @@ public struct MTMathListBuilder {
         "supseteq": "\u{2289}", // ⊉ Not superset or equal
         "=": "\u{2260}",        // ≠ Not equal (alternative to \neq)
     ]
+
+    /// Delimiter sizing commands mapping to their size multipliers.
+    /// The multiplier is applied to the base font size to determine delimiter height.
+    /// Standard TeX sizing: big (1.0x), Big (1.4x), bigg (1.8x), Bigg (2.2x)
+    public static let delimiterSizeCommands: [String: CGFloat] = [
+        // \big family - slightly larger than normal
+        "big": 1.0,
+        "bigl": 1.0,
+        "bigr": 1.0,
+        "bigm": 1.0,
+        // \Big family - larger
+        "Big": 1.4,
+        "Bigl": 1.4,
+        "Bigr": 1.4,
+        "Bigm": 1.4,
+        // \bigg family - even larger
+        "bigg": 1.8,
+        "biggl": 1.8,
+        "biggr": 1.8,
+        "biggm": 1.8,
+        // \Bigg family - largest
+        "Bigg": 2.2,
+        "Biggl": 2.2,
+        "Biggr": 2.2,
+        "Biggm": 2.2,
+    ]
     
     init(string: String) {
         self.error = nil
@@ -939,6 +965,46 @@ public struct MTMathListBuilder {
                 self.setError(.invalidCommand, message: errorMessage)
                 return nil
             }
+        } else if let sizeMultiplier = Self.delimiterSizeCommands[command] {
+            // Handle \big, \Big, \bigg, \Bigg and their variants
+            let delim = self.readDelimiter()
+            if delim == nil {
+                let errorMessage = "Missing delimiter for \\\(command)"
+                self.setError(.missingDelimiter, message: errorMessage)
+                return nil
+            }
+            let boundary = MTMathAtomFactory.boundary(forDelimiter: delim!)
+            if boundary == nil {
+                let errorMessage = "Invalid delimiter for \\\(command): \(delim!)"
+                self.setError(.invalidDelimiter, message: errorMessage)
+                return nil
+            }
+
+            // Create MTInner with explicit delimiter height
+            let inner = MTInner()
+
+            // Determine if this is a left, right, or middle delimiter based on command suffix
+            let isLeft = command.hasSuffix("l")
+            let isRight = command.hasSuffix("r")
+            // let isMiddle = command.hasSuffix("m")  // For future use
+
+            if isLeft {
+                inner.leftBoundary = boundary
+                inner.rightBoundary = MTMathAtomFactory.boundary(forDelimiter: ".")
+            } else if isRight {
+                inner.leftBoundary = MTMathAtomFactory.boundary(forDelimiter: ".")
+                inner.rightBoundary = boundary
+            } else {
+                // For \big, \Big, \bigg, \Bigg and \bigm variants, use the delimiter on both sides
+                // but with empty inner content - it's just a sized delimiter
+                inner.leftBoundary = boundary
+                inner.rightBoundary = MTMathAtomFactory.boundary(forDelimiter: ".")
+            }
+
+            inner.innerList = MTMathList()
+            inner.delimiterHeight = sizeMultiplier  // Store multiplier, typesetter will compute actual height
+
+            return inner
         } else {
             let errorMessage = "Invalid command \\\(command)"
             self.setError(.invalidCommand, message:errorMessage)
