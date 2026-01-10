@@ -1357,30 +1357,24 @@ final class MTMathListBuilderTests: XCTestCase {
     }
 
     func testOperatorName() throws {
+        // \operatorname{dim} creates a single large operator atom (like \sin, \cos, etc.)
         let str = "\\operatorname{dim}";
         let list = MTMathListBuilder.build(fromString: str)!
         let desc = "Error for string:\(str)"
 
         XCTAssertNotNil(list, desc)
-        XCTAssertEqual((list.atoms.count), 3, desc)
-        var atom = list.atoms[0];
-        XCTAssertEqual(atom.type, .variable, desc)
-        XCTAssertEqual(atom.nucleus, "d", desc)
-        XCTAssertEqual(atom.fontStyle, .roman, desc);
+        XCTAssertEqual((list.atoms.count), 1, desc)
 
-        atom = list.atoms[1];
-        XCTAssertEqual(atom.type, .variable, desc)
-        XCTAssertEqual(atom.nucleus, "i", desc)
-        XCTAssertEqual(atom.fontStyle, .roman, desc);
-
-        atom = list.atoms[2];
-        XCTAssertEqual(atom.type, .variable, desc)
-        XCTAssertEqual(atom.nucleus, "m", desc)
-        XCTAssertEqual(atom.fontStyle, .roman, desc);
+        let op = list.atoms[0] as? MTLargeOperator
+        XCTAssertNotNil(op, desc)
+        XCTAssertEqual(op?.type, .largeOperator, desc)
+        XCTAssertEqual(op?.nucleus, "dim", desc)
+        XCTAssertFalse(op?.limits ?? true, desc)
 
         // convert it back to latex
         let latex = MTMathListBuilder.mathListToString(list)
-        XCTAssertEqual(latex, "\\mathrm{dim}", desc)
+        // Note: large operators are converted to their command name if available
+        XCTAssertEqual(latex, "\\dim ", desc)
     }
 
     func testLimits() throws {
@@ -2968,6 +2962,66 @@ final class MTMathListBuilderTests: XCTestCase {
         XCTAssertEqual(inner?.innerList?.atoms[0].nucleus, "n")
         XCTAssertEqual(inner?.innerList?.atoms[1].nucleus, "|")
         XCTAssertEqual(inner?.innerList?.atoms[2].nucleus, "m")
+    }
+
+    // MARK: - Operatorname Tests
+
+    func testOperatornameCommand() throws {
+        // Test \operatorname{lcm} creates a large operator
+        let list = MTMathListBuilder.build(fromString: "\\operatorname{lcm}")
+        XCTAssertNotNil(list)
+        XCTAssertEqual(list?.atoms.count, 1)
+
+        // Should be an MTLargeOperator
+        let op = list?.atoms.first as? MTLargeOperator
+        XCTAssertNotNil(op)
+        XCTAssertEqual(op?.type, .largeOperator)
+        XCTAssertEqual(op?.nucleus, "lcm")
+        XCTAssertFalse(op?.limits ?? true)
+    }
+
+    func testOperatornameStarCommand() throws {
+        // Test \operatorname*{argmax} creates a large operator with limits
+        let list = MTMathListBuilder.build(fromString: "\\operatorname*{argmax}")
+        XCTAssertNotNil(list)
+        XCTAssertEqual(list?.atoms.count, 1)
+
+        // Should be an MTLargeOperator with limits
+        let op = list?.atoms.first as? MTLargeOperator
+        XCTAssertNotNil(op)
+        XCTAssertEqual(op?.type, .largeOperator)
+        XCTAssertEqual(op?.nucleus, "argmax")
+        XCTAssertTrue(op?.limits ?? false)
+    }
+
+    func testOperatornameInExpression() throws {
+        // Test operatorname in a larger expression
+        let list = MTMathListBuilder.build(fromString: "\\operatorname{Tr}(A)")
+        XCTAssertNotNil(list)
+        XCTAssertEqual(list?.atoms.count, 4)
+
+        // Tr, (, A, )
+        XCTAssertEqual(list?.atoms[0].type, .largeOperator)  // Tr
+        XCTAssertEqual(list?.atoms[0].nucleus, "Tr")
+        XCTAssertEqual(list?.atoms[1].type, .open)           // (
+        XCTAssertEqual(list?.atoms[2].type, .variable)       // A
+        XCTAssertEqual(list?.atoms[3].type, .close)          // )
+    }
+
+    func testOperatornameWithSubscript() throws {
+        // Test \operatorname*{arg\,min}_{x} with limits
+        let list = MTMathListBuilder.build(fromString: "\\operatorname*{argmax}_x")
+        XCTAssertNotNil(list)
+        XCTAssertEqual(list?.atoms.count, 1)
+
+        let op = list?.atoms.first as? MTLargeOperator
+        XCTAssertNotNil(op)
+        XCTAssertEqual(op?.nucleus, "argmax")
+
+        // Check subscript
+        XCTAssertNotNil(op?.subScript)
+        XCTAssertEqual(op?.subScript?.atoms.count, 1)
+        XCTAssertEqual(op?.subScript?.atoms.first?.nucleus, "x")
     }
 
 }
