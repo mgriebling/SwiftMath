@@ -3060,5 +3060,178 @@ final class MTMathListBuilderTests: XCTestCase {
         XCTAssertEqual(lastInner.delimiterHeight, 1.0)
     }
 
+    // MARK: - Negated Relations Tests (Task 4)
+
+    func testNegatedInequalityRelations() throws {
+        let symbols: [(command: String, unicode: String)] = [
+            ("nless", "\u{226E}"),      // ≮
+            ("ngtr", "\u{226F}"),       // ≯
+            ("nleq", "\u{2270}"),       // ≰
+            ("ngeq", "\u{2271}"),       // ≱
+            ("nleqslant", "\u{2A87}"),  // ⪇
+            ("ngeqslant", "\u{2A88}"),  // ⪈
+            ("lneq", "\u{2A87}"),       // ⪇
+            ("gneq", "\u{2A88}"),       // ⪈
+            ("lneqq", "\u{2268}"),      // ≨
+            ("gneqq", "\u{2269}"),      // ≩
+            ("lnsim", "\u{22E6}"),      // ⋦
+            ("gnsim", "\u{22E7}"),      // ⋧
+            ("lnapprox", "\u{2A89}"),   // ⪉
+            ("gnapprox", "\u{2A8A}"),   // ⪊
+        ]
+
+        for (command, unicode) in symbols {
+            var error: NSError? = nil
+            let str = "\\\(command)"
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse \\\(command)")
+            XCTAssertNil(error, "Should not error on \\\(command)")
+            XCTAssertEqual(unwrappedList.atoms.count, 1)
+            XCTAssertEqual(unwrappedList.atoms[0].type, .relation)
+            XCTAssertEqual(unwrappedList.atoms[0].nucleus, unicode, "\\\(command) should have unicode \(unicode)")
+        }
+    }
+
+    func testNegatedOrderingRelations() throws {
+        let symbols: [(command: String, unicode: String)] = [
+            ("nprec", "\u{2280}"),       // ⊀
+            ("nsucc", "\u{2281}"),       // ⊁
+            ("npreceq", "\u{22E0}"),     // ⋠
+            ("nsucceq", "\u{22E1}"),     // ⋡
+            ("precneqq", "\u{2AB5}"),    // ⪵
+            ("succneqq", "\u{2AB6}"),    // ⪶
+            ("precnsim", "\u{22E8}"),    // ⋨
+            ("succnsim", "\u{22E9}"),    // ⋩
+            ("precnapprox", "\u{2AB9}"), // ⪹
+            ("succnapprox", "\u{2ABA}"), // ⪺
+        ]
+
+        for (command, unicode) in symbols {
+            var error: NSError? = nil
+            let str = "\\\(command)"
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse \\\(command)")
+            XCTAssertNil(error, "Should not error on \\\(command)")
+            XCTAssertEqual(unwrappedList.atoms.count, 1)
+            XCTAssertEqual(unwrappedList.atoms[0].type, .relation)
+            XCTAssertEqual(unwrappedList.atoms[0].nucleus, unicode, "\\\(command) should have unicode \(unicode)")
+        }
+    }
+
+    func testNegatedSimilarityRelations() throws {
+        let symbols: [(command: String, unicode: String)] = [
+            ("nsim", "\u{2241}"),           // ≁
+            ("ncong", "\u{2247}"),          // ≇
+            ("nmid", "\u{2224}"),           // ∤
+            ("nshortmid", "\u{2224}"),      // ∤
+            ("nparallel", "\u{2226}"),      // ∦
+            ("nshortparallel", "\u{2226}"), // ∦
+        ]
+
+        for (command, unicode) in symbols {
+            var error: NSError? = nil
+            let str = "\\\(command)"
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse \\\(command)")
+            XCTAssertNil(error, "Should not error on \\\(command)")
+            XCTAssertEqual(unwrappedList.atoms.count, 1)
+            XCTAssertEqual(unwrappedList.atoms[0].type, .relation)
+            XCTAssertEqual(unwrappedList.atoms[0].nucleus, unicode, "\\\(command) should have unicode \(unicode)")
+        }
+    }
+
+    func testNegatedSetRelations() throws {
+        let symbols: [(command: String, unicode: String)] = [
+            ("nsubseteq", "\u{2288}"),     // ⊈
+            ("nsupseteq", "\u{2289}"),     // ⊉
+            ("subsetneq", "\u{228A}"),     // ⊊
+            ("supsetneq", "\u{228B}"),     // ⊋
+            ("subsetneqq", "\u{2ACB}"),    // ⫋
+            ("supsetneqq", "\u{2ACC}"),    // ⫌
+            ("varsubsetneq", "\u{228A}"),  // ⊊ (variant)
+            ("varsupsetneq", "\u{228B}"),  // ⊋ (variant)
+            ("varsubsetneqq", "\u{2ACB}"), // ⫋ (variant)
+            ("varsupsetneqq", "\u{2ACC}"), // ⫌ (variant)
+            ("notni", "\u{220C}"),         // ∌
+            ("nni", "\u{220C}"),           // ∌
+        ]
+
+        for (command, unicode) in symbols {
+            var error: NSError? = nil
+            let str = "\\\(command)"
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse \\\(command)")
+            XCTAssertNil(error, "Should not error on \\\(command)")
+            XCTAssertEqual(unwrappedList.atoms.count, 1)
+            XCTAssertEqual(unwrappedList.atoms[0].type, .relation)
+            XCTAssertEqual(unwrappedList.atoms[0].nucleus, unicode, "\\\(command) should have unicode \(unicode)")
+        }
+    }
+
+    func testNegatedTriangleRelations() throws {
+        let symbols: [(command: String, unicode: String)] = [
+            ("ntriangleleft", "\u{22EA}"),     // ⋪
+            ("ntriangleright", "\u{22EB}"),    // ⋫
+            ("ntrianglelefteq", "\u{22EC}"),   // ⋬
+            ("ntrianglerighteq", "\u{22ED}"),  // ⋭
+        ]
+
+        for (command, unicode) in symbols {
+            var error: NSError? = nil
+            let str = "\\\(command)"
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse \\\(command)")
+            XCTAssertNil(error, "Should not error on \\\(command)")
+            XCTAssertEqual(unwrappedList.atoms.count, 1)
+            XCTAssertEqual(unwrappedList.atoms[0].type, .relation)
+            XCTAssertEqual(unwrappedList.atoms[0].nucleus, unicode, "\\\(command) should have unicode \(unicode)")
+        }
+    }
+
+    func testNegatedTurnstileRelations() throws {
+        let symbols: [(command: String, unicode: String)] = [
+            ("nvdash", "\u{22AC}"),  // ⊬
+            ("nvDash", "\u{22AD}"),  // ⊭
+            ("nVdash", "\u{22AE}"),  // ⊮
+            ("nVDash", "\u{22AF}"),  // ⊯
+        ]
+
+        for (command, unicode) in symbols {
+            var error: NSError? = nil
+            let str = "\\\(command)"
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse \\\(command)")
+            XCTAssertNil(error, "Should not error on \\\(command)")
+            XCTAssertEqual(unwrappedList.atoms.count, 1)
+            XCTAssertEqual(unwrappedList.atoms[0].type, .relation)
+            XCTAssertEqual(unwrappedList.atoms[0].nucleus, unicode, "\\\(command) should have unicode \(unicode)")
+        }
+    }
+
+    func testNegatedSquareSubsetRelations() throws {
+        let symbols: [(command: String, unicode: String)] = [
+            ("nsqsubseteq", "\u{22E2}"),  // ⋢
+            ("nsqsupseteq", "\u{22E3}"),  // ⋣
+        ]
+
+        for (command, unicode) in symbols {
+            var error: NSError? = nil
+            let str = "\\\(command)"
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse \\\(command)")
+            XCTAssertNil(error, "Should not error on \\\(command)")
+            XCTAssertEqual(unwrappedList.atoms.count, 1)
+            XCTAssertEqual(unwrappedList.atoms[0].type, .relation)
+            XCTAssertEqual(unwrappedList.atoms[0].nucleus, unicode, "\\\(command) should have unicode \(unicode)")
+        }
+    }
+
 }
 
