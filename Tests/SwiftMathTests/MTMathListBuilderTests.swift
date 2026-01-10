@@ -2862,6 +2862,114 @@ final class MTMathListBuilderTests: XCTestCase {
         XCTAssertTrue(hasVariables, "Expression should contain variables")
     }
 
+    // MARK: - Dirac Notation Tests
+
+    func testBraCommand() throws {
+        // Test \bra{psi} -> ⟨psi|
+        let list = MTMathListBuilder.build(fromString: "\\bra{\\psi}")
+        XCTAssertNotNil(list)
+        XCTAssertEqual(list?.atoms.count, 1)
+
+        // Should be an MTInner
+        let inner = list?.atoms.first as? MTInner
+        XCTAssertNotNil(inner)
+        XCTAssertEqual(inner?.type, .inner)
+
+        // Check left boundary is langle
+        XCTAssertNotNil(inner?.leftBoundary)
+        XCTAssertEqual(inner?.leftBoundary?.nucleus, "\u{2329}")
+
+        // Check right boundary is vert (|)
+        XCTAssertNotNil(inner?.rightBoundary)
+        XCTAssertEqual(inner?.rightBoundary?.nucleus, "|")
+
+        // Check inner content is psi
+        XCTAssertNotNil(inner?.innerList)
+        XCTAssertEqual(inner?.innerList?.atoms.count, 1)
+        XCTAssertEqual(inner?.innerList?.atoms.first?.nucleus, "\u{03C8}") // psi
+    }
+
+    func testKetCommand() throws {
+        // Test \ket{psi} -> |psi⟩
+        let list = MTMathListBuilder.build(fromString: "\\ket{\\psi}")
+        XCTAssertNotNil(list)
+        XCTAssertEqual(list?.atoms.count, 1)
+
+        // Should be an MTInner
+        let inner = list?.atoms.first as? MTInner
+        XCTAssertNotNil(inner)
+        XCTAssertEqual(inner?.type, .inner)
+
+        // Check left boundary is vert (|)
+        XCTAssertNotNil(inner?.leftBoundary)
+        XCTAssertEqual(inner?.leftBoundary?.nucleus, "|")
+
+        // Check right boundary is rangle
+        XCTAssertNotNil(inner?.rightBoundary)
+        XCTAssertEqual(inner?.rightBoundary?.nucleus, "\u{232A}")
+
+        // Check inner content is psi
+        XCTAssertNotNil(inner?.innerList)
+        XCTAssertEqual(inner?.innerList?.atoms.count, 1)
+        XCTAssertEqual(inner?.innerList?.atoms.first?.nucleus, "\u{03C8}") // psi
+    }
+
+    func testBraketCommand() throws {
+        // Test \braket{phi}{psi} -> ⟨phi|psi⟩
+        let list = MTMathListBuilder.build(fromString: "\\braket{\\phi}{\\psi}")
+        XCTAssertNotNil(list)
+        XCTAssertEqual(list?.atoms.count, 1)
+
+        // Should be an MTInner
+        let inner = list?.atoms.first as? MTInner
+        XCTAssertNotNil(inner)
+        XCTAssertEqual(inner?.type, .inner)
+
+        // Check left boundary is langle
+        XCTAssertNotNil(inner?.leftBoundary)
+        XCTAssertEqual(inner?.leftBoundary?.nucleus, "\u{2329}")
+
+        // Check right boundary is rangle
+        XCTAssertNotNil(inner?.rightBoundary)
+        XCTAssertEqual(inner?.rightBoundary?.nucleus, "\u{232A}")
+
+        // Check inner content is phi | psi (3 atoms)
+        XCTAssertNotNil(inner?.innerList)
+        XCTAssertEqual(inner?.innerList?.atoms.count, 3)
+        XCTAssertEqual(inner?.innerList?.atoms[0].nucleus, "\u{0001D719}") // phi
+        XCTAssertEqual(inner?.innerList?.atoms[1].nucleus, "|")        // separator
+        XCTAssertEqual(inner?.innerList?.atoms[2].nucleus, "\u{03C8}") // psi
+    }
+
+    func testDiracInExpression() throws {
+        // Test Dirac notation in a larger expression
+        let list = MTMathListBuilder.build(fromString: "H\\ket{\\psi}=E\\ket{\\psi}")
+        XCTAssertNotNil(list)
+        XCTAssertEqual(list?.atoms.count, 5)
+
+        // H, ket{psi}, =, E, ket{psi}
+        XCTAssertEqual(list?.atoms[0].type, .variable)  // H
+        XCTAssertEqual(list?.atoms[1].type, .inner)     // \ket{psi}
+        XCTAssertEqual(list?.atoms[2].type, .relation)  // =
+        XCTAssertEqual(list?.atoms[3].type, .variable)  // E
+        XCTAssertEqual(list?.atoms[4].type, .inner)     // \ket{psi}
+    }
+
+    func testBraketWithComplexContent() throws {
+        // Test with more complex content inside
+        let list = MTMathListBuilder.build(fromString: "\\braket{n}{m}")
+        XCTAssertNotNil(list)
+
+        let inner = list?.atoms.first as? MTInner
+        XCTAssertNotNil(inner)
+
+        // Inner content should have n | m
+        XCTAssertEqual(inner?.innerList?.atoms.count, 3)
+        XCTAssertEqual(inner?.innerList?.atoms[0].nucleus, "n")
+        XCTAssertEqual(inner?.innerList?.atoms[1].nucleus, "|")
+        XCTAssertEqual(inner?.innerList?.atoms[2].nucleus, "m")
+    }
+
 }
 
 
