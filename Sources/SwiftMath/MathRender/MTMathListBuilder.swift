@@ -817,6 +817,43 @@ public struct MTMathListBuilder {
             frac.leftDelimiter = "(";
             frac.rightDelimiter = ")";
             return frac;
+        } else if command == "bra" {
+            // Dirac bra notation: \bra{psi} -> ⟨psi|
+            let inner = MTInner()
+            inner.leftBoundary = MTMathAtomFactory.boundary(forDelimiter: "langle")
+            inner.rightBoundary = MTMathAtomFactory.boundary(forDelimiter: "|")
+            inner.innerList = self.buildInternal(true)
+            return inner
+        } else if command == "ket" {
+            // Dirac ket notation: \ket{psi} -> |psi⟩
+            let inner = MTInner()
+            inner.leftBoundary = MTMathAtomFactory.boundary(forDelimiter: "|")
+            inner.rightBoundary = MTMathAtomFactory.boundary(forDelimiter: "rangle")
+            inner.innerList = self.buildInternal(true)
+            return inner
+        } else if command == "braket" {
+            // Dirac braket notation: \braket{phi}{psi} -> ⟨phi|psi⟩
+            let inner = MTInner()
+            inner.leftBoundary = MTMathAtomFactory.boundary(forDelimiter: "langle")
+            inner.rightBoundary = MTMathAtomFactory.boundary(forDelimiter: "rangle")
+            // Build the inner content: phi | psi
+            let phi = self.buildInternal(true)
+            let psi = self.buildInternal(true)
+            let content = MTMathList()
+            if let phiList = phi {
+                for atom in phiList.atoms {
+                    content.add(atom)
+                }
+            }
+            // Add the | separator
+            content.add(MTMathAtom(type: .ordinary, value: "|"))
+            if let psiList = psi {
+                for atom in psiList.atoms {
+                    content.add(atom)
+                }
+            }
+            inner.innerList = content
+            return inner
         } else if command == "sqrt" {
             // A sqrt command with one argument
             let rad = MTRadical()
@@ -1230,6 +1267,41 @@ public struct MTMathListBuilder {
             frac.leftDelimiter = "("
             frac.rightDelimiter = ")"
             return frac
+        } else if command == "bra" {
+            // Dirac bra notation: \bra{psi} -> ⟨psi|
+            let inner = MTInner()
+            inner.leftBoundary = MTMathAtomFactory.boundary(forDelimiter: "langle")
+            inner.rightBoundary = MTMathAtomFactory.boundary(forDelimiter: "|")
+            inner.innerList = self.buildInternal(true)
+            return inner
+        } else if command == "ket" {
+            // Dirac ket notation: \ket{psi} -> |psi⟩
+            let inner = MTInner()
+            inner.leftBoundary = MTMathAtomFactory.boundary(forDelimiter: "|")
+            inner.rightBoundary = MTMathAtomFactory.boundary(forDelimiter: "rangle")
+            inner.innerList = self.buildInternal(true)
+            return inner
+        } else if command == "braket" {
+            // Dirac braket notation: \braket{phi}{psi} -> ⟨phi|psi⟩
+            let inner = MTInner()
+            inner.leftBoundary = MTMathAtomFactory.boundary(forDelimiter: "langle")
+            inner.rightBoundary = MTMathAtomFactory.boundary(forDelimiter: "rangle")
+            let phi = self.buildInternal(true)
+            let psi = self.buildInternal(true)
+            let content = MTMathList()
+            if let phiList = phi {
+                for atom in phiList.atoms {
+                    content.add(atom)
+                }
+            }
+            content.add(MTMathAtom(type: .ordinary, value: "|"))
+            if let psiList = psi {
+                for atom in psiList.atoms {
+                    content.add(atom)
+                }
+            }
+            inner.innerList = content
+            return inner
         } else if command == "sqrt" {
             let rad = MTRadical()
             let char = self.getNextCharacter()
