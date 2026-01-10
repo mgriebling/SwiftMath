@@ -1329,6 +1329,49 @@ final class MTMathListBuilderTests: XCTestCase {
         XCTAssertEqual(latex, "\\sqrt{\\mathrm{x}}y", desc)
     }
 
+    func testBoldsymbol() throws {
+        // \boldsymbol{x} creates bold italic - Greek letters have fontStyle set
+        let str = "\\boldsymbol{\\alpha + \\beta}"
+        let list = MTMathListBuilder.build(fromString: str)!
+        let desc = "Error for string:\(str)"
+
+        XCTAssertNotNil(list, desc)
+        XCTAssertEqual(list.atoms.count, 3, desc)
+
+        var atom = list.atoms[0]
+        XCTAssertEqual(atom.type, .variable, desc)
+        XCTAssertEqual(atom.nucleus, "\u{03B1}", desc)  // alpha - nucleus is base char
+        XCTAssertEqual(atom.fontStyle, .boldItalic)
+
+        atom = list.atoms[1]
+        XCTAssertEqual(atom.type, .binaryOperator, desc)
+        XCTAssertEqual(atom.nucleus, "+", desc)
+
+        atom = list.atoms[2]
+        XCTAssertEqual(atom.type, .variable, desc)
+        XCTAssertEqual(atom.nucleus, "\u{03B2}", desc)  // beta - nucleus is base char
+        XCTAssertEqual(atom.fontStyle, .boldItalic)
+    }
+
+    func testBoldsymbolSingle() throws {
+        // \boldsymbol x creates bold italic single char
+        let str = "\\boldsymbol x"
+        let list = MTMathListBuilder.build(fromString: str)!
+        let desc = "Error for string:\(str)"
+
+        XCTAssertNotNil(list, desc)
+        XCTAssertEqual(list.atoms.count, 1, desc)
+
+        let atom = list.atoms[0]
+        XCTAssertEqual(atom.type, .variable, desc)
+        XCTAssertEqual(atom.nucleus, "x", desc)
+        XCTAssertEqual(atom.fontStyle, .boldItalic)
+
+        // convert it back to latex - uses the first mapped name for boldItalic
+        let latex = MTMathListBuilder.mathListToString(list)
+        XCTAssertEqual(latex, "\\bm{x}", desc)
+    }
+
     func testText() throws {
         let str = "\\text{x y}";
         let list = MTMathListBuilder.build(fromString: str)!
@@ -2625,28 +2668,6 @@ final class MTMathListBuilderTests: XCTestCase {
         let nestedList = MTMathListBuilder.build(fromString: nestedStr, error: &error)
         XCTAssertNil(error, "Should parse nested dfrac/tfrac")
         XCTAssertNotNil(nestedList, "Should parse nested dfrac/tfrac")
-    }
-
-    func testBoldsymbol() throws {
-        // Test \boldsymbol for bold Greek letters
-        let testCases = [
-            ("\\boldsymbol{\\alpha}", "bold alpha"),
-            ("\\boldsymbol{\\beta}", "bold beta"),
-            ("\\boldsymbol{\\Gamma}", "bold Gamma"),
-            ("\\mathbf{x} + \\boldsymbol{\\mu}", "mixed bold")
-        ]
-
-        for (latex, desc) in testCases {
-            var error: NSError? = nil
-            let list = MTMathListBuilder.build(fromString: latex, error: &error)
-
-            if list == nil || error != nil {
-                throw XCTSkip("\\boldsymbol not implemented: \(desc). Error: \(error?.localizedDescription ?? "nil result")")
-            }
-
-            let unwrappedList = try XCTUnwrap(list, "Should parse: \(desc)")
-            XCTAssertTrue(unwrappedList.atoms.count >= 1, "\(desc) should have atoms")
-        }
     }
 
     func testStarredMatrices() throws {
