@@ -288,3 +288,79 @@ final class DelimiterRenderTests: XCTestCase {
         }
     }
 }
+
+// MARK: - Dirac Notation Render Tests
+
+final class DiracRenderTests: XCTestCase {
+
+    let font = MathFont.latinModernFont
+    let fontSize: CGFloat = 20.0
+
+    func saveImage(named name: String, pngData: Data) {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("SwiftMath_DiracTests_\(name).png")
+        try? pngData.write(to: url)
+    }
+
+    func testBraRendering() throws {
+        // Test \bra{psi} renders correctly
+        let latex = "\\bra{\\psi}"
+        let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+        XCTAssertNil(result.error, "Should render \\bra{\\psi} without error: \(result.error?.localizedDescription ?? "")")
+        XCTAssertNotNil(result.image, "Should produce image for \\bra{\\psi}")
+
+        if let image = result.image, let imageData = image.pngData() {
+            saveImage(named: "bra_psi", pngData: imageData)
+        }
+    }
+
+    func testKetRendering() throws {
+        // Test \ket{psi} renders correctly
+        let latex = "\\ket{\\psi}"
+        let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+        XCTAssertNil(result.error, "Should render \\ket{\\psi} without error: \(result.error?.localizedDescription ?? "")")
+        XCTAssertNotNil(result.image, "Should produce image for \\ket{\\psi}")
+
+        if let image = result.image, let imageData = image.pngData() {
+            saveImage(named: "ket_psi", pngData: imageData)
+        }
+    }
+
+    func testBraketRendering() throws {
+        // Test \braket{phi}{psi} renders correctly
+        let latex = "\\braket{\\phi}{\\psi}"
+        let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+        XCTAssertNil(result.error, "Should render \\braket{\\phi}{\\psi} without error: \(result.error?.localizedDescription ?? "")")
+        XCTAssertNotNil(result.image, "Should produce image for \\braket{\\phi}{\\psi}")
+
+        if let image = result.image, let imageData = image.pngData() {
+            saveImage(named: "braket_phi_psi", pngData: imageData)
+        }
+    }
+
+    func testDiracExpressionRendering() throws {
+        // Test a complete quantum mechanics expression
+        let testCases: [(String, String)] = [
+            ("\\bra{0}", "bra_0"),
+            ("\\ket{1}", "ket_1"),
+            ("\\braket{0}{1}", "braket_01"),
+            ("\\braket{n}{m}", "braket_nm"),
+            ("H\\ket{\\psi}=E\\ket{\\psi}", "schrodinger"),
+            ("\\bra{\\phi}A\\ket{\\psi}", "matrix_element"),
+            ("\\sum_n\\ket{n}\\bra{n}=I", "completeness"),
+        ]
+
+        for (latex, name) in testCases {
+            let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+            XCTAssertNil(result.error, "Should render \(latex) without error: \(result.error?.localizedDescription ?? "")")
+            XCTAssertNotNil(result.image, "Should produce image for \(latex)")
+
+            if let image = result.image, let imageData = image.pngData() {
+                saveImage(named: name, pngData: imageData)
+            }
+        }
+    }
+}
