@@ -343,6 +343,51 @@ final class MTMathListBuilderTests: XCTestCase {
         XCTAssertEqual(atom.nucleus, "2", desc)
     }
 
+    func testAmsSymbBinaryOperators() throws {
+        // Test additional amssymb binary operators
+        let testCases: [(String, String, String)] = [
+            ("\\ltimes", "ltimes", "\u{22C9}"),
+            ("\\rtimes", "rtimes", "\u{22CA}"),
+            ("\\bowtie", "bowtie", "\u{22C8}"),
+            ("\\circledast", "circledast", "\u{229B}"),
+            ("\\circledcirc", "circledcirc", "\u{229A}"),
+            ("\\circleddash", "circleddash", "\u{229D}"),
+            ("\\boxdot", "boxdot", "\u{22A1}"),
+            ("\\boxminus", "boxminus", "\u{229F}"),
+            ("\\boxplus", "boxplus", "\u{229E}"),
+            ("\\boxtimes", "boxtimes", "\u{22A0}"),
+            ("\\divideontimes", "divideontimes", "\u{22C7}"),
+            ("\\dotplus", "dotplus", "\u{2214}"),
+            ("\\lhd", "lhd", "\u{22B2}"),
+            ("\\rhd", "rhd", "\u{22B3}"),
+            ("\\unlhd", "unlhd", "\u{22B4}"),
+            ("\\unrhd", "unrhd", "\u{22B5}"),
+            ("\\intercal", "intercal", "\u{22BA}"),
+            ("\\barwedge", "barwedge", "\u{22BC}"),
+            ("\\veebar", "veebar", "\u{22BB}"),
+            ("\\curlywedge", "curlywedge", "\u{22CF}"),
+            ("\\curlyvee", "curlyvee", "\u{22CE}"),
+            ("\\doublebarwedge", "doublebarwedge", "\u{2A5E}"),
+            ("\\centerdot", "centerdot", "\u{22C5}"),
+        ]
+
+        for (latex, name, expected) in testCases {
+            let str = "a\(latex) b"  // space after command to terminate it
+            var error: NSError? = nil
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+            let desc = "Error for \(name)"
+
+            XCTAssertNil(error, "Should not error on \(name): \(error?.localizedDescription ?? "")")
+            XCTAssertNotNil(list, desc)
+            guard let list = list else { continue }
+            XCTAssertEqual(list.atoms.count, 3, desc)
+
+            let atom = list.atoms[1]
+            XCTAssertEqual(atom.type, .binaryOperator, desc)
+            XCTAssertEqual(atom.nucleus, expected, desc)
+        }
+    }
+
     func testFrac() throws {
         let str = "\\frac1c";
         let list = MTMathListBuilder.build(fromString: str)!
