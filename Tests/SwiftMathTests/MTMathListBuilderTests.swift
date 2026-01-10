@@ -2740,7 +2740,8 @@ final class MTMathListBuilderTests: XCTestCase {
     // MARK: - Priority 1 Symbol Tests
 
     func testGreekVariants() throws {
-        let variants = ["varkappa", "digamma", "Digamma", "varepsilon", "vartheta", "varpi", "varrho", "varsigma", "varphi"]
+        // Note: digamma/Digamma (U+03DD/U+03DC) removed - not supported by Latin Modern Math font
+        let variants = ["varkappa", "varepsilon", "vartheta", "varpi", "varrho", "varsigma", "varphi"]
 
         for variant in variants {
             var error: NSError? = nil

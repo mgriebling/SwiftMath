@@ -178,8 +178,7 @@ public class MTMathAtomFactory {
         "varrho" : MTMathAtom(type: .ordinary, value: "\u{0001D71A}"),
         "varpi" : MTMathAtom(type: .ordinary, value: "\u{0001D71B}"),
         "varkappa" : MTMathAtom(type: .ordinary, value: "\u{03F0}"),
-        "digamma" : MTMathAtom(type: .variable, value: "\u{03DD}"),
-        "Digamma" : MTMathAtom(type: .variable, value: "\u{03DC}"),
+        // Note: digamma (U+03DD) and Digamma (U+03DC) are not supported by Latin Modern Math font
 
         // Capital greek characters
         "Gamma" : MTMathAtom(type: .variable, value: "\u{0393}"),
