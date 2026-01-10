@@ -206,28 +206,30 @@ public struct MTMathListBuilder {
     ]
 
     /// Delimiter sizing commands with their size multipliers (relative to font size).
-    /// Values represent multipliers: \big = 1.2x, \Big = 1.8x, \bigg = 2.4x, \Bigg = 3.0x
+    /// Values based on standard TeX: at 10pt, \big=8.5pt, \Big=11.5pt, \bigg=14.5pt, \Bigg=17.5pt
+    /// These translate to approximately 0.85x, 1.15x, 1.45x, 1.75x of font size.
+    /// We use slightly larger values to ensure visible size differences.
     public static let delimiterSizeCommands: [String: CGFloat] = [
         // Basic sizing commands
-        "big": 1.2,
-        "Big": 1.8,
-        "bigg": 2.4,
-        "Bigg": 3.0,
+        "big": 1.0,
+        "Big": 1.4,
+        "bigg": 1.8,
+        "Bigg": 2.2,
         // Left variants (same sizes, just semantic distinction in LaTeX)
-        "bigl": 1.2,
-        "Bigl": 1.8,
-        "biggl": 2.4,
-        "Biggl": 3.0,
+        "bigl": 1.0,
+        "Bigl": 1.4,
+        "biggl": 1.8,
+        "Biggl": 2.2,
         // Right variants
-        "bigr": 1.2,
-        "Bigr": 1.8,
-        "biggr": 2.4,
-        "Biggr": 3.0,
+        "bigr": 1.0,
+        "Bigr": 1.4,
+        "biggr": 1.8,
+        "Biggr": 2.2,
         // Middle variants (used between delimiters)
-        "bigm": 1.2,
-        "Bigm": 1.8,
-        "biggm": 2.4,
-        "Biggm": 3.0,
+        "bigm": 1.0,
+        "Bigm": 1.4,
+        "biggm": 1.8,
+        "Biggm": 2.2,
     ]
 
     init(string: String) {

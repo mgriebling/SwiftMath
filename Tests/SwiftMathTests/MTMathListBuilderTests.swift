@@ -2933,11 +2933,12 @@ final class MTMathListBuilderTests: XCTestCase {
 
     func testBigDelimiterCommands() throws {
         // Test \big, \Big, \bigg, \Bigg commands
+        // Multipliers based on standard TeX sizing
         let sizeCommands = [
-            ("big", CGFloat(1.2)),
-            ("Big", CGFloat(1.8)),
-            ("bigg", CGFloat(2.4)),
-            ("Bigg", CGFloat(3.0))
+            ("big", CGFloat(1.0)),
+            ("Big", CGFloat(1.4)),
+            ("bigg", CGFloat(1.8)),
+            ("Bigg", CGFloat(2.2))
         ]
 
         for (command, expectedMultiplier) in sizeCommands {
@@ -2963,14 +2964,14 @@ final class MTMathListBuilderTests: XCTestCase {
     func testBigDelimiterLeftRightVariants() throws {
         // Test \bigl, \bigr, \Bigl, \Bigr, etc.
         let variants = [
-            ("bigl", "(", CGFloat(1.2)),
-            ("bigr", ")", CGFloat(1.2)),
-            ("Bigl", "[", CGFloat(1.8)),
-            ("Bigr", "]", CGFloat(1.8)),
-            ("biggl", "\\{", CGFloat(2.4)),
-            ("biggr", "\\}", CGFloat(2.4)),
-            ("Biggl", "|", CGFloat(3.0)),
-            ("Biggr", "|", CGFloat(3.0))
+            ("bigl", "(", CGFloat(1.0)),
+            ("bigr", ")", CGFloat(1.0)),
+            ("Bigl", "[", CGFloat(1.4)),
+            ("Bigr", "]", CGFloat(1.4)),
+            ("biggl", "\\{", CGFloat(1.8)),
+            ("biggr", "\\}", CGFloat(1.8)),
+            ("Biggl", "|", CGFloat(2.2)),
+            ("Biggr", "|", CGFloat(2.2))
         ]
 
         for (command, delim, expectedMultiplier) in variants {
@@ -2995,10 +2996,10 @@ final class MTMathListBuilderTests: XCTestCase {
     func testBigDelimiterMiddleVariants() throws {
         // Test \bigm, \Bigm, etc. for middle delimiters like |
         let variants = [
-            ("bigm", "|", CGFloat(1.2)),
-            ("Bigm", "|", CGFloat(1.8)),
-            ("biggm", "|", CGFloat(2.4)),
-            ("Biggm", "|", CGFloat(3.0))
+            ("bigm", "|", CGFloat(1.0)),
+            ("Bigm", "|", CGFloat(1.4)),
+            ("biggm", "|", CGFloat(1.8)),
+            ("Biggm", "|", CGFloat(2.2))
         ]
 
         for (command, delim, expectedMultiplier) in variants {
@@ -3051,12 +3052,12 @@ final class MTMathListBuilderTests: XCTestCase {
         // First atom should be inner with big(
         let firstInner = unwrappedList.atoms[0] as! MTInner
         XCTAssertEqual(firstInner.leftBoundary?.nucleus, "(")
-        XCTAssertEqual(firstInner.delimiterHeight, 1.2)
+        XCTAssertEqual(firstInner.delimiterHeight, 1.0)
 
         // Last atom should be inner with big)
         let lastInner = unwrappedList.atoms[4] as! MTInner
         XCTAssertEqual(lastInner.leftBoundary?.nucleus, ")")
-        XCTAssertEqual(lastInner.delimiterHeight, 1.2)
+        XCTAssertEqual(lastInner.delimiterHeight, 1.0)
     }
 
 }

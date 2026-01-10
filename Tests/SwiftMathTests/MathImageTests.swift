@@ -156,8 +156,8 @@ final class DelimiterSizingRenderTests: XCTestCase {
     func testBigDelimiterRendering() throws {
         // Use unique names to avoid case-insensitive filesystem issues
         let testCases: [(name: String, latex: String)] = [
-            // Compare all four sizes with parentheses - each should be progressively larger
-            ("01_sizes_comparison", #"\big( \Big( \bigg( \Bigg( x \Bigg) \bigg) \Big) \big)"#),
+            // Compare all four sizes with parentheses - outer should be larger, inner smaller
+            ("01_sizes_comparison", #"\Bigg( \bigg( \Big( \big( x \big) \Big) \bigg) \Bigg)"#),
 
             // Each size individually with fraction content (use 1,2,3,4 prefix for size level)
             ("02_size1_big_parens", #"\big( \frac{a}{b} \big)"#),
@@ -171,8 +171,8 @@ final class DelimiterSizingRenderTests: XCTestCase {
             // Mixed in expression
             ("07_mixed_expression", #"f\big(g(x)\big) = \Big(\sum_{i=1}^n x_i\Big)"#),
 
-            // With brackets - should show progressive sizes
-            ("08_brackets", #"\big[ \Big[ \bigg[ \Bigg[ x \Bigg] \bigg] \Big] \big]"#),
+            // With brackets - outer larger, inner smaller
+            ("08_brackets", #"\Bigg[ \bigg[ \Big[ \big[ x \big] \Big] \bigg] \Bigg]"#),
 
             // Comparison with \left \right (auto-sizing)
             ("09_left_right_vs_Big", #"\left( \frac{a}{b} \right) \quad \Big( \frac{a}{b} \Big)"#),
@@ -186,8 +186,8 @@ final class DelimiterSizingRenderTests: XCTestCase {
             // Nested \left \right with actual growing content
             ("12_nested_growing_content", #"\left( a + \left( b + \left( c + \left( d \right) \right) \right) \right)"#),
 
-            // Compare: manual sizing vs auto-sizing for same nesting
-            ("13_manual_vs_auto_nested", #"\big(\Big(\bigg(\Bigg( x \Bigg)\bigg)\Big)\big) \quad \left(\left(\left(\left( x \right)\right)\right)\right)"#),
+            // Compare: manual sizing vs auto-sizing for same nesting (outer=larger)
+            ("13_manual_vs_auto_nested", #"\Bigg(\bigg(\Big(\big( x \big)\Big)\bigg)\Bigg) \quad \left(\left(\left(\left( x \right)\right)\right)\right)"#),
 
             // Nested fractions - \left \right should grow to fit
             ("14_nested_fractions_auto", #"\left( \frac{a}{\left( \frac{b}{\left( \frac{c}{d} \right)} \right)} \right)"#),
