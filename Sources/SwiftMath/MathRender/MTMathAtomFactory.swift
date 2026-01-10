@@ -178,8 +178,7 @@ public class MTMathAtomFactory {
         "varrho" : MTMathAtom(type: .ordinary, value: "\u{0001D71A}"),
         "varpi" : MTMathAtom(type: .ordinary, value: "\u{0001D71B}"),
         "varkappa" : MTMathAtom(type: .ordinary, value: "\u{03F0}"),
-        "digamma" : MTMathAtom(type: .variable, value: "\u{03DD}"),
-        "Digamma" : MTMathAtom(type: .variable, value: "\u{03DC}"),
+        // Note: digamma (U+03DD) and Digamma (U+03DC) are not supported by Latin Modern Math font
 
         // Capital greek characters
         "Gamma" : MTMathAtom(type: .variable, value: "\u{0393}"),
@@ -274,6 +273,67 @@ public class MTMathAtomFactory {
         "bowtie" : MTMathAtom(type: .relation, value: "\u{22C8}"),
         "perp" : MTMathAtom(type: .relation, value: "\u{27C2}"),
         "implies" : MTMathAtom(type: .relation, value: "\u{27F9}"),
+
+        // Negated relations (amssymb)
+        // Inequality negations
+        "nless" : MTMathAtom(type: .relation, value: "\u{226E}"),
+        "ngtr" : MTMathAtom(type: .relation, value: "\u{226F}"),
+        "nleq" : MTMathAtom(type: .relation, value: "\u{2270}"),
+        "ngeq" : MTMathAtom(type: .relation, value: "\u{2271}"),
+        "nleqslant" : MTMathAtom(type: .relation, value: "\u{2A87}"),
+        "ngeqslant" : MTMathAtom(type: .relation, value: "\u{2A88}"),
+        "lneq" : MTMathAtom(type: .relation, value: "\u{2A87}"),
+        "gneq" : MTMathAtom(type: .relation, value: "\u{2A88}"),
+        "lneqq" : MTMathAtom(type: .relation, value: "\u{2268}"),
+        "gneqq" : MTMathAtom(type: .relation, value: "\u{2269}"),
+        "lnsim" : MTMathAtom(type: .relation, value: "\u{22E6}"),
+        "gnsim" : MTMathAtom(type: .relation, value: "\u{22E7}"),
+        "lnapprox" : MTMathAtom(type: .relation, value: "\u{2A89}"),
+        "gnapprox" : MTMathAtom(type: .relation, value: "\u{2A8A}"),
+        // Ordering negations
+        "nprec" : MTMathAtom(type: .relation, value: "\u{2280}"),
+        "nsucc" : MTMathAtom(type: .relation, value: "\u{2281}"),
+        "npreceq" : MTMathAtom(type: .relation, value: "\u{22E0}"),
+        "nsucceq" : MTMathAtom(type: .relation, value: "\u{22E1}"),
+        "precneqq" : MTMathAtom(type: .relation, value: "\u{2AB5}"),
+        "succneqq" : MTMathAtom(type: .relation, value: "\u{2AB6}"),
+        "precnsim" : MTMathAtom(type: .relation, value: "\u{22E8}"),
+        "succnsim" : MTMathAtom(type: .relation, value: "\u{22E9}"),
+        "precnapprox" : MTMathAtom(type: .relation, value: "\u{2AB9}"),
+        "succnapprox" : MTMathAtom(type: .relation, value: "\u{2ABA}"),
+        // Similarity/congruence negations
+        "nsim" : MTMathAtom(type: .relation, value: "\u{2241}"),
+        "ncong" : MTMathAtom(type: .relation, value: "\u{2247}"),
+        "nmid" : MTMathAtom(type: .relation, value: "\u{2224}"),
+        "nshortmid" : MTMathAtom(type: .relation, value: "\u{2224}"),
+        "nparallel" : MTMathAtom(type: .relation, value: "\u{2226}"),
+        "nshortparallel" : MTMathAtom(type: .relation, value: "\u{2226}"),
+        // Set relation negations
+        "nsubseteq" : MTMathAtom(type: .relation, value: "\u{2288}"),
+        "nsupseteq" : MTMathAtom(type: .relation, value: "\u{2289}"),
+        "subsetneq" : MTMathAtom(type: .relation, value: "\u{228A}"),
+        "supsetneq" : MTMathAtom(type: .relation, value: "\u{228B}"),
+        "subsetneqq" : MTMathAtom(type: .relation, value: "\u{2ACB}"),
+        "supsetneqq" : MTMathAtom(type: .relation, value: "\u{2ACC}"),
+        "varsubsetneq" : MTMathAtom(type: .relation, value: "\u{228A}"),
+        "varsupsetneq" : MTMathAtom(type: .relation, value: "\u{228B}"),
+        "varsubsetneqq" : MTMathAtom(type: .relation, value: "\u{2ACB}"),
+        "varsupsetneqq" : MTMathAtom(type: .relation, value: "\u{2ACC}"),
+        "notni" : MTMathAtom(type: .relation, value: "\u{220C}"),
+        "nni" : MTMathAtom(type: .relation, value: "\u{220C}"),
+        // Triangle negations
+        "ntriangleleft" : MTMathAtom(type: .relation, value: "\u{22EA}"),
+        "ntriangleright" : MTMathAtom(type: .relation, value: "\u{22EB}"),
+        "ntrianglelefteq" : MTMathAtom(type: .relation, value: "\u{22EC}"),
+        "ntrianglerighteq" : MTMathAtom(type: .relation, value: "\u{22ED}"),
+        // Turnstile negations
+        "nvdash" : MTMathAtom(type: .relation, value: "\u{22AC}"),
+        "nvDash" : MTMathAtom(type: .relation, value: "\u{22AD}"),
+        "nVdash" : MTMathAtom(type: .relation, value: "\u{22AE}"),
+        "nVDash" : MTMathAtom(type: .relation, value: "\u{22AF}"),
+        // Square subset negations
+        "nsqsubseteq" : MTMathAtom(type: .relation, value: "\u{22E2}"),
+        "nsqsupseteq" : MTMathAtom(type: .relation, value: "\u{22E3}"),
 
         // operators
         "times" : MTMathAtomFactory.times(),
