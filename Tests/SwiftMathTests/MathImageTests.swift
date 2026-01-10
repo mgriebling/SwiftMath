@@ -625,3 +625,58 @@ final class CornerBracketRenderTests: XCTestCase {
         }
     }
 }
+
+// MARK: - Trig Function Render Tests
+
+final class TrigFunctionRenderTests: XCTestCase {
+
+    let font = MathFont.latinModernFont
+    let fontSize: CGFloat = 20.0
+
+    func saveImage(named name: String, pngData: Data) {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("SwiftMath_TrigTests_\(name).png")
+        try? pngData.write(to: url)
+    }
+
+    func testInverseTrigFunctions() throws {
+        // Test inverse trig functions
+        let testCases: [(String, String)] = [
+            ("\\arccot x", "arccot"),
+            ("\\arcsec x", "arcsec"),
+            ("\\arccsc x", "arccsc"),
+        ]
+
+        for (latex, name) in testCases {
+            let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+            XCTAssertNil(result.error, "Should render \(latex) without error: \(result.error?.localizedDescription ?? "")")
+            XCTAssertNotNil(result.image, "Should produce image for \(latex)")
+
+            if let image = result.image, let imageData = image.pngData() {
+                saveImage(named: name, pngData: imageData)
+            }
+        }
+    }
+
+    func testHyperbolicFunctions() throws {
+        // Test hyperbolic functions
+        let testCases: [(String, String)] = [
+            ("\\sech x", "sech"),
+            ("\\csch x", "csch"),
+            ("\\arcsinh x", "arcsinh"),
+            ("\\arccosh x", "arccosh"),
+            ("\\arctanh x", "arctanh"),
+        ]
+
+        for (latex, name) in testCases {
+            let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+            XCTAssertNil(result.error, "Should render \(latex) without error: \(result.error?.localizedDescription ?? "")")
+            XCTAssertNotNil(result.image, "Should produce image for \(latex)")
+
+            if let image = result.image, let imageData = image.pngData() {
+                saveImage(named: name, pngData: imageData)
+            }
+        }
+    }
+}
