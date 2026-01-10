@@ -493,3 +493,83 @@ final class BoldsymbolRenderTests: XCTestCase {
         }
     }
 }
+
+// MARK: - Binary Operator Render Tests
+
+final class BinaryOperatorRenderTests: XCTestCase {
+
+    let font = MathFont.latinModernFont
+    let fontSize: CGFloat = 20.0
+
+    func saveImage(named name: String, pngData: Data) {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("SwiftMath_BinaryOpTests_\(name).png")
+        try? pngData.write(to: url)
+    }
+
+    func testSemidirectProducts() throws {
+        // Test semidirect product operators
+        let testCases: [(String, String)] = [
+            ("G \\ltimes H", "ltimes"),
+            ("G \\rtimes H", "rtimes"),
+            ("A \\bowtie B", "bowtie"),
+        ]
+
+        for (latex, name) in testCases {
+            let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+            XCTAssertNil(result.error, "Should render \(latex) without error: \(result.error?.localizedDescription ?? "")")
+            XCTAssertNotNil(result.image, "Should produce image for \(latex)")
+
+            if let image = result.image, let imageData = image.pngData() {
+                saveImage(named: name, pngData: imageData)
+            }
+        }
+    }
+
+    func testCircledAndBoxedOperators() throws {
+        // Test circled and boxed operators
+        let testCases: [(String, String)] = [
+            ("a \\oplus b", "oplus"),
+            ("a \\ominus b", "ominus"),
+            ("a \\otimes b", "otimes"),
+            ("a \\circledast b", "circledast"),
+            ("a \\circledcirc b", "circledcirc"),
+            ("a \\boxplus b", "boxplus"),
+            ("a \\boxminus b", "boxminus"),
+            ("a \\boxtimes b", "boxtimes"),
+            ("a \\boxdot b", "boxdot"),
+        ]
+
+        for (latex, name) in testCases {
+            let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+            XCTAssertNil(result.error, "Should render \(latex) without error: \(result.error?.localizedDescription ?? "")")
+            XCTAssertNotNil(result.image, "Should produce image for \(latex)")
+
+            if let image = result.image, let imageData = image.pngData() {
+                saveImage(named: name, pngData: imageData)
+            }
+        }
+    }
+
+    func testLogicalOperators() throws {
+        // Test logical operators
+        let testCases: [(String, String)] = [
+            ("p \\barwedge q", "barwedge"),
+            ("p \\veebar q", "veebar"),
+            ("p \\curlywedge q", "curlywedge"),
+            ("p \\curlyvee q", "curlyvee"),
+        ]
+
+        for (latex, name) in testCases {
+            let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+            XCTAssertNil(result.error, "Should render \(latex) without error: \(result.error?.localizedDescription ?? "")")
+            XCTAssertNotNil(result.image, "Should produce image for \(latex)")
+
+            if let image = result.image, let imageData = image.pngData() {
+                saveImage(named: name, pngData: imageData)
+            }
+        }
+    }
+}
