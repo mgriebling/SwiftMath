@@ -364,3 +364,77 @@ final class DiracRenderTests: XCTestCase {
         }
     }
 }
+
+// MARK: - Operatorname Render Tests
+
+final class OperatornameRenderTests: XCTestCase {
+
+    let font = MathFont.latinModernFont
+    let fontSize: CGFloat = 20.0
+
+    func saveImage(named name: String, pngData: Data) {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("SwiftMath_OperatornameTests_\(name).png")
+        try? pngData.write(to: url)
+    }
+
+    func testOperatornameRendering() throws {
+        // Test basic \operatorname{name} renders correctly
+        let testCases: [(String, String)] = [
+            ("\\operatorname{lcm}(a,b)", "lcm"),
+            ("\\operatorname{sgn}(x)", "sgn"),
+            ("\\operatorname{ord}(g)", "ord"),
+            ("\\operatorname{Tr}(A)", "trace"),
+            ("\\operatorname{rank}(M)", "rank"),
+        ]
+
+        for (latex, name) in testCases {
+            let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+            XCTAssertNil(result.error, "Should render \(latex) without error: \(result.error?.localizedDescription ?? "")")
+            XCTAssertNotNil(result.image, "Should produce image for \(latex)")
+
+            if let image = result.image, let imageData = image.pngData() {
+                saveImage(named: "basic_\(name)", pngData: imageData)
+            }
+        }
+    }
+
+    func testOperatornameStarRendering() throws {
+        // Test \operatorname*{name} renders with limits above/below
+        let testCases: [(String, String)] = [
+            ("\\operatorname*{argmax}_{x \\in X} f(x)", "argmax"),
+            ("\\operatorname*{argmin}_{x \\in X} f(x)", "argmin"),
+            ("\\operatorname*{esssup}_{x \\in \\mathbb{R}} |f(x)|", "esssup"),
+        ]
+
+        for (latex, name) in testCases {
+            let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+            XCTAssertNil(result.error, "Should render \(latex) without error: \(result.error?.localizedDescription ?? "")")
+            XCTAssertNotNil(result.image, "Should produce image for \(latex)")
+
+            if let image = result.image, let imageData = image.pngData() {
+                saveImage(named: "star_\(name)", pngData: imageData)
+            }
+        }
+    }
+
+    func testOperatornameComparisonWithBuiltIn() throws {
+        // Compare custom operatorname with built-in operators
+        let testCases: [(String, String)] = [
+            ("\\sin x + \\operatorname{mysin} x", "compare_sin"),
+            ("\\lim_{n \\to \\infty} a_n = \\operatorname*{lim}_{n \\to \\infty} b_n", "compare_lim"),
+        ]
+
+        for (latex, name) in testCases {
+            let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+            XCTAssertNil(result.error, "Should render \(latex) without error: \(result.error?.localizedDescription ?? "")")
+            XCTAssertNotNil(result.image, "Should produce image for \(latex)")
+
+            if let image = result.image, let imageData = image.pngData() {
+                saveImage(named: name, pngData: imageData)
+            }
+        }
+    }
+}
