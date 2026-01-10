@@ -388,6 +388,31 @@ final class MTMathListBuilderTests: XCTestCase {
         }
     }
 
+    func testCornerBracketDelimiters() throws {
+        // Test corner bracket delimiters (amssymb)
+        let testCases: [(String, String, String, String)] = [
+            ("\\left\\ulcorner x \\right\\urcorner", "ulcorner-urcorner", "\u{231C}", "\u{231D}"),
+            ("\\left\\llcorner x \\right\\lrcorner", "llcorner-lrcorner", "\u{231E}", "\u{231F}"),
+            ("\\left\\llbracket x \\right\\rrbracket", "llbracket-rrbracket", "\u{27E6}", "\u{27E7}"),
+        ]
+
+        for (latex, name, expectedLeft, expectedRight) in testCases {
+            var error: NSError? = nil
+            let list = MTMathListBuilder.build(fromString: latex, error: &error)
+            let desc = "Error for \(name)"
+
+            XCTAssertNil(error, "Should not error on \(name): \(error?.localizedDescription ?? "")")
+            XCTAssertNotNil(list, desc)
+            guard let list = list else { continue }
+
+            let inner = list.atoms[0] as? MTInner
+            XCTAssertNotNil(inner, "Should have MTInner for \(name)")
+
+            XCTAssertEqual(inner?.leftBoundary?.nucleus, expectedLeft, "Left delimiter for \(name)")
+            XCTAssertEqual(inner?.rightBoundary?.nucleus, expectedRight, "Right delimiter for \(name)")
+        }
+    }
+
     func testFrac() throws {
         let str = "\\frac1c";
         let list = MTMathListBuilder.build(fromString: str)!
