@@ -2904,5 +2904,30 @@ final class MTMathListBuilderTests: XCTestCase {
         }
     }
 
+    func testMathbbCommand() throws {
+        // Test that \mathbb{} command works for common letters
+        let letters = ["N", "Z", "Q", "R", "C", "H", "P"]
+
+        for letter in letters {
+            var error: NSError? = nil
+            let str = "\\mathbb{\(letter)}"
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse \\mathbb{\(letter)}")
+            XCTAssertNil(error, "Should not error on \\mathbb{\(letter)}: \(error?.localizedDescription ?? "")")
+            XCTAssertEqual(unwrappedList.atoms.count, 1, "\\mathbb{\(letter)} should have one atom")
+
+            let atom = unwrappedList.atoms[0]
+            XCTAssertEqual(atom.nucleus, letter, "Nucleus should be \(letter)")
+            XCTAssertEqual(atom.fontStyle, .blackboard, "Font style should be blackboard")
+        }
+
+        // Test round-trip conversion
+        let str = "\\mathbb{R}"
+        let list = MTMathListBuilder.build(fromString: str)!
+        let latex = MTMathListBuilder.mathListToString(list)
+        XCTAssertEqual(latex, "\\mathbb{R}", "Should round-trip correctly")
+    }
+
 }
 
