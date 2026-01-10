@@ -290,6 +290,31 @@ public class MTMathAtomFactory {
         "cdot"  : MTMathAtom(type: .binaryOperator, value: "\u{22C5}"),
         "amalg" : MTMathAtom(type: .binaryOperator, value: "\u{2A3F}"),
 
+        // Additional binary operators (amssymb)
+        "ltimes" : MTMathAtom(type: .binaryOperator, value: "\u{22C9}"),  // left semidirect product
+        "rtimes" : MTMathAtom(type: .binaryOperator, value: "\u{22CA}"),  // right semidirect product
+        "bowtie" : MTMathAtom(type: .binaryOperator, value: "\u{22C8}"),  // join/bowtie
+        "circledast" : MTMathAtom(type: .binaryOperator, value: "\u{229B}"),
+        "circledcirc" : MTMathAtom(type: .binaryOperator, value: "\u{229A}"),
+        "circleddash" : MTMathAtom(type: .binaryOperator, value: "\u{229D}"),
+        "boxdot" : MTMathAtom(type: .binaryOperator, value: "\u{22A1}"),
+        "boxminus" : MTMathAtom(type: .binaryOperator, value: "\u{229F}"),
+        "boxplus" : MTMathAtom(type: .binaryOperator, value: "\u{229E}"),
+        "boxtimes" : MTMathAtom(type: .binaryOperator, value: "\u{22A0}"),
+        "divideontimes" : MTMathAtom(type: .binaryOperator, value: "\u{22C7}"),
+        "dotplus" : MTMathAtom(type: .binaryOperator, value: "\u{2214}"),
+        "lhd" : MTMathAtom(type: .binaryOperator, value: "\u{22B2}"),  // left normal subgroup
+        "rhd" : MTMathAtom(type: .binaryOperator, value: "\u{22B3}"),  // right normal subgroup
+        "unlhd" : MTMathAtom(type: .binaryOperator, value: "\u{22B4}"),  // left normal subgroup or equal
+        "unrhd" : MTMathAtom(type: .binaryOperator, value: "\u{22B5}"),  // right normal subgroup or equal
+        "intercal" : MTMathAtom(type: .binaryOperator, value: "\u{22BA}"),
+        "barwedge" : MTMathAtom(type: .binaryOperator, value: "\u{22BC}"),
+        "veebar" : MTMathAtom(type: .binaryOperator, value: "\u{22BB}"),
+        "curlywedge" : MTMathAtom(type: .binaryOperator, value: "\u{22CF}"),
+        "curlyvee" : MTMathAtom(type: .binaryOperator, value: "\u{22CE}"),
+        "doublebarwedge" : MTMathAtom(type: .binaryOperator, value: "\u{2A5E}"),
+        "centerdot" : MTMathAtom(type: .binaryOperator, value: "\u{22C5}"),  // alias for cdot
+
         // No limit operators
         "log" : MTMathAtomFactory.operatorWithName( "log", limits: false),
         "lg" : MTMathAtomFactory.operatorWithName( "lg", limits: false),
