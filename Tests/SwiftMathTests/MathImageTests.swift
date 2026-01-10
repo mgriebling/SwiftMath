@@ -573,3 +573,55 @@ final class BinaryOperatorRenderTests: XCTestCase {
         }
     }
 }
+
+// MARK: - Corner Bracket Render Tests
+
+final class CornerBracketRenderTests: XCTestCase {
+
+    let font = MathFont.latinModernFont
+    let fontSize: CGFloat = 20.0
+
+    func saveImage(named name: String, pngData: Data) {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("SwiftMath_CornerBracketTests_\(name).png")
+        try? pngData.write(to: url)
+    }
+
+    func testCornerBrackets() throws {
+        // Test corner bracket delimiters
+        let testCases: [(String, String)] = [
+            ("\\left\\ulcorner x \\right\\urcorner", "upper_corners"),
+            ("\\left\\llcorner x \\right\\lrcorner", "lower_corners"),
+            ("\\left\\ulcorner \\text{quote} \\right\\urcorner", "quote_corners"),
+        ]
+
+        for (latex, name) in testCases {
+            let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+            XCTAssertNil(result.error, "Should render \(latex) without error: \(result.error?.localizedDescription ?? "")")
+            XCTAssertNotNil(result.image, "Should produce image for \(latex)")
+
+            if let image = result.image, let imageData = image.pngData() {
+                saveImage(named: name, pngData: imageData)
+            }
+        }
+    }
+
+    func testDoubleBrackets() throws {
+        // Test double square brackets (semantic brackets)
+        let testCases: [(String, String)] = [
+            ("\\left\\llbracket x \\right\\rrbracket", "double_brackets"),
+            ("\\left\\llbracket f(x) \\right\\rrbracket", "semantic_function"),
+        ]
+
+        for (latex, name) in testCases {
+            let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+            XCTAssertNil(result.error, "Should render \(latex) without error: \(result.error?.localizedDescription ?? "")")
+            XCTAssertNotNil(result.image, "Should produce image for \(latex)")
+
+            if let image = result.image, let imageData = image.pngData() {
+                saveImage(named: name, pngData: imageData)
+            }
+        }
+    }
+}
