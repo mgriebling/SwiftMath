@@ -438,3 +438,58 @@ final class OperatornameRenderTests: XCTestCase {
         }
     }
 }
+
+// MARK: - Boldsymbol Render Tests
+
+final class BoldsymbolRenderTests: XCTestCase {
+
+    let font = MathFont.latinModernFont
+    let fontSize: CGFloat = 20.0
+
+    func saveImage(named name: String, pngData: Data) {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("SwiftMath_BoldsymbolTests_\(name).png")
+        try? pngData.write(to: url)
+    }
+
+    func testBoldsymbolGreekRendering() throws {
+        // Test \boldsymbol with Greek letters
+        let testCases: [(String, String)] = [
+            ("\\boldsymbol{\\alpha}", "alpha"),
+            ("\\boldsymbol{\\beta}", "beta"),
+            ("\\boldsymbol{\\gamma}", "gamma"),
+            ("\\boldsymbol{\\Gamma}", "Gamma_upper"),
+            ("\\boldsymbol{\\mu} + \\boldsymbol{\\sigma}", "mu_sigma"),
+        ]
+
+        for (latex, name) in testCases {
+            let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+            XCTAssertNil(result.error, "Should render \(latex) without error: \(result.error?.localizedDescription ?? "")")
+            XCTAssertNotNil(result.image, "Should produce image for \(latex)")
+
+            if let image = result.image, let imageData = image.pngData() {
+                saveImage(named: "greek_\(name)", pngData: imageData)
+            }
+        }
+    }
+
+    func testBoldsymbolComparisonWithMathbf() throws {
+        // Compare \boldsymbol with \mathbf to show difference
+        let testCases: [(String, String)] = [
+            ("\\mathbf{x} \\text{ vs } \\boldsymbol{x}", "x_comparison"),
+            ("\\mathbf{\\alpha} \\text{ vs } \\boldsymbol{\\alpha}", "alpha_comparison"),
+            ("\\boldsymbol{\\nabla} f = \\mathbf{0}", "gradient"),
+        ]
+
+        for (latex, name) in testCases {
+            let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+            XCTAssertNil(result.error, "Should render \(latex) without error: \(result.error?.localizedDescription ?? "")")
+            XCTAssertNotNil(result.image, "Should produce image for \(latex)")
+
+            if let image = result.image, let imageData = image.pngData() {
+                saveImage(named: "compare_\(name)", pngData: imageData)
+            }
+        }
+    }
+}
