@@ -59,7 +59,15 @@ public class MTMathAtomFactory {
         "lceil" : "\u{2308}",
         "rceil" : "\u{2309}",
         "lfloor" : "\u{230A}",
-        "rfloor" : "\u{230B}"
+        "rfloor" : "\u{230B}",
+        // Corner brackets (amssymb)
+        "ulcorner" : "\u{231C}",  // upper left corner
+        "urcorner" : "\u{231D}",  // upper right corner
+        "llcorner" : "\u{231E}",  // lower left corner
+        "lrcorner" : "\u{231F}",  // lower right corner
+        // Double square brackets (strachey brackets)
+        "llbracket" : "\u{27E6}",  // left double bracket
+        "rrbracket" : "\u{27E7}",  // right double bracket
     ]
     
     private static let delimValueLock = NSLock()
@@ -370,6 +378,30 @@ public class MTMathAtomFactory {
         "diamond" : MTMathAtom(type: .binaryOperator, value: "\u{22C4}"),
         "amalg" : MTMathAtom(type: .binaryOperator, value: "\u{2A3F}"),
 
+        // Additional binary operators (amssymb)
+        "ltimes" : MTMathAtom(type: .binaryOperator, value: "\u{22C9}"),  // left semidirect product
+        "rtimes" : MTMathAtom(type: .binaryOperator, value: "\u{22CA}"),  // right semidirect product
+        "circledast" : MTMathAtom(type: .binaryOperator, value: "\u{229B}"),
+        "circledcirc" : MTMathAtom(type: .binaryOperator, value: "\u{229A}"),
+        "circleddash" : MTMathAtom(type: .binaryOperator, value: "\u{229D}"),
+        "boxdot" : MTMathAtom(type: .binaryOperator, value: "\u{22A1}"),
+        "boxminus" : MTMathAtom(type: .binaryOperator, value: "\u{229F}"),
+        "boxplus" : MTMathAtom(type: .binaryOperator, value: "\u{229E}"),
+        "boxtimes" : MTMathAtom(type: .binaryOperator, value: "\u{22A0}"),
+        "divideontimes" : MTMathAtom(type: .binaryOperator, value: "\u{22C7}"),
+        "dotplus" : MTMathAtom(type: .binaryOperator, value: "\u{2214}"),
+        "lhd" : MTMathAtom(type: .binaryOperator, value: "\u{22B2}"),  // left normal subgroup
+        "rhd" : MTMathAtom(type: .binaryOperator, value: "\u{22B3}"),  // right normal subgroup
+        "unlhd" : MTMathAtom(type: .binaryOperator, value: "\u{22B4}"),  // left normal subgroup or equal
+        "unrhd" : MTMathAtom(type: .binaryOperator, value: "\u{22B5}"),  // right normal subgroup or equal
+        "intercal" : MTMathAtom(type: .binaryOperator, value: "\u{22BA}"),
+        "barwedge" : MTMathAtom(type: .binaryOperator, value: "\u{22BC}"),
+        "veebar" : MTMathAtom(type: .binaryOperator, value: "\u{22BB}"),
+        "curlywedge" : MTMathAtom(type: .binaryOperator, value: "\u{22CF}"),
+        "curlyvee" : MTMathAtom(type: .binaryOperator, value: "\u{22CE}"),
+        "doublebarwedge" : MTMathAtom(type: .binaryOperator, value: "\u{2A5E}"),
+        "centerdot" : MTMathAtom(type: .binaryOperator, value: "\u{22C5}"),  // alias for cdot
+
         // No limit operators
         "log" : MTMathAtomFactory.operatorWithName( "log", limits: false),
         "lg" : MTMathAtomFactory.operatorWithName( "lg", limits: false),
@@ -387,6 +419,20 @@ public class MTMathAtomFactory {
         "coth" : MTMathAtomFactory.operatorWithName( "coth", limits: false),
         "sec" : MTMathAtomFactory.operatorWithName( "sec", limits: false),
         "csc" : MTMathAtomFactory.operatorWithName( "csc", limits: false),
+        // Additional inverse trig functions
+        "arccot" : MTMathAtomFactory.operatorWithName( "arccot", limits: false),
+        "arcsec" : MTMathAtomFactory.operatorWithName( "arcsec", limits: false),
+        "arccsc" : MTMathAtomFactory.operatorWithName( "arccsc", limits: false),
+        // Additional hyperbolic functions
+        "sech" : MTMathAtomFactory.operatorWithName( "sech", limits: false),
+        "csch" : MTMathAtomFactory.operatorWithName( "csch", limits: false),
+        // Inverse hyperbolic functions
+        "arcsinh" : MTMathAtomFactory.operatorWithName( "arcsinh", limits: false),
+        "arccosh" : MTMathAtomFactory.operatorWithName( "arccosh", limits: false),
+        "arctanh" : MTMathAtomFactory.operatorWithName( "arctanh", limits: false),
+        "arccoth" : MTMathAtomFactory.operatorWithName( "arccoth", limits: false),
+        "arcsech" : MTMathAtomFactory.operatorWithName( "arcsech", limits: false),
+        "arccsch" : MTMathAtomFactory.operatorWithName( "arccsch", limits: false),
         "arg" : MTMathAtomFactory.operatorWithName( "arg", limits: false),
         "ker" : MTMathAtomFactory.operatorWithName( "ker", limits: false),
         "dim" : MTMathAtomFactory.operatorWithName( "dim", limits: false),
@@ -613,8 +659,9 @@ public class MTMathAtomFactory {
         "mathbb": .blackboard,
         "mathbfit": .boldItalic,
         "bm": .boldItalic,
+        "boldsymbol": .boldItalic,
         "text": .roman,
-        "operatorname": .roman,
+        // Note: operatorname is handled specially in MTMathListBuilder to create proper operators
     ]
     
     public static func fontStyleWithName(_ fontName:String) -> MTFontStyle? {

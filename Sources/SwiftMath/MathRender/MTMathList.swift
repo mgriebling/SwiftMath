@@ -476,6 +476,7 @@ public class MTInner: MTMathAtom {
             }
         }
     }
+
     /// Optional explicit delimiter height (in points). When set, this overrides the automatic
     /// delimiter sizing based on inner content. Used by \big, \Big, \bigg, \Bigg commands.
     public var delimiterHeight: CGFloat?

@@ -343,6 +343,101 @@ final class MTMathListBuilderTests: XCTestCase {
         XCTAssertEqual(atom.nucleus, "2", desc)
     }
 
+    func testAmsSymbBinaryOperators() throws {
+        // Test additional amssymb binary operators
+        // Note: bowtie is a relation, not a binary operator
+        let testCases: [(String, String, String)] = [
+            ("\\ltimes", "ltimes", "\u{22C9}"),
+            ("\\rtimes", "rtimes", "\u{22CA}"),
+            ("\\circledast", "circledast", "\u{229B}"),
+            ("\\circledcirc", "circledcirc", "\u{229A}"),
+            ("\\circleddash", "circleddash", "\u{229D}"),
+            ("\\boxdot", "boxdot", "\u{22A1}"),
+            ("\\boxminus", "boxminus", "\u{229F}"),
+            ("\\boxplus", "boxplus", "\u{229E}"),
+            ("\\boxtimes", "boxtimes", "\u{22A0}"),
+            ("\\divideontimes", "divideontimes", "\u{22C7}"),
+            ("\\dotplus", "dotplus", "\u{2214}"),
+            ("\\lhd", "lhd", "\u{22B2}"),
+            ("\\rhd", "rhd", "\u{22B3}"),
+            ("\\unlhd", "unlhd", "\u{22B4}"),
+            ("\\unrhd", "unrhd", "\u{22B5}"),
+            ("\\intercal", "intercal", "\u{22BA}"),
+            ("\\barwedge", "barwedge", "\u{22BC}"),
+            ("\\veebar", "veebar", "\u{22BB}"),
+            ("\\curlywedge", "curlywedge", "\u{22CF}"),
+            ("\\curlyvee", "curlyvee", "\u{22CE}"),
+            ("\\doublebarwedge", "doublebarwedge", "\u{2A5E}"),
+            ("\\centerdot", "centerdot", "\u{22C5}"),
+        ]
+
+        for (latex, name, expected) in testCases {
+            let str = "a\(latex) b"  // space after command to terminate it
+            var error: NSError? = nil
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+            let desc = "Error for \(name)"
+
+            XCTAssertNil(error, "Should not error on \(name): \(error?.localizedDescription ?? "")")
+            XCTAssertNotNil(list, desc)
+            guard let list = list else { continue }
+            XCTAssertEqual(list.atoms.count, 3, desc)
+
+            let atom = list.atoms[1]
+            XCTAssertEqual(atom.type, .binaryOperator, desc)
+            XCTAssertEqual(atom.nucleus, expected, desc)
+        }
+    }
+
+    func testCornerBracketDelimiters() throws {
+        // Test corner bracket delimiters (amssymb)
+        let testCases: [(String, String, String, String)] = [
+            ("\\left\\ulcorner x \\right\\urcorner", "ulcorner-urcorner", "\u{231C}", "\u{231D}"),
+            ("\\left\\llcorner x \\right\\lrcorner", "llcorner-lrcorner", "\u{231E}", "\u{231F}"),
+            ("\\left\\llbracket x \\right\\rrbracket", "llbracket-rrbracket", "\u{27E6}", "\u{27E7}"),
+        ]
+
+        for (latex, name, expectedLeft, expectedRight) in testCases {
+            var error: NSError? = nil
+            let list = MTMathListBuilder.build(fromString: latex, error: &error)
+            let desc = "Error for \(name)"
+
+            XCTAssertNil(error, "Should not error on \(name): \(error?.localizedDescription ?? "")")
+            XCTAssertNotNil(list, desc)
+            guard let list = list else { continue }
+
+            let inner = list.atoms[0] as? MTInner
+            XCTAssertNotNil(inner, "Should have MTInner for \(name)")
+
+            XCTAssertEqual(inner?.leftBoundary?.nucleus, expectedLeft, "Left delimiter for \(name)")
+            XCTAssertEqual(inner?.rightBoundary?.nucleus, expectedRight, "Right delimiter for \(name)")
+        }
+    }
+
+    func testAdditionalTrigFunctions() throws {
+        // Test additional trig/hyperbolic functions
+        let functions = [
+            "arccot", "arcsec", "arccsc",  // inverse trig
+            "sech", "csch",                  // hyperbolic
+            "arcsinh", "arccosh", "arctanh", "arccoth", "arcsech", "arccsch"  // inverse hyperbolic
+        ]
+
+        for func_ in functions {
+            let str = "\\\(func_) x"
+            var error: NSError? = nil
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+            let desc = "Error for \\\(func_)"
+
+            XCTAssertNil(error, "Should not error on \\\(func_): \(error?.localizedDescription ?? "")")
+            XCTAssertNotNil(list, desc)
+            guard let list = list else { continue }
+
+            XCTAssertEqual(list.atoms.count, 2, desc)
+            let op = list.atoms[0] as? MTLargeOperator
+            XCTAssertNotNil(op, "Should be MTLargeOperator for \\\(func_)")
+            XCTAssertEqual(op?.nucleus, func_, "Nucleus should be \(func_)")
+        }
+    }
+
     func testFrac() throws {
         let str = "\\frac1c";
         let list = MTMathListBuilder.build(fromString: str)!
@@ -1329,6 +1424,49 @@ final class MTMathListBuilderTests: XCTestCase {
         XCTAssertEqual(latex, "\\sqrt{\\mathrm{x}}y", desc)
     }
 
+    func testBoldsymbol() throws {
+        // \boldsymbol{x} creates bold italic - Greek letters have fontStyle set
+        let str = "\\boldsymbol{\\alpha + \\beta}"
+        let list = MTMathListBuilder.build(fromString: str)!
+        let desc = "Error for string:\(str)"
+
+        XCTAssertNotNil(list, desc)
+        XCTAssertEqual(list.atoms.count, 3, desc)
+
+        var atom = list.atoms[0]
+        XCTAssertEqual(atom.type, .variable, desc)
+        XCTAssertEqual(atom.nucleus, "\u{03B1}", desc)  // alpha - nucleus is base char
+        XCTAssertEqual(atom.fontStyle, .boldItalic)
+
+        atom = list.atoms[1]
+        XCTAssertEqual(atom.type, .binaryOperator, desc)
+        XCTAssertEqual(atom.nucleus, "+", desc)
+
+        atom = list.atoms[2]
+        XCTAssertEqual(atom.type, .variable, desc)
+        XCTAssertEqual(atom.nucleus, "\u{03B2}", desc)  // beta - nucleus is base char
+        XCTAssertEqual(atom.fontStyle, .boldItalic)
+    }
+
+    func testBoldsymbolSingle() throws {
+        // \boldsymbol x creates bold italic single char
+        let str = "\\boldsymbol x"
+        let list = MTMathListBuilder.build(fromString: str)!
+        let desc = "Error for string:\(str)"
+
+        XCTAssertNotNil(list, desc)
+        XCTAssertEqual(list.atoms.count, 1, desc)
+
+        let atom = list.atoms[0]
+        XCTAssertEqual(atom.type, .variable, desc)
+        XCTAssertEqual(atom.nucleus, "x", desc)
+        XCTAssertEqual(atom.fontStyle, .boldItalic)
+
+        // convert it back to latex - uses the first mapped name for boldItalic
+        let latex = MTMathListBuilder.mathListToString(list)
+        XCTAssertEqual(latex, "\\bm{x}", desc)
+    }
+
     func testText() throws {
         let str = "\\text{x y}";
         let list = MTMathListBuilder.build(fromString: str)!
@@ -1357,30 +1495,24 @@ final class MTMathListBuilderTests: XCTestCase {
     }
 
     func testOperatorName() throws {
+        // \operatorname{dim} creates a single large operator atom (like \sin, \cos, etc.)
         let str = "\\operatorname{dim}";
         let list = MTMathListBuilder.build(fromString: str)!
         let desc = "Error for string:\(str)"
 
         XCTAssertNotNil(list, desc)
-        XCTAssertEqual((list.atoms.count), 3, desc)
-        var atom = list.atoms[0];
-        XCTAssertEqual(atom.type, .variable, desc)
-        XCTAssertEqual(atom.nucleus, "d", desc)
-        XCTAssertEqual(atom.fontStyle, .roman, desc);
+        XCTAssertEqual((list.atoms.count), 1, desc)
 
-        atom = list.atoms[1];
-        XCTAssertEqual(atom.type, .variable, desc)
-        XCTAssertEqual(atom.nucleus, "i", desc)
-        XCTAssertEqual(atom.fontStyle, .roman, desc);
-
-        atom = list.atoms[2];
-        XCTAssertEqual(atom.type, .variable, desc)
-        XCTAssertEqual(atom.nucleus, "m", desc)
-        XCTAssertEqual(atom.fontStyle, .roman, desc);
+        let op = list.atoms[0] as? MTLargeOperator
+        XCTAssertNotNil(op, desc)
+        XCTAssertEqual(op?.type, .largeOperator, desc)
+        XCTAssertEqual(op?.nucleus, "dim", desc)
+        XCTAssertFalse(op?.limits ?? true, desc)
 
         // convert it back to latex
         let latex = MTMathListBuilder.mathListToString(list)
-        XCTAssertEqual(latex, "\\mathrm{dim}", desc)
+        // Note: large operators are converted to their command name if available
+        XCTAssertEqual(latex, "\\dim ", desc)
     }
 
     func testLimits() throws {
@@ -2633,28 +2765,6 @@ final class MTMathListBuilderTests: XCTestCase {
         XCTAssertNotNil(nestedList, "Should parse nested dfrac/tfrac")
     }
 
-    func testBoldsymbol() throws {
-        // Test \boldsymbol for bold Greek letters
-        let testCases = [
-            ("\\boldsymbol{\\alpha}", "bold alpha"),
-            ("\\boldsymbol{\\beta}", "bold beta"),
-            ("\\boldsymbol{\\Gamma}", "bold Gamma"),
-            ("\\mathbf{x} + \\boldsymbol{\\mu}", "mixed bold")
-        ]
-
-        for (latex, desc) in testCases {
-            var error: NSError? = nil
-            let list = MTMathListBuilder.build(fromString: latex, error: &error)
-
-            if list == nil || error != nil {
-                throw XCTSkip("\\boldsymbol not implemented: \(desc). Error: \(error?.localizedDescription ?? "nil result")")
-            }
-
-            let unwrappedList = try XCTUnwrap(list, "Should parse: \(desc)")
-            XCTAssertTrue(unwrappedList.atoms.count >= 1, "\(desc) should have atoms")
-        }
-    }
-
     func testStarredMatrices() throws {
         // Test starred matrix environments with alignment
         let testCases = [
@@ -3234,5 +3344,174 @@ final class MTMathListBuilderTests: XCTestCase {
         }
     }
 
+    // MARK: - Dirac Notation Tests
+
+    func testBraCommand() throws {
+        // Test \bra{psi} -> ⟨psi|
+        let list = MTMathListBuilder.build(fromString: "\\bra{\\psi}")
+        XCTAssertNotNil(list)
+        XCTAssertEqual(list?.atoms.count, 1)
+
+        // Should be an MTInner
+        let inner = list?.atoms.first as? MTInner
+        XCTAssertNotNil(inner)
+        XCTAssertEqual(inner?.type, .inner)
+
+        // Check left boundary is langle
+        XCTAssertNotNil(inner?.leftBoundary)
+        XCTAssertEqual(inner?.leftBoundary?.nucleus, "\u{2329}")
+
+        // Check right boundary is vert (|)
+        XCTAssertNotNil(inner?.rightBoundary)
+        XCTAssertEqual(inner?.rightBoundary?.nucleus, "|")
+
+        // Check inner content is psi
+        XCTAssertNotNil(inner?.innerList)
+        XCTAssertEqual(inner?.innerList?.atoms.count, 1)
+        XCTAssertEqual(inner?.innerList?.atoms.first?.nucleus, "\u{03C8}") // psi
+    }
+
+    func testKetCommand() throws {
+        // Test \ket{psi} -> |psi⟩
+        let list = MTMathListBuilder.build(fromString: "\\ket{\\psi}")
+        XCTAssertNotNil(list)
+        XCTAssertEqual(list?.atoms.count, 1)
+
+        // Should be an MTInner
+        let inner = list?.atoms.first as? MTInner
+        XCTAssertNotNil(inner)
+        XCTAssertEqual(inner?.type, .inner)
+
+        // Check left boundary is vert (|)
+        XCTAssertNotNil(inner?.leftBoundary)
+        XCTAssertEqual(inner?.leftBoundary?.nucleus, "|")
+
+        // Check right boundary is rangle
+        XCTAssertNotNil(inner?.rightBoundary)
+        XCTAssertEqual(inner?.rightBoundary?.nucleus, "\u{232A}")
+
+        // Check inner content is psi
+        XCTAssertNotNil(inner?.innerList)
+        XCTAssertEqual(inner?.innerList?.atoms.count, 1)
+        XCTAssertEqual(inner?.innerList?.atoms.first?.nucleus, "\u{03C8}") // psi
+    }
+
+    func testBraketCommand() throws {
+        // Test \braket{phi}{psi} -> ⟨phi|psi⟩
+        let list = MTMathListBuilder.build(fromString: "\\braket{\\phi}{\\psi}")
+        XCTAssertNotNil(list)
+        XCTAssertEqual(list?.atoms.count, 1)
+
+        // Should be an MTInner
+        let inner = list?.atoms.first as? MTInner
+        XCTAssertNotNil(inner)
+        XCTAssertEqual(inner?.type, .inner)
+
+        // Check left boundary is langle
+        XCTAssertNotNil(inner?.leftBoundary)
+        XCTAssertEqual(inner?.leftBoundary?.nucleus, "\u{2329}")
+
+        // Check right boundary is rangle
+        XCTAssertNotNil(inner?.rightBoundary)
+        XCTAssertEqual(inner?.rightBoundary?.nucleus, "\u{232A}")
+
+        // Check inner content is phi | psi (3 atoms)
+        XCTAssertNotNil(inner?.innerList)
+        XCTAssertEqual(inner?.innerList?.atoms.count, 3)
+        XCTAssertEqual(inner?.innerList?.atoms[0].nucleus, "\u{0001D719}") // phi
+        XCTAssertEqual(inner?.innerList?.atoms[1].nucleus, "|")        // separator
+        XCTAssertEqual(inner?.innerList?.atoms[2].nucleus, "\u{03C8}") // psi
+    }
+
+    func testDiracInExpression() throws {
+        // Test Dirac notation in a larger expression
+        let list = MTMathListBuilder.build(fromString: "H\\ket{\\psi}=E\\ket{\\psi}")
+        XCTAssertNotNil(list)
+        XCTAssertEqual(list?.atoms.count, 5)
+
+        // H, ket{psi}, =, E, ket{psi}
+        XCTAssertEqual(list?.atoms[0].type, .variable)  // H
+        XCTAssertEqual(list?.atoms[1].type, .inner)     // \ket{psi}
+        XCTAssertEqual(list?.atoms[2].type, .relation)  // =
+        XCTAssertEqual(list?.atoms[3].type, .variable)  // E
+        XCTAssertEqual(list?.atoms[4].type, .inner)     // \ket{psi}
+    }
+
+    func testBraketWithComplexContent() throws {
+        // Test with more complex content inside
+        let list = MTMathListBuilder.build(fromString: "\\braket{n}{m}")
+        XCTAssertNotNil(list)
+
+        let inner = list?.atoms.first as? MTInner
+        XCTAssertNotNil(inner)
+
+        // Inner content should have n | m
+        XCTAssertEqual(inner?.innerList?.atoms.count, 3)
+        XCTAssertEqual(inner?.innerList?.atoms[0].nucleus, "n")
+        XCTAssertEqual(inner?.innerList?.atoms[1].nucleus, "|")
+        XCTAssertEqual(inner?.innerList?.atoms[2].nucleus, "m")
+    }
+
+    // MARK: - Operatorname Tests
+
+    func testOperatornameCommand() throws {
+        // Test \operatorname{lcm} creates a large operator
+        let list = MTMathListBuilder.build(fromString: "\\operatorname{lcm}")
+        XCTAssertNotNil(list)
+        XCTAssertEqual(list?.atoms.count, 1)
+
+        // Should be an MTLargeOperator
+        let op = list?.atoms.first as? MTLargeOperator
+        XCTAssertNotNil(op)
+        XCTAssertEqual(op?.type, .largeOperator)
+        XCTAssertEqual(op?.nucleus, "lcm")
+        XCTAssertFalse(op?.limits ?? true)
+    }
+
+    func testOperatornameStarCommand() throws {
+        // Test \operatorname*{argmax} creates a large operator with limits
+        let list = MTMathListBuilder.build(fromString: "\\operatorname*{argmax}")
+        XCTAssertNotNil(list)
+        XCTAssertEqual(list?.atoms.count, 1)
+
+        // Should be an MTLargeOperator with limits
+        let op = list?.atoms.first as? MTLargeOperator
+        XCTAssertNotNil(op)
+        XCTAssertEqual(op?.type, .largeOperator)
+        XCTAssertEqual(op?.nucleus, "argmax")
+        XCTAssertTrue(op?.limits ?? false)
+    }
+
+    func testOperatornameInExpression() throws {
+        // Test operatorname in a larger expression
+        let list = MTMathListBuilder.build(fromString: "\\operatorname{Tr}(A)")
+        XCTAssertNotNil(list)
+        XCTAssertEqual(list?.atoms.count, 4)
+
+        // Tr, (, A, )
+        XCTAssertEqual(list?.atoms[0].type, .largeOperator)  // Tr
+        XCTAssertEqual(list?.atoms[0].nucleus, "Tr")
+        XCTAssertEqual(list?.atoms[1].type, .open)           // (
+        XCTAssertEqual(list?.atoms[2].type, .variable)       // A
+        XCTAssertEqual(list?.atoms[3].type, .close)          // )
+    }
+
+    func testOperatornameWithSubscript() throws {
+        // Test \operatorname*{arg\,min}_{x} with limits
+        let list = MTMathListBuilder.build(fromString: "\\operatorname*{argmax}_x")
+        XCTAssertNotNil(list)
+        XCTAssertEqual(list?.atoms.count, 1)
+
+        let op = list?.atoms.first as? MTLargeOperator
+        XCTAssertNotNil(op)
+        XCTAssertEqual(op?.nucleus, "argmax")
+
+        // Check subscript
+        XCTAssertNotNil(op?.subScript)
+        XCTAssertEqual(op?.subScript?.atoms.count, 1)
+        XCTAssertEqual(op?.subScript?.atoms.first?.nucleus, "x")
+    }
+
 }
+
 

@@ -440,3 +440,482 @@ enum Latex {
         """#
     ]
 }
+
+// MARK: - Delimiter Sizing Render Tests
+
+final class DelimiterRenderTests: XCTestCase {
+
+    private func saveImage(named name: String, pngData: Data) {
+        let imageFileURL = URL(fileURLWithPath: NSTemporaryDirectory().appending("delimiter-\(name).png"))
+        try? pngData.write(to: imageFileURL, options: [.atomicWrite])
+        print("Saved: \(imageFileURL.path)")
+    }
+
+    /// Test rendering of all delimiter size variants
+    func testDelimiterSizeRendering() throws {
+        let testCases: [(String, String)] = [
+            // Basic size comparison
+            (#"( \big( \Big( \bigg( \Bigg("#, "size_comparison_parens"),
+            (#") \big) \Big) \bigg) \Bigg)"#, "size_comparison_parens_close"),
+            (#"[ \big[ \Big[ \bigg[ \Bigg["#, "size_comparison_brackets"),
+            (#"\{ \big\{ \Big\{ \bigg\{ \Bigg\{"#, "size_comparison_braces"),
+            (#"| \big| \Big| \bigg| \Bigg|"#, "size_comparison_pipes"),
+
+            // Left/right variants
+            (#"\bigl( x \bigr)"#, "bigl_bigr_parens"),
+            (#"\Bigl[ x \Bigr]"#, "Bigl_Bigr_brackets"),
+            (#"\biggl\{ x \biggr\}"#, "biggl_biggr_braces"),
+            (#"\Biggl| x \Biggr|"#, "Biggl_Biggr_pipes"),
+
+            // Middle variants
+            (#"a \bigm| b"#, "bigm_pipe"),
+            (#"a \Bigm| b \Biggm| c"#, "Bigm_Biggm_pipes"),
+
+            // Practical usage with fractions
+            (#"\bigl( \frac{a}{b} \bigr)"#, "bigl_frac"),
+            (#"\Bigl( \frac{a}{b} \Bigr)"#, "Bigl_frac"),
+            (#"\biggl( \frac{a}{b} \biggr)"#, "biggl_frac"),
+            (#"\Biggl( \frac{a}{b} \Biggr)"#, "Biggl_frac"),
+
+            // Mixed with auto-sized delimiters
+            (#"\left( \frac{a}{b} \right) \quad \big( \frac{a}{b} \big)"#, "auto_vs_manual"),
+        ]
+
+        let font = MathFont.latinModernFont
+        let fontSize: CGFloat = 24.0
+
+        for (latex, name) in testCases {
+            let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+            XCTAssertNil(result.error, "Should render \(name) without error: \(result.error?.localizedDescription ?? "")")
+            XCTAssertNotNil(result.image, "Should produce image for \(name)")
+
+            if let image = result.image, let imageData = image.pngData() {
+                saveImage(named: name, pngData: imageData)
+            }
+        }
+    }
+
+    /// Test that delimiter sizes increase progressively
+    func testDelimiterSizeProgression() throws {
+        let font = MathFont.latinModernFont
+        let fontSize: CGFloat = 24.0
+
+        // Render each size and compare heights
+        let sizeCommands = ["big", "Big", "bigg", "Bigg"]
+        var previousHeight: CGFloat = 0
+
+        for command in sizeCommands {
+            let latex = "\\\(command)("
+            let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+            XCTAssertNil(result.error, "Should render \\\(command)( without error")
+            XCTAssertNotNil(result.image, "Should produce image for \\\(command)(")
+
+            if let layoutInfo = result.layoutInfo {
+                let currentHeight = layoutInfo.ascent + layoutInfo.descent
+
+                // Each size should be larger than the previous
+                XCTAssertGreaterThan(currentHeight, previousHeight,
+                    "\\\(command) height (\(currentHeight)) should be greater than previous (\(previousHeight))")
+                previousHeight = currentHeight
+            }
+
+            if let image = result.image, let imageData = image.pngData() {
+                saveImage(named: "progression_\(command)", pngData: imageData)
+            }
+        }
+    }
+}
+
+// MARK: - Dirac Notation Render Tests
+
+final class DiracRenderTests: XCTestCase {
+
+    let font = MathFont.latinModernFont
+    let fontSize: CGFloat = 20.0
+
+    func saveImage(named name: String, pngData: Data) {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("SwiftMath_DiracTests_\(name).png")
+        try? pngData.write(to: url)
+    }
+
+    func testBraRendering() throws {
+        // Test \bra{psi} renders correctly
+        let latex = "\\bra{\\psi}"
+        let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+        XCTAssertNil(result.error, "Should render \\bra{\\psi} without error: \(result.error?.localizedDescription ?? "")")
+        XCTAssertNotNil(result.image, "Should produce image for \\bra{\\psi}")
+
+        if let image = result.image, let imageData = image.pngData() {
+            saveImage(named: "bra_psi", pngData: imageData)
+        }
+    }
+
+    func testKetRendering() throws {
+        // Test \ket{psi} renders correctly
+        let latex = "\\ket{\\psi}"
+        let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+        XCTAssertNil(result.error, "Should render \\ket{\\psi} without error: \(result.error?.localizedDescription ?? "")")
+        XCTAssertNotNil(result.image, "Should produce image for \\ket{\\psi}")
+
+        if let image = result.image, let imageData = image.pngData() {
+            saveImage(named: "ket_psi", pngData: imageData)
+        }
+    }
+
+    func testBraketRendering() throws {
+        // Test \braket{phi}{psi} renders correctly
+        let latex = "\\braket{\\phi}{\\psi}"
+        let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+        XCTAssertNil(result.error, "Should render \\braket{\\phi}{\\psi} without error: \(result.error?.localizedDescription ?? "")")
+        XCTAssertNotNil(result.image, "Should produce image for \\braket{\\phi}{\\psi}")
+
+        if let image = result.image, let imageData = image.pngData() {
+            saveImage(named: "braket_phi_psi", pngData: imageData)
+        }
+    }
+
+    func testDiracExpressionRendering() throws {
+        // Test a complete quantum mechanics expression
+        let testCases: [(String, String)] = [
+            ("\\bra{0}", "bra_0"),
+            ("\\ket{1}", "ket_1"),
+            ("\\braket{0}{1}", "braket_01"),
+            ("\\braket{n}{m}", "braket_nm"),
+            ("H\\ket{\\psi}=E\\ket{\\psi}", "schrodinger"),
+            ("\\bra{\\phi}A\\ket{\\psi}", "matrix_element"),
+            ("\\sum_n\\ket{n}\\bra{n}=I", "completeness"),
+        ]
+
+        for (latex, name) in testCases {
+            let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+            XCTAssertNil(result.error, "Should render \(latex) without error: \(result.error?.localizedDescription ?? "")")
+            XCTAssertNotNil(result.image, "Should produce image for \(latex)")
+
+            if let image = result.image, let imageData = image.pngData() {
+                saveImage(named: name, pngData: imageData)
+            }
+        }
+    }
+}
+
+// MARK: - Operatorname Render Tests
+
+final class OperatornameRenderTests: XCTestCase {
+
+    let font = MathFont.latinModernFont
+    let fontSize: CGFloat = 20.0
+
+    func saveImage(named name: String, pngData: Data) {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("SwiftMath_OperatornameTests_\(name).png")
+        try? pngData.write(to: url)
+    }
+
+    func testOperatornameRendering() throws {
+        // Test basic \operatorname{name} renders correctly
+        let testCases: [(String, String)] = [
+            ("\\operatorname{lcm}(a,b)", "lcm"),
+            ("\\operatorname{sgn}(x)", "sgn"),
+            ("\\operatorname{ord}(g)", "ord"),
+            ("\\operatorname{Tr}(A)", "trace"),
+            ("\\operatorname{rank}(M)", "rank"),
+        ]
+
+        for (latex, name) in testCases {
+            let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+            XCTAssertNil(result.error, "Should render \(latex) without error: \(result.error?.localizedDescription ?? "")")
+            XCTAssertNotNil(result.image, "Should produce image for \(latex)")
+
+            if let image = result.image, let imageData = image.pngData() {
+                saveImage(named: "basic_\(name)", pngData: imageData)
+            }
+        }
+    }
+
+    func testOperatornameStarRendering() throws {
+        // Test \operatorname*{name} renders with limits above/below
+        let testCases: [(String, String)] = [
+            ("\\operatorname*{argmax}_{x \\in X} f(x)", "argmax"),
+            ("\\operatorname*{argmin}_{x \\in X} f(x)", "argmin"),
+            ("\\operatorname*{esssup}_{x \\in \\mathbb{R}} |f(x)|", "esssup"),
+        ]
+
+        for (latex, name) in testCases {
+            let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+            XCTAssertNil(result.error, "Should render \(latex) without error: \(result.error?.localizedDescription ?? "")")
+            XCTAssertNotNil(result.image, "Should produce image for \(latex)")
+
+            if let image = result.image, let imageData = image.pngData() {
+                saveImage(named: "star_\(name)", pngData: imageData)
+            }
+        }
+    }
+
+    func testOperatornameComparisonWithBuiltIn() throws {
+        // Compare custom operatorname with built-in operators
+        let testCases: [(String, String)] = [
+            ("\\sin x + \\operatorname{mysin} x", "compare_sin"),
+            ("\\lim_{n \\to \\infty} a_n = \\operatorname*{lim}_{n \\to \\infty} b_n", "compare_lim"),
+        ]
+
+        for (latex, name) in testCases {
+            let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+            XCTAssertNil(result.error, "Should render \(latex) without error: \(result.error?.localizedDescription ?? "")")
+            XCTAssertNotNil(result.image, "Should produce image for \(latex)")
+
+            if let image = result.image, let imageData = image.pngData() {
+                saveImage(named: name, pngData: imageData)
+            }
+        }
+    }
+}
+
+// MARK: - Boldsymbol Render Tests
+
+final class BoldsymbolRenderTests: XCTestCase {
+
+    let font = MathFont.latinModernFont
+    let fontSize: CGFloat = 20.0
+
+    func saveImage(named name: String, pngData: Data) {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("SwiftMath_BoldsymbolTests_\(name).png")
+        try? pngData.write(to: url)
+    }
+
+    func testBoldsymbolGreekRendering() throws {
+        // Test \boldsymbol with Greek letters
+        let testCases: [(String, String)] = [
+            ("\\boldsymbol{\\alpha}", "alpha"),
+            ("\\boldsymbol{\\beta}", "beta"),
+            ("\\boldsymbol{\\gamma}", "gamma"),
+            ("\\boldsymbol{\\Gamma}", "Gamma_upper"),
+            ("\\boldsymbol{\\mu} + \\boldsymbol{\\sigma}", "mu_sigma"),
+        ]
+
+        for (latex, name) in testCases {
+            let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+            XCTAssertNil(result.error, "Should render \(latex) without error: \(result.error?.localizedDescription ?? "")")
+            XCTAssertNotNil(result.image, "Should produce image for \(latex)")
+
+            if let image = result.image, let imageData = image.pngData() {
+                saveImage(named: "greek_\(name)", pngData: imageData)
+            }
+        }
+    }
+
+    func testBoldsymbolComparisonWithMathbf() throws {
+        // Compare \boldsymbol with \mathbf to show difference
+        let testCases: [(String, String)] = [
+            ("\\mathbf{x} \\text{ vs } \\boldsymbol{x}", "x_comparison"),
+            ("\\mathbf{\\alpha} \\text{ vs } \\boldsymbol{\\alpha}", "alpha_comparison"),
+            ("\\boldsymbol{\\nabla} f = \\mathbf{0}", "gradient"),
+        ]
+
+        for (latex, name) in testCases {
+            let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+            XCTAssertNil(result.error, "Should render \(latex) without error: \(result.error?.localizedDescription ?? "")")
+            XCTAssertNotNil(result.image, "Should produce image for \(latex)")
+
+            if let image = result.image, let imageData = image.pngData() {
+                saveImage(named: "compare_\(name)", pngData: imageData)
+            }
+        }
+    }
+}
+
+// MARK: - Binary Operator Render Tests
+
+final class BinaryOperatorRenderTests: XCTestCase {
+
+    let font = MathFont.latinModernFont
+    let fontSize: CGFloat = 20.0
+
+    func saveImage(named name: String, pngData: Data) {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("SwiftMath_BinaryOpTests_\(name).png")
+        try? pngData.write(to: url)
+    }
+
+    func testSemidirectProducts() throws {
+        // Test semidirect product operators
+        let testCases: [(String, String)] = [
+            ("G \\ltimes H", "ltimes"),
+            ("G \\rtimes H", "rtimes"),
+            ("A \\bowtie B", "bowtie"),
+        ]
+
+        for (latex, name) in testCases {
+            let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+            XCTAssertNil(result.error, "Should render \(latex) without error: \(result.error?.localizedDescription ?? "")")
+            XCTAssertNotNil(result.image, "Should produce image for \(latex)")
+
+            if let image = result.image, let imageData = image.pngData() {
+                saveImage(named: name, pngData: imageData)
+            }
+        }
+    }
+
+    func testCircledAndBoxedOperators() throws {
+        // Test circled and boxed operators
+        let testCases: [(String, String)] = [
+            ("a \\oplus b", "oplus"),
+            ("a \\ominus b", "ominus"),
+            ("a \\otimes b", "otimes"),
+            ("a \\circledast b", "circledast"),
+            ("a \\circledcirc b", "circledcirc"),
+            ("a \\boxplus b", "boxplus"),
+            ("a \\boxminus b", "boxminus"),
+            ("a \\boxtimes b", "boxtimes"),
+            ("a \\boxdot b", "boxdot"),
+        ]
+
+        for (latex, name) in testCases {
+            let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+            XCTAssertNil(result.error, "Should render \(latex) without error: \(result.error?.localizedDescription ?? "")")
+            XCTAssertNotNil(result.image, "Should produce image for \(latex)")
+
+            if let image = result.image, let imageData = image.pngData() {
+                saveImage(named: name, pngData: imageData)
+            }
+        }
+    }
+
+    func testLogicalOperators() throws {
+        // Test logical operators
+        let testCases: [(String, String)] = [
+            ("p \\barwedge q", "barwedge"),
+            ("p \\veebar q", "veebar"),
+            ("p \\curlywedge q", "curlywedge"),
+            ("p \\curlyvee q", "curlyvee"),
+        ]
+
+        for (latex, name) in testCases {
+            let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+            XCTAssertNil(result.error, "Should render \(latex) without error: \(result.error?.localizedDescription ?? "")")
+            XCTAssertNotNil(result.image, "Should produce image for \(latex)")
+
+            if let image = result.image, let imageData = image.pngData() {
+                saveImage(named: name, pngData: imageData)
+            }
+        }
+    }
+}
+
+// MARK: - Corner Bracket Render Tests
+
+final class CornerBracketRenderTests: XCTestCase {
+
+    let font = MathFont.latinModernFont
+    let fontSize: CGFloat = 20.0
+
+    func saveImage(named name: String, pngData: Data) {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("SwiftMath_CornerBracketTests_\(name).png")
+        try? pngData.write(to: url)
+    }
+
+    func testCornerBrackets() throws {
+        // Test corner bracket delimiters
+        let testCases: [(String, String)] = [
+            ("\\left\\ulcorner x \\right\\urcorner", "upper_corners"),
+            ("\\left\\llcorner x \\right\\lrcorner", "lower_corners"),
+            ("\\left\\ulcorner \\text{quote} \\right\\urcorner", "quote_corners"),
+        ]
+
+        for (latex, name) in testCases {
+            let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+            XCTAssertNil(result.error, "Should render \(latex) without error: \(result.error?.localizedDescription ?? "")")
+            XCTAssertNotNil(result.image, "Should produce image for \(latex)")
+
+            if let image = result.image, let imageData = image.pngData() {
+                saveImage(named: name, pngData: imageData)
+            }
+        }
+    }
+
+    func testDoubleBrackets() throws {
+        // Test double square brackets (semantic brackets)
+        let testCases: [(String, String)] = [
+            ("\\left\\llbracket x \\right\\rrbracket", "double_brackets"),
+            ("\\left\\llbracket f(x) \\right\\rrbracket", "semantic_function"),
+        ]
+
+        for (latex, name) in testCases {
+            let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+            XCTAssertNil(result.error, "Should render \(latex) without error: \(result.error?.localizedDescription ?? "")")
+            XCTAssertNotNil(result.image, "Should produce image for \(latex)")
+
+            if let image = result.image, let imageData = image.pngData() {
+                saveImage(named: name, pngData: imageData)
+            }
+        }
+    }
+}
+
+// MARK: - Trig Function Render Tests
+
+final class TrigFunctionRenderTests: XCTestCase {
+
+    let font = MathFont.latinModernFont
+    let fontSize: CGFloat = 20.0
+
+    func saveImage(named name: String, pngData: Data) {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("SwiftMath_TrigTests_\(name).png")
+        try? pngData.write(to: url)
+    }
+
+    func testInverseTrigFunctions() throws {
+        // Test inverse trig functions
+        let testCases: [(String, String)] = [
+            ("\\arccot x", "arccot"),
+            ("\\arcsec x", "arcsec"),
+            ("\\arccsc x", "arccsc"),
+        ]
+
+        for (latex, name) in testCases {
+            let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+            XCTAssertNil(result.error, "Should render \(latex) without error: \(result.error?.localizedDescription ?? "")")
+            XCTAssertNotNil(result.image, "Should produce image for \(latex)")
+
+            if let image = result.image, let imageData = image.pngData() {
+                saveImage(named: name, pngData: imageData)
+            }
+        }
+    }
+
+    func testHyperbolicFunctions() throws {
+        // Test hyperbolic functions
+        let testCases: [(String, String)] = [
+            ("\\sech x", "sech"),
+            ("\\csch x", "csch"),
+            ("\\arcsinh x", "arcsinh"),
+            ("\\arccosh x", "arccosh"),
+            ("\\arctanh x", "arctanh"),
+        ]
+
+        for (latex, name) in testCases {
+            let result = SwiftMathImageResult.useMathImage(latex: latex, font: font, fontSize: fontSize)
+
+            XCTAssertNil(result.error, "Should render \(latex) without error: \(result.error?.localizedDescription ?? "")")
+            XCTAssertNotNil(result.image, "Should produce image for \(latex)")
+
+            if let image = result.image, let imageData = image.pngData() {
+                saveImage(named: name, pngData: imageData)
+            }
+        }
+    }
+}

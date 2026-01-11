@@ -818,6 +818,66 @@ public struct MTMathListBuilder {
             frac.leftDelimiter = "(";
             frac.rightDelimiter = ")";
             return frac;
+        } else if command == "bra" {
+            // Dirac bra notation: \bra{psi} -> ⟨psi|
+            let inner = MTInner()
+            inner.leftBoundary = MTMathAtomFactory.boundary(forDelimiter: "langle")
+            inner.rightBoundary = MTMathAtomFactory.boundary(forDelimiter: "|")
+            inner.innerList = self.buildInternal(true)
+            return inner
+        } else if command == "ket" {
+            // Dirac ket notation: \ket{psi} -> |psi⟩
+            let inner = MTInner()
+            inner.leftBoundary = MTMathAtomFactory.boundary(forDelimiter: "|")
+            inner.rightBoundary = MTMathAtomFactory.boundary(forDelimiter: "rangle")
+            inner.innerList = self.buildInternal(true)
+            return inner
+        } else if command == "braket" {
+            // Dirac braket notation: \braket{phi}{psi} -> ⟨phi|psi⟩
+            let inner = MTInner()
+            inner.leftBoundary = MTMathAtomFactory.boundary(forDelimiter: "langle")
+            inner.rightBoundary = MTMathAtomFactory.boundary(forDelimiter: "rangle")
+            // Build the inner content: phi | psi
+            let phi = self.buildInternal(true)
+            let psi = self.buildInternal(true)
+            let content = MTMathList()
+            if let phiList = phi {
+                for atom in phiList.atoms {
+                    content.add(atom)
+                }
+            }
+            // Add the | separator
+            content.add(MTMathAtom(type: .ordinary, value: "|"))
+            if let psiList = psi {
+                for atom in psiList.atoms {
+                    content.add(atom)
+                }
+            }
+            inner.innerList = content
+            return inner
+        } else if command == "operatorname" || command == "operatorname*" {
+            // \operatorname{name} creates a custom operator with proper spacing
+            // \operatorname*{name} creates an operator with limits above/below
+            let hasLimits = command.hasSuffix("*")
+
+            // Parse the operator name
+            let content = self.buildInternal(true)
+
+            // Convert the parsed content to a string
+            var operatorName = ""
+            if let atoms = content?.atoms {
+                for atom in atoms {
+                    operatorName += atom.nucleus
+                }
+            }
+
+            if operatorName.isEmpty {
+                let errorMessage = "Missing operator name for \\operatorname"
+                self.setError(.invalidCommand, message: errorMessage)
+                return nil
+            }
+
+            return MTLargeOperator(value: operatorName, limits: hasLimits)
         } else if command == "sqrt" {
             // A sqrt command with one argument
             let rad = MTRadical()
@@ -967,7 +1027,7 @@ public struct MTMathListBuilder {
                 return nil
             }
         } else if let sizeMultiplier = Self.delimiterSizeCommands[command] {
-            // Handle \big, \Big, \bigg, \Bigg and their left/right variants
+            // Handle \big, \Big, \bigg, \Bigg and their variants
             let delim = self.readDelimiter()
             if delim == nil {
                 let errorMessage = "Missing delimiter for \\\(command)"
@@ -981,11 +1041,30 @@ public struct MTMathListBuilder {
                 return nil
             }
 
-            // Create an MTInner with explicit delimiter height
+            // Create MTInner with explicit delimiter height
             let inner = MTInner()
-            inner.leftBoundary = boundary
-            inner.innerList = MTMathList()  // Empty inner list
-            inner.delimiterHeight = sizeMultiplier
+
+            // Determine if this is a left, right, or middle delimiter based on command suffix
+            let isLeft = command.hasSuffix("l")
+            let isRight = command.hasSuffix("r")
+            // let isMiddle = command.hasSuffix("m")  // For future use
+
+            if isLeft {
+                inner.leftBoundary = boundary
+                inner.rightBoundary = MTMathAtomFactory.boundary(forDelimiter: ".")
+            } else if isRight {
+                inner.leftBoundary = MTMathAtomFactory.boundary(forDelimiter: ".")
+                inner.rightBoundary = boundary
+            } else {
+                // For \big, \Big, \bigg, \Bigg and \bigm variants, use the delimiter on both sides
+                // but with empty inner content - it's just a sized delimiter
+                inner.leftBoundary = boundary
+                inner.rightBoundary = MTMathAtomFactory.boundary(forDelimiter: ".")
+            }
+
+            inner.innerList = MTMathList()
+            inner.delimiterHeight = sizeMultiplier  // Store multiplier, typesetter will compute actual height
+
             return inner
         } else {
             let errorMessage = "Invalid command \\\(command)"
@@ -1212,6 +1291,58 @@ public struct MTMathListBuilder {
             frac.leftDelimiter = "("
             frac.rightDelimiter = ")"
             return frac
+        } else if command == "bra" {
+            // Dirac bra notation: \bra{psi} -> ⟨psi|
+            let inner = MTInner()
+            inner.leftBoundary = MTMathAtomFactory.boundary(forDelimiter: "langle")
+            inner.rightBoundary = MTMathAtomFactory.boundary(forDelimiter: "|")
+            inner.innerList = self.buildInternal(true)
+            return inner
+        } else if command == "ket" {
+            // Dirac ket notation: \ket{psi} -> |psi⟩
+            let inner = MTInner()
+            inner.leftBoundary = MTMathAtomFactory.boundary(forDelimiter: "|")
+            inner.rightBoundary = MTMathAtomFactory.boundary(forDelimiter: "rangle")
+            inner.innerList = self.buildInternal(true)
+            return inner
+        } else if command == "braket" {
+            // Dirac braket notation: \braket{phi}{psi} -> ⟨phi|psi⟩
+            let inner = MTInner()
+            inner.leftBoundary = MTMathAtomFactory.boundary(forDelimiter: "langle")
+            inner.rightBoundary = MTMathAtomFactory.boundary(forDelimiter: "rangle")
+            let phi = self.buildInternal(true)
+            let psi = self.buildInternal(true)
+            let content = MTMathList()
+            if let phiList = phi {
+                for atom in phiList.atoms {
+                    content.add(atom)
+                }
+            }
+            content.add(MTMathAtom(type: .ordinary, value: "|"))
+            if let psiList = psi {
+                for atom in psiList.atoms {
+                    content.add(atom)
+                }
+            }
+            inner.innerList = content
+            return inner
+        } else if command == "operatorname" || command == "operatorname*" {
+            // \operatorname{name} creates a custom operator with proper spacing
+            // \operatorname*{name} creates an operator with limits above/below
+            let hasLimits = command.hasSuffix("*")
+
+            let content = self.buildInternal(true)
+            var operatorName = ""
+            if let atoms = content?.atoms {
+                for atom in atoms {
+                    operatorName += atom.nucleus
+                }
+            }
+            if operatorName.isEmpty {
+                self.setError(.invalidCommand, message: "Missing operator name for \\operatorname")
+                return nil
+            }
+            return MTLargeOperator(value: operatorName, limits: hasLimits)
         } else if command == "sqrt" {
             let rad = MTRadical()
             let char = self.getNextCharacter()
