@@ -199,28 +199,48 @@ f(x) = \begin{cases}
 ```LaTeX
 \bra{\psi} \ket{\phi} = \braket{\psi}{\phi}
 ```
+
+![Dirac Notation](img/dirac-light.png#gh-light-mode-only)
+![Dirac Notation](img/dirac-dark.png#gh-dark-mode-only)
+
 The `\bra`, `\ket`, and `\braket` commands create proper quantum mechanical notation with angle brackets.
 
 ## Custom Operators
 ```LaTeX
 \operatorname{argmax}_{x \in \mathbb{R}} f(x) = \operatorname*{lim}_{n \to \infty} a_n
 ```
+
+![Custom Operators](img/operatorname-light.png#gh-light-mode-only)
+![Custom Operators](img/operatorname-dark.png#gh-dark-mode-only)
+
 Use `\operatorname{name}` for inline operators and `\operatorname*{name}` for operators with limits displayed above/below.
 
 ## Manual Delimiter Sizing
 ```LaTeX
 \Bigg( \bigg( \Big( \big( x \big) \Big) \bigg) \Bigg)
 ```
+
+![Delimiter Sizing](img/delimiter-light.png#gh-light-mode-only)
+![Delimiter Sizing](img/delimiter-dark.png#gh-dark-mode-only)
+
 Control delimiter sizes explicitly with `\big`, `\Big`, `\bigg`, and `\Bigg` (plus `l`, `r`, `m` variants).
 
 ## Bold Greek Symbols
 ```LaTeX
 \boldsymbol{\alpha} + \boldsymbol{\beta} = \boldsymbol{\gamma}
 ```
+
+![Bold Greek](img/boldsymbol-light.png#gh-light-mode-only)
+![Bold Greek](img/boldsymbol-dark.png#gh-dark-mode-only)
+
 Use `\boldsymbol` for bold Greek letters (unlike `\mathbf` which only works for Latin letters).
 
 ## Additional Trigonometric Functions
 ```LaTeX
 \arcsinh x + \arccosh y = \arctanh z
 ```
+
+![Trig Functions](img/trighyp-light.png#gh-light-mode-only)
+![Trig Functions](img/trighyp-dark.png#gh-dark-mode-only)
+
 Includes inverse hyperbolic functions: `\arcsinh`, `\arccosh`, `\arctanh`, `\arccoth`, `\arcsech`, `\arccsch`, and inverse trig: `\arccot`, `\arcsec`, `\arccsc`, plus `\sech`, `\csch`.

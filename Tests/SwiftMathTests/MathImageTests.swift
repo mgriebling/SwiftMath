@@ -919,3 +919,131 @@ final class TrigFunctionRenderTests: XCTestCase {
         }
     }
 }
+
+// MARK: - EXAMPLES.md Image Generation Tests
+
+/// Generates PNG images for EXAMPLES.md examples that are missing images
+/// Run this test to regenerate all example images in the img/ directory
+final class ExamplesImageGenerationTests: XCTestCase {
+
+    let font = MathFont.latinModernFont
+    let fontSize: CGFloat = 20.0
+
+    /// Get the path to the project's img/ directory
+    private func imgDirectory() -> URL? {
+        // Navigate from test bundle to project root
+        let testBundle = Bundle(for: type(of: self))
+        guard let bundlePath = testBundle.bundlePath.components(separatedBy: ".build").first else {
+            // Fallback: use current directory
+            let currentPath = FileManager.default.currentDirectoryPath
+            return URL(fileURLWithPath: currentPath).appendingPathComponent("img")
+        }
+        return URL(fileURLWithPath: bundlePath).appendingPathComponent("img")
+    }
+
+    private func saveImageToProject(named name: String, mode: String, pngData: Data) -> Bool {
+        guard let imgDir = imgDirectory() else {
+            print("Could not determine img directory")
+            return false
+        }
+
+        // Ensure directory exists
+        try? FileManager.default.createDirectory(at: imgDir, withIntermediateDirectories: true)
+
+        let filename = "\(name)-\(mode).png"
+        let fileURL = imgDir.appendingPathComponent(filename)
+
+        do {
+            try pngData.write(to: fileURL)
+            print("Saved: \(fileURL.path)")
+            return true
+        } catch {
+            print("Failed to save \(filename): \(error)")
+            return false
+        }
+    }
+
+    /// Generate both light and dark mode images for each example
+    func testGenerateExampleImages() throws {
+        // Examples from EXAMPLES.md that need images
+        let examples: [(name: String, latex: String)] = [
+            // Dirac Notation
+            ("dirac", #"\bra{\psi} \ket{\phi} = \braket{\psi}{\phi}"#),
+
+            // Custom Operators
+            ("operatorname", #"\operatorname{argmax}_{x \in \mathbb{R}} f(x) = \operatorname*{lim}_{n \to \infty} a_n"#),
+
+            // Manual Delimiter Sizing
+            ("delimiter", #"\Bigg( \bigg( \Big( \big( x \big) \Big) \bigg) \Bigg)"#),
+
+            // Bold Greek Symbols
+            ("boldsymbol", #"\boldsymbol{\alpha} + \boldsymbol{\beta} = \boldsymbol{\gamma}"#),
+
+            // Additional Trigonometric Functions
+            ("trighyp", #"\arcsinh x + \arccosh y = \arctanh z"#),
+        ]
+
+        var successCount = 0
+        var failureCount = 0
+
+        for (name, latex) in examples {
+            // Generate light mode image (black text)
+            let lightResult = SwiftMathImageResult.useMathImage(
+                latex: latex,
+                font: font,
+                fontSize: fontSize,
+                textColor: MTColor.black
+            )
+
+            if let error = lightResult.error {
+                print("Failed to render '\(name)' (light): \(error.localizedDescription)")
+                failureCount += 1
+                continue
+            }
+
+            guard let lightImage = lightResult.image, let lightData = lightImage.pngData() else {
+                print("No image generated for '\(name)' (light)")
+                failureCount += 1
+                continue
+            }
+
+            // Generate dark mode image (white text)
+            let darkResult = SwiftMathImageResult.useMathImage(
+                latex: latex,
+                font: font,
+                fontSize: fontSize,
+                textColor: MTColor.white
+            )
+
+            if let error = darkResult.error {
+                print("Failed to render '\(name)' (dark): \(error.localizedDescription)")
+                failureCount += 1
+                continue
+            }
+
+            guard let darkImage = darkResult.image, let darkData = darkImage.pngData() else {
+                print("No image generated for '\(name)' (dark)")
+                failureCount += 1
+                continue
+            }
+
+            // Save both images
+            if saveImageToProject(named: name, mode: "light", pngData: lightData) &&
+               saveImageToProject(named: name, mode: "dark", pngData: darkData) {
+                successCount += 1
+            } else {
+                failureCount += 1
+            }
+        }
+
+        print("\n=== Example Image Generation Results ===")
+        print("Successfully generated: \(successCount * 2) images (\(successCount) examples)")
+        print("Failed: \(failureCount)")
+        if let imgDir = imgDirectory() {
+            print("Output directory: \(imgDir.path)")
+        }
+        print("========================================\n")
+
+        XCTAssertEqual(failureCount, 0, "All examples should generate successfully")
+    }
+}
