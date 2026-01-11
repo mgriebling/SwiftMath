@@ -4,7 +4,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "ExtendedSwiftMath",
+    name: "SwiftMath",
     defaultLocalization: "en",
     platforms: [.iOS("11.0"), .macOS("12.0")],
     products: [
