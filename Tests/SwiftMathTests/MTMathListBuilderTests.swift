@@ -345,10 +345,10 @@ final class MTMathListBuilderTests: XCTestCase {
 
     func testAmsSymbBinaryOperators() throws {
         // Test additional amssymb binary operators
+        // Note: bowtie is a relation, not a binary operator
         let testCases: [(String, String, String)] = [
             ("\\ltimes", "ltimes", "\u{22C9}"),
             ("\\rtimes", "rtimes", "\u{22CA}"),
-            ("\\bowtie", "bowtie", "\u{22C8}"),
             ("\\circledast", "circledast", "\u{229B}"),
             ("\\circledcirc", "circledcirc", "\u{229A}"),
             ("\\circleddash", "circleddash", "\u{229D}"),
@@ -3138,6 +3138,173 @@ final class MTMathListBuilderTests: XCTestCase {
         XCTAssertNotNil(op?.subScript)
         XCTAssertEqual(op?.subScript?.atoms.count, 1)
         XCTAssertEqual(op?.subScript?.atoms.first?.nucleus, "x")
+    }
+
+    // MARK: - Priority 1 Symbol Tests
+
+    func testGreekVariants() throws {
+        let variants = ["varkappa", "digamma", "Digamma", "varepsilon", "vartheta", "varpi", "varrho", "varsigma", "varphi"]
+
+        for variant in variants {
+            var error: NSError? = nil
+            let str = "$\\\(variant)$"
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse \\\(variant)")
+            XCTAssertNil(error, "Should not error on \\\(variant): \(error?.localizedDescription ?? "")")
+            XCTAssertTrue(unwrappedList.atoms.count >= 1, "\\\(variant) should have at least one atom")
+        }
+    }
+
+    func testVarsigmaCorrectUnicode() throws {
+        var error: NSError? = nil
+        let str = "\\varsigma"
+        let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+        let unwrappedList = try XCTUnwrap(list, "Should parse \\varsigma")
+        XCTAssertNil(error)
+        XCTAssertEqual(unwrappedList.atoms.count, 1)
+
+        // Verify it's the correct Unicode character (U+03C2, final sigma ς)
+        let atom = unwrappedList.atoms[0]
+        XCTAssertEqual(atom.nucleus, "\u{03C2}", "varsigma should map to U+03C2 (final sigma ς), not U+03C1 (rho ρ)")
+    }
+
+    func testNewArrows() throws {
+        let arrows = ["longmapsto", "hookrightarrow", "hookleftarrow"]
+
+        for arrow in arrows {
+            var error: NSError? = nil
+            let str = "$a \\\(arrow) b$"
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse \\\(arrow)")
+            XCTAssertNil(error, "Should not error on \\\(arrow): \(error?.localizedDescription ?? "")")
+
+            var foundArrow = false
+            for atom in unwrappedList.atoms {
+                if atom.type == .relation {
+                    foundArrow = true
+                    break
+                }
+            }
+            XCTAssertTrue(foundArrow, "Should find arrow relation for \\\(arrow)")
+        }
+    }
+
+    func testSlantedInequalities() throws {
+        let inequalities = ["leqslant", "geqslant"]
+
+        for ineq in inequalities {
+            var error: NSError? = nil
+            let str = "$a \\\(ineq) b$"
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse \\\(ineq)")
+            XCTAssertNil(error, "Should not error on \\\(ineq): \(error?.localizedDescription ?? "")")
+
+            var foundRel = false
+            for atom in unwrappedList.atoms {
+                if atom.type == .relation {
+                    foundRel = true
+                    break
+                }
+            }
+            XCTAssertTrue(foundRel, "Should find relation for \\\(ineq)")
+        }
+    }
+
+    func testPrecedenceRelations() throws {
+        let relations = ["preceq", "succeq", "prec", "succ"]
+
+        for rel in relations {
+            var error: NSError? = nil
+            let str = "$a \\\(rel) b$"
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse \\\(rel)")
+            XCTAssertNil(error, "Should not error on \\\(rel): \(error?.localizedDescription ?? "")")
+
+            var foundRel = false
+            for atom in unwrappedList.atoms {
+                if atom.type == .relation {
+                    foundRel = true
+                    break
+                }
+            }
+            XCTAssertTrue(foundRel, "Should find relation for \\\(rel)")
+        }
+    }
+
+    func testTurnstileRelations() throws {
+        let relations = ["vdash", "dashv", "bowtie", "models"]
+
+        for rel in relations {
+            var error: NSError? = nil
+            let str = "$a \\\(rel) b$"
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse \\\(rel)")
+            XCTAssertNil(error, "Should not error on \\\(rel): \(error?.localizedDescription ?? "")")
+
+            var foundRel = false
+            for atom in unwrappedList.atoms {
+                if atom.type == .relation {
+                    foundRel = true
+                    break
+                }
+            }
+            XCTAssertTrue(foundRel, "Should find relation for \\\(rel)")
+        }
+    }
+
+    func testDiamondOperator() throws {
+        var error: NSError? = nil
+        let str = "$a \\diamond b$"
+        let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+        let unwrappedList = try XCTUnwrap(list, "Should parse \\diamond")
+        XCTAssertNil(error, "Should not error on \\diamond")
+
+        var foundOp = false
+        for atom in unwrappedList.atoms {
+            if atom.type == .binaryOperator {
+                foundOp = true
+                break
+            }
+        }
+        XCTAssertTrue(foundOp, "Should find binary operator for \\diamond")
+    }
+
+    func testHebrewLetters() throws {
+        let letters = ["aleph", "beth", "gimel", "daleth"]
+
+        for letter in letters {
+            var error: NSError? = nil
+            let str = "\\\(letter)"
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse \\\(letter)")
+            XCTAssertNil(error, "Should not error on \\\(letter): \(error?.localizedDescription ?? "")")
+            XCTAssertEqual(unwrappedList.atoms.count, 1, "\\\(letter) should have exactly one atom")
+
+            let atom = unwrappedList.atoms[0]
+            XCTAssertEqual(atom.type, .ordinary, "\\\(letter) should be ordinary type")
+        }
+    }
+
+    func testMiscSymbols() throws {
+        let symbols = ["varnothing", "emptyset", "Box", "measuredangle", "angle", "triangle"]
+
+        for symbol in symbols {
+            var error: NSError? = nil
+            let str = "$\\\(symbol)$"
+            let list = MTMathListBuilder.build(fromString: str, error: &error)
+
+            let unwrappedList = try XCTUnwrap(list, "Should parse \\\(symbol)")
+            XCTAssertNil(error, "Should not error on \\\(symbol): \(error?.localizedDescription ?? "")")
+            XCTAssertTrue(unwrappedList.atoms.count >= 1, "\\\(symbol) should have at least one atom")
+        }
     }
 
 }

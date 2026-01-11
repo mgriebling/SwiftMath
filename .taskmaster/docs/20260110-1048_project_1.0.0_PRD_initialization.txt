@@ -1,0 +1,258 @@
+# Product Requirements Document: ExtendedSwiftMath
+
+## Project Overview
+
+**Project Name:** ExtendedSwiftMath
+**Version:** 1.0.0
+**Date:** 2026-01-10
+**Author:** Christian C. Berclaz
+**License:** MIT (same as upstream SwiftMath)
+**Repository:** https://github.com/ChrisGVE/ExtendedSwiftMath
+**Upstream:** https://github.com/mgriebling/SwiftMath (v1.7.3+)
+
+### Purpose
+
+ExtendedSwiftMath is a fork of SwiftMath that extends LaTeX mathematical symbol coverage to address gaps identified through a comprehensive gap analysis against the OEIS LaTeX mathematical symbols reference. The goal is to provide near-complete LaTeX math mode support for iOS and macOS applications while maintaining full backward compatibility with SwiftMath.
+
+---
+
+## Background Research
+
+### Gap Analysis Summary
+
+A comprehensive gap analysis was conducted comparing SwiftMath's supported symbols against the OEIS List of LaTeX Mathematical Symbols (https://oeis.org/wiki/List_of_LaTeX_mathematical_symbols).
+
+#### Key Finding: Gaps Are Code Omissions, Not Font Limitations
+
+The investigation revealed that:
+
+1. **SwiftMath bundles 12 OpenType MATH fonts** with comprehensive glyph coverage:
+   - latinmodern-math.otf (default)
+   - xits-math.otf
+   - Asana-Math.otf
+   - LibertinusMath-Regular.otf
+   - And 8 others
+
+2. **The fonts contain thousands of mathematical glyphs** including symbols currently not exposed
+
+3. **Missing symbols are due to:**
+   - Commands not mapped in `MTMathAtomFactory.supportedLatexSymbols` dictionary
+   - Rendering logic not implemented for certain command types
+   - Unicode mappings exist in `MTUnicode.swift` but aren't wired to commands
+
+4. **Font size is NOT limited** - SwiftMath supports dynamic sizing via `MTMathUILabel.fontSize`
+
+### Composed Symbols (e.g., \vec)
+
+SwiftMath DOES support composed/accented symbols. The `accents` dictionary includes:
+
+| Command | Unicode | Description |
+|---------|---------|-------------|
+| `\vec` | U+20D7 | Vector arrow above |
+| `\hat` | U+0302 | Circumflex accent |
+| `\bar` | U+0304 | Macron/overline |
+| `\dot` | U+0307 | Single dot above |
+| `\ddot` | U+0308 | Double dot above |
+| `\tilde` | U+0303 | Tilde accent |
+| `\widehat` | U+0302 | Wide circumflex |
+| `\widetilde` | U+0303 | Wide tilde |
+| `\overrightarrow` | U+20D7 | Combining right arrow |
+| `\overleftarrow` | U+20D6 | Combining left arrow |
+| `\overleftrightarrow` | U+20E1 | Bidirectional arrow |
+
+These use `isStretchy` and `isWide` properties for proper sizing.
+
+---
+
+## Gap Categories and Priorities
+
+### Priority 1: High-Impact Missing Symbols (Code additions only)
+
+These require only adding entries to `MTMathAtomFactory.supportedLatexSymbols`:
+
+| Category | Missing Commands | Effort |
+|----------|-----------------|--------|
+| **Blackboard Bold** | `\mathbb{N}`, `\mathbb{Z}`, `\mathbb{Q}`, `\mathbb{R}`, `\mathbb{C}` | Low - Unicode exists in MTUnicode.swift |
+| **Slanted Inequalities** | `\leqslant`, `\geqslant`, `\nleqslant`, `\ngeqslant` | Low |
+| **Set Relations** | `\sqsubseteq`, `\sqsupseteq`, `\preceq`, `\succeq` | Low |
+| **Arrows** | `\longmapsto`, `\hookrightarrow`, `\hookleftarrow` | Low |
+| **Operators** | `\wr`, `\diamond`, `\bowtie`, `\vdash`, `\dashv` | Low |
+| **Greek Variants** | `\varkappa`, `\varpi`, `\varrho`, `\varsigma`, `\digamma` | Low |
+| **Misc Symbols** | `\varnothing`, `\square`, `\Box`, `\measuredangle`, `\beth`, `\gimel` | Low |
+
+### Priority 2: Missing Commands Requiring Logic
+
+| Feature | Commands | Effort |
+|---------|----------|--------|
+| **Manual Delimiter Sizing** | `\big`, `\Big`, `\bigg`, `\Bigg` | Medium - size multiplier logic |
+| **Middle Delimiter** | `\middle` | Medium - placement logic |
+| **Custom Operators** | `\operatorname{}` | Medium - text rendering in math mode |
+| **Unique Existence** | `\exists!` | Low-Medium - composite symbol |
+
+### Priority 3: Negated Relations (amssymb equivalents)
+
+Extend `\not` mechanism or add direct mappings:
+
+| Commands | Count |
+|----------|-------|
+| `\nless`, `\ngtr`, `\nleq`, `\ngeq` | 4 |
+| `\nprec`, `\nsucc`, `\npreceq`, `\nsucceq` | 4 |
+| `\lneq`, `\gneq`, `\lneqq`, `\gneqq` | 4 |
+| `\precneqq`, `\succneqq`, `\precnsim`, `\succnsim` | 4 |
+| `\ncong`, `\nsim`, `\nvdash`, `\nvDash`, `\nVdash`, `\nVDash` | 6 |
+| `\ntriangleleft`, `\ntriangleright`, `\ntrianglelefteq`, `\ntrianglerighteq` | 4 |
+| `\subsetneq`, `\supsetneq`, `\subsetneqq`, `\supsetneqq` | 4 |
+| **Total** | ~30+ |
+
+### Priority 4: Extended Features
+
+| Feature | Description | Effort |
+|---------|-------------|--------|
+| **Bold Math** | `\boldsymbol{}` for bold Greek/symbols | Medium |
+| **Font Size Commands** | `\tiny`, `\small`, `\large`, `\huge`, `\Huge` | Medium |
+| **Binary Operators** | `\triangleleft`, `\triangleright`, `\bigtriangleup`, `\bigtriangledown`, `\bigcirc`, `\uplus` | Low |
+| **Corners** | `\ulcorner`, `\urcorner`, `\llcorner`, `\lrcorner` | Low |
+| **Trig Functions** | `\arccsc`, `\arcsec`, `\arccot`, `\csch`, `\sech` | Low |
+
+---
+
+## Technical Implementation Plan
+
+### Phase 1: Symbol Dictionary Extensions
+
+**File:** `Sources/SwiftMath/MathRender/MTMathAtomFactory.swift`
+
+1. Extend `supportedLatexSymbols` dictionary with Priority 1 symbols
+2. Add Unicode code points for each new symbol
+3. Maintain backward compatibility with existing symbols
+
+**Estimated additions:** ~50-60 new symbol mappings
+
+### Phase 2: Blackboard Bold (\mathbb) Command
+
+**Files:**
+- `MTMathListBuilder.swift` - Add command parsing for `\mathbb{}`
+- `MTUnicode.swift` - Already has `mathBB()` function with mappings
+
+**Implementation:**
+```swift
+// In MTMathListBuilder.atomForCommand()
+case "mathbb":
+    return buildMathBBAtom()
+```
+
+### Phase 3: Manual Delimiter Sizing
+
+**Files:**
+- `MTMathListBuilder.swift` - Parse `\big`, `\Big`, `\bigg`, `\Bigg`
+- `MTTypesetter.swift` - Apply size multipliers (1.2x, 1.8x, 2.4x, 3.0x)
+
+**Size multipliers (standard LaTeX):**
+| Command | Multiplier |
+|---------|------------|
+| `\big` | 1.2x |
+| `\Big` | 1.8x |
+| `\bigg` | 2.4x |
+| `\Bigg` | 3.0x |
+
+### Phase 4: Negated Relations
+
+**Approach options:**
+1. Extend `notCombinations` dictionary for `\not` prefix support
+2. Add direct symbol mappings for common negated relations
+3. Combination of both for maximum compatibility
+
+### Phase 5: Custom Operators (\operatorname)
+
+**Files:**
+- `MTMathListBuilder.swift` - Parse `\operatorname{}`
+- Render text in roman (upright) font within math mode
+
+---
+
+## Architecture Considerations
+
+### Maintaining Upstream Compatibility
+
+1. Keep all changes additive where possible
+2. Use extension patterns rather than modifying core classes
+3. Document all additions for potential upstream contribution
+4. Maintain ability to merge upstream updates
+
+### File Organization
+
+```
+Sources/SwiftMath/
+├── MathRender/
+│   ├── MTMathAtomFactory.swift      # Symbol dictionary (extend)
+│   ├── MTMathAtomFactory+Extended.swift  # New extension file
+│   ├── MTMathListBuilder.swift      # Command parsing (extend)
+│   ├── MTTypesetter.swift           # Rendering logic (extend)
+│   └── MTUnicode.swift              # Unicode mappings (reference)
+```
+
+### Testing Strategy
+
+1. Create comprehensive test suite for all new symbols
+2. Visual regression tests comparing rendered output
+3. Test against LaTeX reference renderings
+4. Ensure existing tests continue to pass
+
+---
+
+## Success Criteria
+
+### Minimum Viable Product (MVP)
+
+- [ ] All Priority 1 symbols added and rendering correctly
+- [ ] `\mathbb{}` command working for N, Z, Q, R, C
+- [ ] Full backward compatibility with SwiftMath
+- [ ] All existing tests passing
+- [ ] New test coverage for added symbols
+
+### Full Release
+
+- [ ] All Priority 1-3 symbols implemented
+- [ ] `\big`/`\Big`/`\bigg`/`\Bigg` delimiter sizing
+- [ ] `\operatorname{}` for custom operators
+- [ ] `\boldsymbol{}` for bold Greek letters
+- [ ] Comprehensive documentation
+- [ ] Example project demonstrating new features
+
+---
+
+## Symbol Coverage Targets
+
+| Category | Current | Target | Gap |
+|----------|---------|--------|-----|
+| Greek Letters | ~90% | 100% | Variants, digamma |
+| Basic Relations | ~70% | 95% | Slanted, precedence |
+| Binary Operators | ~80% | 95% | Triangles, circle |
+| Negated Relations | ~10% | 80% | amssymb equivalents |
+| Set/Logic | ~60% | 95% | mathbb, varnothing |
+| Delimiters | ~85% | 100% | Corners |
+| Arrows | ~95% | 100% | longmapsto |
+| Spacing | 100% | 100% | - |
+
+---
+
+## Dependencies
+
+- Swift 5.9+
+- iOS 16+ / macOS 13+
+- No additional external dependencies
+
+---
+
+## Timeline Considerations
+
+Work should proceed in priority order. Each phase can be released independently as minor version updates while maintaining backward compatibility.
+
+---
+
+## References
+
+1. OEIS List of LaTeX Mathematical Symbols: https://oeis.org/wiki/List_of_LaTeX_mathematical_symbols
+2. SwiftMath Repository: https://github.com/mgriebling/SwiftMath
+3. OpenType MATH Table Specification
+4. LaTeX2e Symbol List (Comprehensive LaTeX Symbol List)
