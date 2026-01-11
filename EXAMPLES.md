@@ -194,3 +194,33 @@ f(x) = \begin{cases}
 
 ![Long equation](img/long-light.png#gh-light-mode-only)
 ![Long equation](img/long-dark.png#gh-dark-mode-only)
+
+## Dirac Notation (Quantum Mechanics)
+```LaTeX
+\bra{\psi} \ket{\phi} = \braket{\psi}{\phi}
+```
+The `\bra`, `\ket`, and `\braket` commands create proper quantum mechanical notation with angle brackets.
+
+## Custom Operators
+```LaTeX
+\operatorname{argmax}_{x \in \mathbb{R}} f(x) = \operatorname*{lim}_{n \to \infty} a_n
+```
+Use `\operatorname{name}` for inline operators and `\operatorname*{name}` for operators with limits displayed above/below.
+
+## Manual Delimiter Sizing
+```LaTeX
+\Bigg( \bigg( \Big( \big( x \big) \Big) \bigg) \Bigg)
+```
+Control delimiter sizes explicitly with `\big`, `\Big`, `\bigg`, and `\Bigg` (plus `l`, `r`, `m` variants).
+
+## Bold Greek Symbols
+```LaTeX
+\boldsymbol{\alpha} + \boldsymbol{\beta} = \boldsymbol{\gamma}
+```
+Use `\boldsymbol` for bold Greek letters (unlike `\mathbf` which only works for Latin letters).
+
+## Additional Trigonometric Functions
+```LaTeX
+\arcsinh x + \arccosh y = \arctanh z
+```
+Includes inverse hyperbolic functions: `\arcsinh`, `\arccosh`, `\arctanh`, `\arccoth`, `\arcsech`, `\arccsch`, and inverse trig: `\arccot`, `\arcsec`, `\arccsc`, plus `\sech`, `\csch`.

@@ -442,12 +442,14 @@ This is a list of formula types that the library currently supports:
 * Simple algebraic equations
 * Fractions and continued fractions (including `\frac`, `\dfrac`, `\tfrac`, `\cfrac`)
 * Exponents and subscripts
-* Trigonometric formulae
+* Trigonometric formulae (including inverse hyperbolic: `\arcsinh`, `\arccosh`, etc.)
 * Square roots and n-th roots
 * Calculus symbols - limits, derivatives, integrals (including `\iint`, `\iiint`, `\iiiint`)
 * Big operators (e.g. product, sum)
 * Big delimiters (using `\left` and `\right`)
+* Manual delimiter sizing (`\big`, `\Big`, `\bigg`, `\Bigg` and variants)
 * Greek alphabet
+* Bold Greek symbols (`\boldsymbol`)
 * Combinatorics (`\binom`, `\choose` etc.)
 * Geometry symbols (e.g. angle, congruence etc.)
 * Ratios, proportions, percentages
@@ -459,6 +461,8 @@ This is a list of formula types that the library currently supports:
 * Equation alignment
 * Change bold, roman, caligraphic and other font styles (`\bf`, `\text`, etc.)
 * Style commands (`\displaystyle`, `\textstyle`)
+* Custom operators (`\operatorname`, `\operatorname*`)
+* Dirac notation (`\bra`, `\ket`, `\braket`)
 * Most commonly used math symbols
 * Colors for both text and background
 * **Inline and display math mode delimiters** (see below)
@@ -675,16 +679,12 @@ label.displayErrorInline = true
 ## Future Enhancements
 
 Note this is not a complete implementation of LaTeX math mode. There are
-some important pieces that are missing and will be included in future
-updates. This includes:
+some pieces that are missing and may be included in future updates:
 
-* Support for explicit big delimiters (`\big`, `\Big`, `\bigg`, `\Bigg`, etc.)
 * `\middle` delimiter for use between `\left` and `\right`
-* Fine spacing commands (`\,`, `\:`, `\;`, `\!`)
-* Bold symbol command (`\boldsymbol`)
-* Addition of missing plain TeX commands
+* Some fine spacing commands (`\:`, `\;`, `\!` - note that `\,` works)
 
-For a complete list of missing features and their implementation status, see [MISSING_FEATURES.md](MISSING_FEATURES.md).
+For a complete list of features and their implementation status, see [MISSING_FEATURES.md](MISSING_FEATURES.md).
 
 ## License
 
