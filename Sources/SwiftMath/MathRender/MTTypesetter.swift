@@ -803,7 +803,12 @@ class MTTypesetter {
 
         let numeratorDisplay = MTTypesetter.createLineForMathList(frac!.numerator, font:font, style:numeratorStyle, cramped:false)
         let denominatorDisplay = MTTypesetter.createLineForMathList(frac!.denominator, font:font, style:denominatorStyle, cramped:true)
-        
+
+        // Guard against empty numerator or denominator (e.g., \frac{}{} or \frac{x}{})
+        guard numeratorDisplay != nil, denominatorDisplay != nil else {
+            return nil
+        }
+
         // determine the location of the numerator
         var numeratorShiftUp = self.numeratorShiftUp(frac!.hasRule)
         var denominatorShiftDown = self.denominatorShiftDown(frac!.hasRule)
