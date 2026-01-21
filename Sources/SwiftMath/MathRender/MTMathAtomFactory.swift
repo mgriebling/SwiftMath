@@ -564,6 +564,7 @@ public class MTMathAtomFactory {
 		
 		// Circumflex
 		"â": ("hat", "a"), "ê": ("hat", "e"), "î": ("hat", "i"),
+		"ĵ": ("hat", "j"),  // j with circumflex (Esperanto)
 		"ô": ("hat", "o"), "û": ("hat", "u"),
 		
 		// Umlaut/dieresis
@@ -726,18 +727,33 @@ public class MTMathAtomFactory {
         return rad
     }
 	
+	/// Latin Small Letter Dotless I (U+0131) - base character that can be styled
+	private static let dotlessI: Character = "\u{0131}"
+	/// Latin Small Letter Dotless J (U+0237) - base character that can be styled
+	private static let dotlessJ: Character = "\u{0237}"
+
 	public static func atom(fromAccentedCharacter ch: Character) -> MTMathAtom? {
 		if let symbol = supportedAccentedCharacters[ch] {
 			// first handle any special characters
 			if let atom = atom(forLatexSymbol: symbol.0) {
 				return atom
 			}
-			
+
 			if let accent = MTMathAtomFactory.accent(withName: symbol.0) {
 				// The command is an accent
 				let list = MTMathList()
-				let ch = Array(symbol.1)[0]
-				list.add(atom(forCharacter: ch))
+				let baseChar = Array(symbol.1)[0]
+				// Use dotless variants for 'i' and 'j' to avoid double dots with accents.
+				// We use the base Latin dotless characters (U+0131, U+0237) rather than
+				// the pre-styled mathematical italic versions (U+1D6A4, U+1D6A5) so that
+				// font style (roman, bold, etc.) is properly applied during rendering.
+				if baseChar == "i" {
+					list.add(MTMathAtom(type: .ordinary, value: String(dotlessI)))
+				} else if baseChar == "j" {
+					list.add(MTMathAtom(type: .ordinary, value: String(dotlessJ)))
+				} else {
+					list.add(atom(forCharacter: baseChar))
+				}
 				accent.innerList = list
 				return accent
 			}

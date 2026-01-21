@@ -92,10 +92,14 @@ func getInterElementSpaceArrayIndexForType(_ type:MTMathAtomType, row:Bool) -> I
 // mathit
 func getItalicized(_ ch:Character) -> UTF32Char  {
     var unicode = ch.utf32Char
-    
+
     // Special cases for italics
     if ch == "h" { return UnicodeSymbol.planksConstant }
-    
+    // Dotless i (U+0131) → Mathematical Italic Small Dotless I (U+1D6A4)
+    if ch == "\u{0131}" { return 0x1D6A4 }
+    // Dotless j (U+0237) → Mathematical Italic Small Dotless J (U+1D6A5)
+    if ch == "\u{0237}" { return 0x1D6A5 }
+
     if ch.isUpperEnglish {
         unicode = UnicodeSymbol.capitalItalicStart + (ch.utf32Char - Character("A").utf32Char)
     } else if ch.isLowerEnglish {
@@ -159,6 +163,9 @@ func getBoldItalic(_ ch:Character) -> UTF32Char {
 // LaTeX default
 func getDefaultStyle(_ ch:Character) -> UTF32Char {
     if ch.isLowerEnglish || ch.isUpperEnglish || ch.isLowerGreek || ch.isGreekSymbol {
+        return getItalicized(ch);
+    } else if ch == "\u{0131}" || ch == "\u{0237}" {
+        // Dotless i (U+0131) and dotless j (U+0237) should be italicized in default style
         return getItalicized(ch);
     } else if ch.isNumber || ch.isCapitalGreek {
         // In the default style numbers and capital greek is roman
