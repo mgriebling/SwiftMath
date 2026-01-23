@@ -123,7 +123,7 @@ class MTAtomTokenizer {
             return tokenizeLargeOperator(atom as! MTLargeOperator, prevAtom: prevAtom, atomIndex: atomIndex)
 
         case .accent:
-            return tokenizeAccent(atom as! MTAccent, prevAtom: prevAtom, atomIndex: atomIndex)
+            return tokenizeAccent(atom as! MTAccent, prevAtom: prevAtom, atomIndex: atomIndex, allAtoms: allAtoms)
 
         case .underline:
             return tokenizeUnderline(atom as! MTUnderLine, prevAtom: prevAtom, atomIndex: atomIndex)
@@ -196,28 +196,46 @@ class MTAtomTokenizer {
             // Both rules must allow breaking for a break to be permitted
 
             // Check if we should break BEFORE this atom
-            if let prevAtom = prevAtom, prevAtom.fontStyle == .roman {
-                let prevText = prevAtom.nucleus
-                if !prevText.isEmpty && !text.isEmpty {
-                    // Use Unicode word boundary detection
-                    if !hasWordBoundaryBetween(prevText, and: text) {
-                        // No word boundary = we're in the middle of a word
+            if let prevAtom = prevAtom {
+                // Handle previous accent atoms (e.g., "é" before "r" in "bactéries")
+                if prevAtom.type == .accent && isTextLetterAtom(prevAtom) {
+                    // Previous is a text accent - don't break if current is a letter
+                    if text.first?.isLetter == true {
                         isBreakBefore = false
                         penaltyBefore = MTBreakPenalty.never
+                    }
+                } else if prevAtom.fontStyle == .roman {
+                    let prevText = prevAtom.nucleus
+                    if !prevText.isEmpty && !text.isEmpty {
+                        // Use Unicode word boundary detection
+                        if !hasWordBoundaryBetween(prevText, and: text) {
+                            // No word boundary = we're in the middle of a word
+                            isBreakBefore = false
+                            penaltyBefore = MTBreakPenalty.never
+                        }
                     }
                 }
             }
 
             // Check if we should break AFTER this atom
-            if let nextAtom = (atomIndex + 1 < allAtoms.count) ? allAtoms[atomIndex + 1] : nil,
-               nextAtom.fontStyle == .roman {
-                let nextText = nextAtom.nucleus
-                if !text.isEmpty && !nextText.isEmpty {
-                    // Use Unicode word boundary detection
-                    if !hasWordBoundaryBetween(text, and: nextText) {
-                        // No word boundary = next atom is part of same word
+            if atomIndex + 1 < allAtoms.count {
+                let nextAtom = allAtoms[atomIndex + 1]
+                // Handle next accent atoms (e.g., "t" before "é" in "bactéries")
+                if nextAtom.type == .accent && isTextLetterAtom(nextAtom) {
+                    // Next is a text accent - don't break if current is a letter
+                    if text.last?.isLetter == true {
                         isBreakAfter = false
                         penaltyAfter = MTBreakPenalty.never
+                    }
+                } else if nextAtom.fontStyle == .roman {
+                    let nextText = nextAtom.nucleus
+                    if !text.isEmpty && !nextText.isEmpty {
+                        // Use Unicode word boundary detection
+                        if !hasWordBoundaryBetween(text, and: nextText) {
+                            // No word boundary = next atom is part of same word
+                            isBreakAfter = false
+                            penaltyAfter = MTBreakPenalty.never
+                        }
                     }
                 }
             }
@@ -347,21 +365,35 @@ class MTAtomTokenizer {
             }
         } else if isFirstInAtom {
             // First character - check against previous element
-            if let lastElement = prevElements.last,
-               case .text(let prevText) = lastElement.content,
-               let prevLastChar = prevText.last {
-                if char.isLetter && prevLastChar.isLetter {
-                    // Check if either character is CJK
-                    let isCJKBreak = isCJKCharacter(char) || isCJKCharacter(prevLastChar)
+            if let lastElement = prevElements.last {
+                switch lastElement.content {
+                case .text(let prevText):
+                    if let prevLastChar = prevText.last {
+                        if char.isLetter && prevLastChar.isLetter {
+                            // Check if either character is CJK
+                            let isCJKBreak = isCJKCharacter(char) || isCJKCharacter(prevLastChar)
 
-                    if !isCJKBreak {
-                        // Both non-CJK letters - don't break
+                            if !isCJKBreak {
+                                // Both non-CJK letters - don't break
+                                isBreakBefore = false
+                                penaltyBefore = MTBreakPenalty.never
+                            }
+                        } else if prevLastChar == "'" || prevLastChar == "-" {
+                            isBreakBefore = false
+                            penaltyBefore = MTBreakPenalty.never
+                        }
+                    }
+                case .display:
+                    // Check if previous element is a text-mode accent (e.g., "é")
+                    // Accents in text mode should not allow breaks after them if current is a letter
+                    if lastElement.originalAtom.type == .accent,
+                       isTextLetterAtom(lastElement.originalAtom),
+                       char.isLetter {
                         isBreakBefore = false
                         penaltyBefore = MTBreakPenalty.never
                     }
-                } else if prevLastChar == "'" || prevLastChar == "-" {
-                    isBreakBefore = false
-                    penaltyBefore = MTBreakPenalty.never
+                default:
+                    break
                 }
             }
         }
@@ -383,17 +415,24 @@ class MTAtomTokenizer {
             }
         } else if isLastInAtom {
             // Last character - check against next atom
-            if let nextAtom = nextAtom,
-               nextAtom.fontStyle == .roman,
-               let nextFirstChar = nextAtom.nucleus.first {
-                if char.isLetter && nextFirstChar.isLetter {
-                    // Check if either character is CJK
-                    let isCJKBreak = isCJKCharacter(char) || isCJKCharacter(nextFirstChar)
-
-                    if !isCJKBreak {
-                        // Both non-CJK letters - don't break
+            if let nextAtom = nextAtom {
+                // Handle next accent atoms (e.g., "t" before "é" in "bactéries")
+                if nextAtom.type == .accent && isTextLetterAtom(nextAtom) {
+                    if char.isLetter {
                         isBreakAfter = false
                         penaltyAfter = MTBreakPenalty.never
+                    }
+                } else if nextAtom.fontStyle == .roman,
+                   let nextFirstChar = nextAtom.nucleus.first {
+                    if char.isLetter && nextFirstChar.isLetter {
+                        // Check if either character is CJK
+                        let isCJKBreak = isCJKCharacter(char) || isCJKCharacter(nextFirstChar)
+
+                        if !isCJKBreak {
+                            // Both non-CJK letters - don't break
+                            isBreakAfter = false
+                            penaltyAfter = MTBreakPenalty.never
+                        }
                     }
                 }
             }
@@ -907,9 +946,40 @@ class MTAtomTokenizer {
         )
     }
 
-    private func tokenizeAccent(_ accent: MTAccent, prevAtom: MTMathAtom?, atomIndex: Int) -> MTBreakableElement? {
+    private func tokenizeAccent(_ accent: MTAccent, prevAtom: MTMathAtom?, atomIndex: Int, allAtoms: [MTMathAtom]) -> MTBreakableElement? {
         let typesetter = MTTypesetter(withFont: font, style: style, cramped: cramped, spaced: false)
         guard let display = typesetter.makeAccent(accent) else { return nil }
+
+        // Determine break rules - accents in text mode should respect word boundaries
+        var isBreakBefore = true
+        var isBreakAfter = true
+        var penaltyBefore = MTBreakPenalty.good
+        var penaltyAfter = MTBreakPenalty.good
+
+        // Check if this accent is in a text context (the accented character is roman text)
+        // An accent's innerList contains the base character(s)
+        let isTextAccent = accent.innerList?.atoms.first?.fontStyle == .roman
+
+        if isTextAccent {
+            // Check previous atom - if it's a letter in text mode, don't break before
+            if let prevAtom = prevAtom {
+                let prevIsTextLetter = isTextLetterAtom(prevAtom)
+                if prevIsTextLetter {
+                    isBreakBefore = false
+                    penaltyBefore = MTBreakPenalty.never
+                }
+            }
+
+            // Check next atom - if it's a letter in text mode, don't break after
+            if atomIndex + 1 < allAtoms.count {
+                let nextAtom = allAtoms[atomIndex + 1]
+                let nextIsTextLetter = isTextLetterAtom(nextAtom)
+                if nextIsTextLetter {
+                    isBreakAfter = false
+                    penaltyAfter = MTBreakPenalty.never
+                }
+            }
+        }
 
         return MTBreakableElement(
             content: .display(display),
@@ -917,10 +987,10 @@ class MTAtomTokenizer {
             height: display.ascent + display.descent,
             ascent: display.ascent,
             descent: display.descent,
-            isBreakBefore: true,
-            isBreakAfter: true,
-            penaltyBefore: MTBreakPenalty.good,
-            penaltyAfter: MTBreakPenalty.good,
+            isBreakBefore: isBreakBefore,
+            isBreakAfter: isBreakAfter,
+            penaltyBefore: penaltyBefore,
+            penaltyAfter: penaltyAfter,
             groupId: nil,
             parentId: nil,
             originalAtom: accent,
@@ -929,6 +999,27 @@ class MTAtomTokenizer {
             backgroundColor: nil,
             indivisible: true
         )
+    }
+
+    /// Helper to check if an atom is a letter in text mode (roman style)
+    private func isTextLetterAtom(_ atom: MTMathAtom) -> Bool {
+        // For accent atoms, check their inner content FIRST
+        // (accent atom's nucleus contains the accent mark, not the letter)
+        if let accent = atom as? MTAccent {
+            if let firstInner = accent.innerList?.atoms.first {
+                return isTextLetterAtom(firstInner)
+            }
+            return false
+        }
+        // For regular text atoms with roman style
+        if atom.fontStyle == .roman {
+            // Check if the nucleus contains only letters
+            let nucleus = atom.nucleus
+            if !nucleus.isEmpty {
+                return nucleus.allSatisfy { $0.isLetter }
+            }
+        }
+        return false
     }
 
     private func tokenizeUnderline(_ underline: MTUnderLine, prevAtom: MTMathAtom?, atomIndex: Int) -> MTBreakableElement? {

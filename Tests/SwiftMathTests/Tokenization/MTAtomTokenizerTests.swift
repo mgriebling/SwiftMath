@@ -308,4 +308,111 @@ class MTAtomTokenizerTests: XCTestCase {
             XCTAssertGreaterThan(element.width, 0, "All elements should have positive width")
         }
     }
+
+    // MARK: - Text Mode Accent Word Boundary Tests
+
+    /// Test that accented characters in text mode don't break words
+    /// Issue: "bactéries" was being split as "bacté" + "ries" because the accent
+    /// was treated as a separate breakable element
+    func testAccentedCharacterInTextModeWordBoundary() {
+        // Parse LaTeX to get atoms for "bactéries" - the é becomes an accent atom
+        let latex = "\\text{bactéries}"
+        guard let mathList = MTMathListBuilder.build(fromString: latex) else {
+            XCTFail("Failed to parse LaTeX")
+            return
+        }
+
+        let elements = tokenizer.tokenize(mathList.atoms)
+
+        // Find elements that represent the accent "é" and adjacent characters
+        // The word should not be breakable in the middle
+        var foundAccent = false
+        for (index, element) in elements.enumerated() {
+            if case .display = element.content,
+               element.originalAtom.type == .accent {
+                foundAccent = true
+
+                // Check that we can't break BEFORE the accent (after "t")
+                XCTAssertFalse(element.isBreakBefore,
+                    "Should NOT be able to break before accented character in the middle of a word")
+
+                // Check that we can't break AFTER the accent (before "r")
+                XCTAssertFalse(element.isBreakAfter,
+                    "Should NOT be able to break after accented character in the middle of a word")
+
+                // Also check that the preceding element (if any) can't break after
+                if index > 0 {
+                    let prevElement = elements[index - 1]
+                    XCTAssertFalse(prevElement.isBreakAfter,
+                        "Previous character should NOT allow break after when followed by accent in word")
+                }
+
+                // And the following element (if any) can't break before
+                if index + 1 < elements.count {
+                    let nextElement = elements[index + 1]
+                    XCTAssertFalse(nextElement.isBreakBefore,
+                        "Next character should NOT allow break before when preceded by accent in word")
+                }
+            }
+        }
+
+        XCTAssertTrue(foundAccent, "Should have found an accent element for 'é'")
+    }
+
+    /// Test that multiple accented characters in a word are handled correctly
+    func testMultipleAccentedCharactersInTextMode() {
+        // "après" has an accent
+        let latex = "\\text{après}"
+        guard let mathList = MTMathListBuilder.build(fromString: latex) else {
+            XCTFail("Failed to parse LaTeX")
+            return
+        }
+
+        let elements = tokenizer.tokenize(mathList.atoms)
+
+        // Count accents and verify none allow word-internal breaks
+        var accentCount = 0
+        for element in elements {
+            if case .display = element.content,
+               element.originalAtom.type == .accent {
+                accentCount += 1
+
+                // This is the "è" - check it doesn't allow breaks in word
+                XCTAssertFalse(element.isBreakBefore,
+                    "Accent in word should not allow break before")
+                XCTAssertFalse(element.isBreakAfter,
+                    "Accent in word should not allow break after")
+            }
+        }
+
+        XCTAssertGreaterThan(accentCount, 0, "Should have found accent(s)")
+    }
+
+    /// Test that accents at word boundaries DO allow breaks
+    func testAccentAtWordBoundaryAllowsBreak() {
+        // "café noir" - the é is at the end of "café", should allow break after it
+        let latex = "\\text{café noir}"
+        guard let mathList = MTMathListBuilder.build(fromString: latex) else {
+            XCTFail("Failed to parse LaTeX")
+            return
+        }
+
+        let elements = tokenizer.tokenize(mathList.atoms)
+
+        // Find the accent for "é" in "café"
+        for (index, element) in elements.enumerated() {
+            if case .display = element.content,
+               element.originalAtom.type == .accent {
+                // The é is followed by a space, so it SHOULD allow break after
+                // Check the next element - if it's a space, the accent can break after
+                if index + 1 < elements.count {
+                    let nextElement = elements[index + 1]
+                    if case .text(let text) = nextElement.content, text == " " {
+                        XCTAssertTrue(element.isBreakAfter,
+                            "Accent at end of word (before space) should allow break after")
+                    }
+                }
+            }
+        }
+    }
 }
