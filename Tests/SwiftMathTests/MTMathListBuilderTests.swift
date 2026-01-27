@@ -185,7 +185,9 @@ final class MTMathListBuilderTests: XCTestCase {
                   ("\\begin{notanenv} x \\end{notanenv}", .invalidEnv),
                   ("\\begin{matrix} \\notacommand \\end{matrix}", .invalidCommand),
                   ("\\begin{displaylines} x & y \\end{displaylines}", .invalidNumColumns),
-                  ("\\begin{eqalign} x \\end{eqalign}", .invalidNumColumns),
+                  // eqalign/aligned now allow any number of columns (matching KaTeX)
+                  // Only split is limited to max 2 columns
+                  ("\\begin{split} a & b & c \\end{split}", .invalidNumColumns),
                   ("\\nolimits", .invalidLimits),
                   ("\\frac\\limits{1}{2}", .invalidLimits),
                   ("&\\begin", .characterNotFound),

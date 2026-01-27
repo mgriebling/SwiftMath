@@ -975,6 +975,13 @@ public class MTMathAtomFactory {
      @param env The environment to use to build the table. If the env is nil, then the default table is built.
      @note The reason this function returns a `MTMathAtom` and not a `MTMathTable` is because some
      matrix environments are have builtin delimiters added to the table and hence are returned as inner atoms.
+
+     Column constraints by environment (matching KaTeX behavior):
+     - `aligned`, `eqalign`: Any number of columns (1, 2, 3, 4+) with r-l-r-l alignment pattern
+     - `split`: Maximum 2 columns with r-l alignment
+     - `gather`, `displaylines`: Exactly 1 column, centered
+     - `cases`: 1 or 2 columns, left-aligned
+     - `eqnarray`: Exactly 3 columns with r-c-l alignment
      */
     public static func table(withEnvironment env: String?, alignment: MTColumnAlignment? = nil, rows: [[MTMathList]], error:inout NSError?) -> MTMathAtom? {
         let table = MTMathTable(environment: env)
@@ -1028,28 +1035,36 @@ public class MTMathAtomFactory {
                     return table
                 }
             } else if env == "eqalign" || env == "split" || env == "aligned" {
-                if table.numColumns != 2 {
-                    let message = "\(env) environment can only have 2 columns"
+                // split is limited to max 2 columns per LaTeX/KaTeX spec
+                // aligned/eqalign can have any number of columns (1, 2, 3, 4+)
+                if env == "split" && table.numColumns > 2 {
+                    let message = "split environment can have at most 2 columns"
                     if error == nil {
                         error = NSError(domain: MTParseError, code: MTParseErrors.invalidNumColumns.rawValue, userInfo: [NSLocalizedDescriptionKey:message])
                     }
                     return nil
                 }
-                
+
                 let spacer = MTMathAtom(type: .ordinary, value: "")
-                
+
+                // Add spacer at beginning of odd-indexed columns (1, 3, 5, ...)
+                // This matches KaTeX behavior for binary operator spacing
                 for i in 0..<table.cells.count {
-                    if table.cells[i].count >= 2 {
-                        table.cells[i][1].insert(spacer, at: 0)
+                    var colIndex = 1
+                    while colIndex < table.cells[i].count {
+                        table.cells[i][colIndex].insert(spacer, at: 0)
+                        colIndex += 2
                     }
                 }
-                
+
                 table.interRowAdditionalSpacing = 1
                 table.interColumnSpacing = 0
-                
-                table.set(alignment: .right, forColumn: 0)
-                table.set(alignment: .left, forColumn: 1)
-                
+
+                // Apply alternating r-l-r-l alignment pattern
+                for col in 0..<table.numColumns {
+                    table.set(alignment: col % 2 == 0 ? .right : .left, forColumn: col)
+                }
+
                 return table
             } else if env == "displaylines" || env == "gather" {
                 if table.numColumns != 1 {
