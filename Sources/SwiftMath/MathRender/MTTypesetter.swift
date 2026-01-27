@@ -793,11 +793,13 @@ class MTTypesetter {
     }
     
     func makeFraction(_ frac:MTFraction?) -> MTDisplay? {
+        guard let frac = frac else { return nil }
+
         // lay out the parts of the fraction
         let numeratorStyle: MTLineStyle
         let denominatorStyle: MTLineStyle
 
-        if frac!.isContinuedFraction {
+        if frac.isContinuedFraction {
             // Continued fractions always use display style
             numeratorStyle = .display
             denominatorStyle = .display
@@ -808,23 +810,22 @@ class MTTypesetter {
             denominatorStyle = fractionStyle()
         }
 
-        let numeratorDisplay = MTTypesetter.createLineForMathList(frac!.numerator, font:font, style:numeratorStyle, cramped:false)
-        let denominatorDisplay = MTTypesetter.createLineForMathList(frac!.denominator, font:font, style:denominatorStyle, cramped:true)
+        let numeratorDisplay = MTTypesetter.createLineForMathList(frac.numerator, font:font, style:numeratorStyle, cramped:false)
+        let denominatorDisplay = MTTypesetter.createLineForMathList(frac.denominator, font:font, style:denominatorStyle, cramped:true)
 
-        // Guard against empty numerator or denominator (e.g., \frac{}{} or \frac{x}{})
-        guard numeratorDisplay != nil, denominatorDisplay != nil else {
-            return nil
-        }
+        // Handle empty numerator or denominator by creating empty displays
+        let numDisplay = numeratorDisplay ?? MTMathListDisplay(withDisplays: [], range: NSMakeRange(0, 0))
+        let denomDisplay = denominatorDisplay ?? MTMathListDisplay(withDisplays: [], range: NSMakeRange(0, 0))
 
         // determine the location of the numerator
-        var numeratorShiftUp = self.numeratorShiftUp(frac!.hasRule)
-        var denominatorShiftDown = self.denominatorShiftDown(frac!.hasRule)
+        var numeratorShiftUp = self.numeratorShiftUp(frac.hasRule)
+        var denominatorShiftDown = self.denominatorShiftDown(frac.hasRule)
         let barLocation = styleFont.mathTable!.axisHeight
-        let barThickness = frac!.hasRule ? styleFont.mathTable!.fractionRuleThickness : 0
-        
-        if frac!.hasRule {
+        let barThickness = frac.hasRule ? styleFont.mathTable!.fractionRuleThickness : 0
+
+        if frac.hasRule {
             // This is the difference between the lowest edge of the numerator and the top edge of the fraction bar
-            let distanceFromNumeratorToBar = (numeratorShiftUp - numeratorDisplay!.descent) - (barLocation + barThickness/2);
+            let distanceFromNumeratorToBar = (numeratorShiftUp - numDisplay.descent) - (barLocation + barThickness/2);
             // The distance should at least be displayGap
             let minNumeratorGap = self.numeratorGapMin;
             if distanceFromNumeratorToBar < minNumeratorGap() {
@@ -832,10 +833,10 @@ class MTTypesetter {
                 // at least minNumeratorGap.
                 numeratorShiftUp += (minNumeratorGap() - distanceFromNumeratorToBar);
             }
-            
+
             // Do the same for the denominator
             // This is the difference between the top edge of the denominator and the bottom edge of the fraction bar
-            let distanceFromDenominatorToBar = (barLocation - barThickness/2) - (denominatorDisplay!.ascent - denominatorShiftDown);
+            let distanceFromDenominatorToBar = (barLocation - barThickness/2) - (denomDisplay.ascent - denominatorShiftDown);
             // The distance should at least be denominator gap
             let minDenominatorGap = self.denominatorGapMin;
             if distanceFromDenominatorToBar < minDenominatorGap() {
@@ -845,7 +846,7 @@ class MTTypesetter {
             }
         } else {
             // This is the distance between the numerator and the denominator
-            let clearance = (numeratorShiftUp - numeratorDisplay!.descent) - (denominatorDisplay!.ascent - denominatorShiftDown);
+            let clearance = (numeratorShiftUp - numDisplay.descent) - (denomDisplay.ascent - denominatorShiftDown);
             // This is the minimum clearance between the numerator and denominator.
             // For ruleless fractions (like binom, choose, atop), use 1.5x the standard gap
             // for better visual separation, following TeX's approach for binomial coefficients
@@ -855,44 +856,46 @@ class MTTypesetter {
                 denominatorShiftDown += (minGap - clearance)/2;
             }
         }
-        
-        let display = MTFractionDisplay(withNumerator: numeratorDisplay, denominator: denominatorDisplay, position: currentPosition, range: frac!.indexRange)
-        
+
+        let display = MTFractionDisplay(withNumerator: numDisplay, denominator: denomDisplay, position: currentPosition, range: frac.indexRange)
+
         display.numeratorUp = numeratorShiftUp;
         display.denominatorDown = denominatorShiftDown;
         display.lineThickness = barThickness;
         display.linePosition = barLocation;
-        if frac!.leftDelimiter.isEmpty && frac!.rightDelimiter.isEmpty {
+        if frac.leftDelimiter.isEmpty && frac.rightDelimiter.isEmpty {
             return display
         } else {
-            return self.addDelimitersToFractionDisplay(display, forFraction:frac)
+            return self.addDelimitersToFractionDisplay(display, forFraction: frac)
         }
     }
-    
-    func addDelimitersToFractionDisplay(_ display:MTFractionDisplay?, forFraction frac:MTFraction?) -> MTDisplay? {
-        assert(!frac!.leftDelimiter.isEmpty || !frac!.rightDelimiter.isEmpty, "Fraction should have a delimiters to call this function");
-        
+
+    func addDelimitersToFractionDisplay(_ display: MTFractionDisplay, forFraction frac: MTFraction) -> MTDisplay {
+        assert(!frac.leftDelimiter.isEmpty || !frac.rightDelimiter.isEmpty, "Fraction should have delimiters to call this function")
+
         var innerElements = [MTDisplay]()
         let glyphHeight = self.fractionDelimiterHeight
         var position = CGPoint.zero
-        if !frac!.leftDelimiter.isEmpty {
-            let leftGlyph = self.findGlyphForBoundary(frac!.leftDelimiter, withHeight:glyphHeight())
-            leftGlyph!.position = position
-            position.x += leftGlyph!.width
-            innerElements.append(leftGlyph!)
+        if !frac.leftDelimiter.isEmpty {
+            if let leftGlyph = self.findGlyphForBoundary(frac.leftDelimiter, withHeight: glyphHeight()) {
+                leftGlyph.position = position
+                position.x += leftGlyph.width
+                innerElements.append(leftGlyph)
+            }
         }
-        
-        display!.position = position
-        position.x += display!.width
-        innerElements.append(display!)
-        
-        if !frac!.rightDelimiter.isEmpty {
-            let rightGlyph = self.findGlyphForBoundary(frac!.rightDelimiter, withHeight:glyphHeight())
-            rightGlyph!.position = position
-            position.x += rightGlyph!.width
-            innerElements.append(rightGlyph!)
+
+        display.position = position
+        position.x += display.width
+        innerElements.append(display)
+
+        if !frac.rightDelimiter.isEmpty {
+            if let rightGlyph = self.findGlyphForBoundary(frac.rightDelimiter, withHeight: glyphHeight()) {
+                rightGlyph.position = position
+                position.x += rightGlyph.width
+                innerElements.append(rightGlyph)
+            }
         }
-        let innerDisplay = MTMathListDisplay(withDisplays: innerElements, range: frac!.indexRange)
+        let innerDisplay = MTMathListDisplay(withDisplays: innerElements, range: frac.indexRange)
         innerDisplay.position = currentPosition
         return innerDisplay
     }

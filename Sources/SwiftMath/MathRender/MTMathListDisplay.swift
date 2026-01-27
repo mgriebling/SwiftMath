@@ -358,17 +358,17 @@ public class MTFractionDisplay : MTDisplay {
 
     override public var ascent:CGFloat {
         set { super.ascent = newValue }
-        get { numerator!.ascent + self.numeratorUp }
+        get { (numerator?.ascent ?? 0) + self.numeratorUp }
     }
 
     override public var descent:CGFloat {
         set { super.descent = newValue }
-        get { denominator!.descent + self.denominatorDown }
+        get { (denominator?.descent ?? 0) + self.denominatorDown }
     }
 
     override public var width:CGFloat {
         set { super.width = newValue }
-        get { max(numerator!.width, denominator!.width) }
+        get { max(numerator?.width ?? 0, denominator?.width ?? 0) }
     }
 
     func updateDenominatorPosition() {

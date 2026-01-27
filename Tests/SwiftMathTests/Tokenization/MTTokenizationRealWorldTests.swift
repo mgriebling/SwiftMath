@@ -284,7 +284,12 @@ class MTTokenizationRealWorldTests: XCTestCase {
             maxWidth: 100
         )
 
-        XCTAssertNil(display, "Empty expression should return nil")
+        // Empty math list should return an empty display (not nil) to match KaTeX behavior
+        // This allows empty fraction numerators/denominators to render correctly
+        XCTAssertNotNil(display, "Empty expression should return an empty display (KaTeX compatibility)")
+        XCTAssertEqual(display?.width, 0, "Empty display should have zero width")
+        XCTAssertEqual(display?.ascent, 0, "Empty display should have zero ascent")
+        XCTAssertEqual(display?.descent, 0, "Empty display should have zero descent")
     }
 
     func testSingleAtom() {

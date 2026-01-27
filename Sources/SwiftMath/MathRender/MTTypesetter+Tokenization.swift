@@ -25,7 +25,10 @@ extension MTTypesetter {
     ) -> MTMathListDisplay? {
         guard let mathList = mathList else { return nil }
         guard let font = font else { return nil }
-        guard !mathList.atoms.isEmpty else { return nil }
+        guard !mathList.atoms.isEmpty else {
+            // Return empty display instead of nil (matches KaTeX behavior)
+            return MTMathListDisplay(withDisplays: [], range: NSMakeRange(0, 0))
+        }
 
         // Phase 0: Preprocess atoms to fuse ordinary characters
         // This is critical for accents and other structures where multi-character
