@@ -101,6 +101,11 @@ public class MTMathUILabel : MTView {
     
     /** If true, if there is an error it displays the error message inline. Default true. */
     public var displayErrorInline = true
+
+    /** If true, enables detailed debug logging for intrinsicContentSize calculations.
+     This helps diagnose rendering issues like missing row breaks in aligned environments.
+     Default false. */
+    public var debugLogging = false
     
     /** The MTFont to use for rendering. */
     public var font:MTFont? {
@@ -382,10 +387,12 @@ public class MTMathUILabel : MTView {
         var resultHeight = displayList!.ascent + displayList!.descent + contentInsets.top + contentInsets.bottom
 
         // DEBUG LOGGING for width calculation
-        let debugLogging = false  // Set to true to enable detailed logging
         if debugLogging {
             print("\n=== MTMathUILabel intrinsicContentSize DEBUG ===")
-            print("LaTeX: \(self.latex ?? "nil")")
+            print("LaTeX: \(self.latex)")
+            // Show raw bytes to help debug escaping issues
+            let latexBytes = Array(self.latex.utf8.prefix(100))
+            print("LaTeX bytes (first 100): \(latexBytes)")
             print("preferredMaxLayoutWidth: \(_preferredMaxLayoutWidth)")
             print("size constraint: \(size)")
             print("maxWidth passed to typesetter: \(maxWidth)")
@@ -399,6 +406,30 @@ public class MTMathUILabel : MTView {
             print("contentInsets: \(contentInsets)")
             print("resultWidth (before clamping): \(resultWidth)")
             print("resultHeight (before clamping): \(resultHeight)")
+
+            // HELPFUL WARNING: Detect common escaping mistake
+            // Check for environments that typically have multiple rows but only 1 row is rendered
+            let multiRowEnvs = ["aligned", "align", "eqnarray", "gather", "split"]
+            let latexLower = self.latex.lowercased()
+            for env in multiRowEnvs {
+                if latexLower.contains("\\begin{\(env)}") {
+                    // Check if there's a table with only 1 row
+                    if let ml = _mathList {
+                        for atom in ml.atoms {
+                            if let table = atom as? MTMathTable, table.numRows == 1 {
+                                // Check if latex contains single backslash (spacing) where double might be intended
+                                // Pattern: \\ followed by non-backslash (like space or letter)
+                                if self.latex.contains("\\ ") || self.latex.range(of: #"\\[a-zA-Z]"#, options: .regularExpression) != nil {
+                                    print("⚠️ WARNING: '\(env)' environment has only 1 row.")
+                                    print("   If you intended multiple rows, use '\\\\\\\\' (4 backslashes in Swift strings)")
+                                    print("   or use raw strings: #\"...42\\\\ \\\\dfrac...\"#")
+                                    print("   Current input has '\\\\ ' which is a SPACING command, not a row break.")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         // CRITICAL FIX: Ensure dimensions are never negative
