@@ -79,8 +79,13 @@ internal class MTFontMathTableV2: MTFontMathTable {
     }
     /** Returns a larger vertical variant of the given glyph if any.
      If there is no larger version, this returns the current glyph.
+
+     - Parameter glyph: The glyph to find a larger variant for
+     - Parameter forDisplayStyle: If true, selects the largest appropriate variant for display style.
+                                  If false, selects the next larger variant (incremental sizing).
+     - Returns: A larger glyph variant, or the original glyph if no variants exist
      */
-    override func getLargerGlyph(_ glyph: CGGlyph) -> CGGlyph {
+    override func getLargerGlyph(_ glyph: CGGlyph, forDisplayStyle: Bool = false) -> CGGlyph {
         let font = mathFont.mtfont(size: fontSize)
         let glyphName = font.get(nameForGlyph: glyph)
 
@@ -89,13 +94,42 @@ internal class MTFontMathTableV2: MTFontMathTable {
             // There are no extra variants, so just returnt the current glyph.
             return glyph
         }
-        // Find the first variant with a different name.
-        for gvn in variantGlyphs {
-            if let glyphVariantName = gvn as? String, glyphVariantName != glyphName {
+
+        if forDisplayStyle {
+            // For display style, select a large variant suitable for mathematical display mode
+            // Display integrals should be significantly larger (~2.2em) for visual prominence
+            let count = variantGlyphs.count
+
+            // Strategy: Use the largest variant, but avoid extreme sizes for fonts with many variants
+            let targetIndex: Int
+            if count <= 2 {
+                // Small variant list: use the last one (e.g., integral.size1 at ~2.2em)
+                targetIndex = count - 1
+            } else if count <= 4 {
+                // Medium variant list: use second-to-last to avoid extremes
+                targetIndex = count - 2
+            } else {
+                // Large variant list (like texgyretermes with 6 variants):
+                // Use variant at ~60% position to get appropriate display size (~2.0em)
+                // For 7 variants (0-6), this gives index 4
+                targetIndex = min(count - 2, Int(Double(count) * 0.6))
+            }
+
+            if let glyphVariantName = variantGlyphs[targetIndex] as? String {
                 let variantGlyph = font.get(glyphWithName: glyphVariantName)
                 return variantGlyph
             }
+        } else {
+            // Text/inline style: use incremental sizing for moderate enlargement
+            // Find the first variant with a different name
+            for gvn in variantGlyphs {
+                if let glyphVariantName = gvn as? String, glyphVariantName != glyphName {
+                    let variantGlyph = font.get(glyphWithName: glyphVariantName)
+                    return variantGlyph
+                }
+            }
         }
+
         // We did not find any variants of this glyph so return it.
         return glyph
     }

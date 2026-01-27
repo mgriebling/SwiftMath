@@ -505,6 +505,19 @@ public struct MTMathListBuilder {
             
             assert(atom != nil, "Atom shouldn't be nil")
             atom?.fontStyle = currentFontStyle
+            // If this is an accent atom (e.g., from an accented character like "é"),
+            // propagate the font style to the inner list atoms that don't already have
+            // an explicit font style. This handles Unicode accented characters which are
+            // converted to accents by atom(fromAccentedCharacter:) without font style context.
+            // We only set font style on atoms with .defaultStyle to avoid overriding
+            // explicit font style commands like \textbf inside accents.
+            if let accent = atom as? MTAccent, let innerList = accent.innerList {
+                for innerAtom in innerList.atoms {
+                    if innerAtom.fontStyle == .defaultStyle {
+                        innerAtom.fontStyle = currentFontStyle
+                    }
+                }
+            }
             list.add(atom)
             prevAtom = atom
             
@@ -742,9 +755,11 @@ public struct MTMathListBuilder {
             skipSpaces()
             if hasCharacters && string[currentCharIndex] == "[" {
                 _ = getNextCharacter() // consume '['
-                let alignmentChar = getNextCharacter()
-                if alignmentChar == "l" || alignmentChar == "r" || alignmentChar == "c" {
-                    frac.alignment = String(alignmentChar)
+                if hasCharacters {
+                    let alignmentChar = getNextCharacter()
+                    if alignmentChar == "l" || alignmentChar == "r" || alignmentChar == "c" {
+                        frac.alignment = String(alignmentChar)
+                    }
                 }
                 // Consume closing ']'
                 if hasCharacters && string[currentCharIndex] == "]" {
@@ -1116,9 +1131,11 @@ public struct MTMathListBuilder {
             skipSpaces()
             if hasCharacters && string[currentCharIndex] == "[" {
                 _ = getNextCharacter() // consume '['
-                let alignmentChar = getNextCharacter()
-                if alignmentChar == "l" || alignmentChar == "r" || alignmentChar == "c" {
-                    frac.alignment = String(alignmentChar)
+                if hasCharacters {
+                    let alignmentChar = getNextCharacter()
+                    if alignmentChar == "l" || alignmentChar == "r" || alignmentChar == "c" {
+                        frac.alignment = String(alignmentChar)
+                    }
                 }
                 // Consume closing ']'
                 if hasCharacters && string[currentCharIndex] == "]" {
@@ -1166,6 +1183,10 @@ public struct MTMathListBuilder {
             return frac
         } else if command == "sqrt" {
             let rad = MTRadical()
+            guard self.hasCharacters else {
+                rad.radicand = self.buildInternal(true)
+                return rad
+            }
             let char = self.getNextCharacter()
             if char == "[" {
                 rad.degree = self.buildInternal(false, stopChar: "]")
