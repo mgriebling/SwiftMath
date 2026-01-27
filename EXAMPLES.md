@@ -141,7 +141,9 @@ equations.
 
 ## Maxwell's Equations
 Use the `aligned`, `eqalign` or `split` environments to align
-multiple equations.
+multiple equations. The `aligned` and `eqalign` environments support any number
+of columns (1, 2, 3, 4+), while `split` is limited to 2 columns maximum.
+Columns use alternating right-left alignment (`r-l-r-l...`).
 ```LaTeX
 \begin{eqalign}
 \nabla \cdot \vec{\bf E} & = \frac {\rho} {\varepsilon_0} \\
