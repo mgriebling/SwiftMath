@@ -59,7 +59,15 @@ public class MTMathAtomFactory {
         "lceil" : "\u{2308}",
         "rceil" : "\u{2309}",
         "lfloor" : "\u{230A}",
-        "rfloor" : "\u{230B}"
+        "rfloor" : "\u{230B}",
+        // Corner brackets (amssymb)
+        "ulcorner" : "\u{231C}",  // upper left corner
+        "urcorner" : "\u{231D}",  // upper right corner
+        "llcorner" : "\u{231E}",  // lower left corner
+        "lrcorner" : "\u{231F}",  // lower right corner
+        // Double square brackets (strachey brackets)
+        "llbracket" : "\u{27E6}",  // left double bracket
+        "rrbracket" : "\u{27E7}",  // right double bracket
     ]
     
     private static let delimValueLock = NSLock()
@@ -161,7 +169,7 @@ public class MTMathAtomFactory {
         "omicron" : MTMathAtom(type: .variable, value: "\u{03BF}"),
         "pi" : MTMathAtom(type: .variable, value: "\u{03C0}"),
         "rho" : MTMathAtom(type: .variable, value: "\u{03C1}"),
-        "varsigma" : MTMathAtom(type: .variable, value: "\u{03C1}"),
+        "varsigma" : MTMathAtom(type: .variable, value: "\u{03C2}"),
         "sigma" : MTMathAtom(type: .variable, value: "\u{03C3}"),
         "tau" : MTMathAtom(type: .variable, value: "\u{03C4}"),
         "upsilon" : MTMathAtom(type: .variable, value: "\u{03C5}"),
@@ -177,6 +185,8 @@ public class MTMathAtomFactory {
         "phi" : MTMathAtom(type: .ordinary, value: "\u{0001D719}"),
         "varrho" : MTMathAtom(type: .ordinary, value: "\u{0001D71A}"),
         "varpi" : MTMathAtom(type: .ordinary, value: "\u{0001D71B}"),
+        "varkappa" : MTMathAtom(type: .ordinary, value: "\u{03F0}"),
+        // Note: digamma (U+03DD) and Digamma (U+03DC) are not supported by Latin Modern Math font
 
         // Capital greek characters
         "Gamma" : MTMathAtom(type: .variable, value: "\u{0393}"),
@@ -227,11 +237,16 @@ public class MTMathAtomFactory {
         "Longleftarrow" : MTMathAtom(type: .relation, value: "\u{27F8}"),
         "Longrightarrow" : MTMathAtom(type: .relation, value: "\u{27F9}"),
         "Longleftrightarrow" : MTMathAtom(type: .relation, value: "\u{27FA}"),
+        "longmapsto" : MTMathAtom(type: .relation, value: "\u{27FC}"),
+        "hookrightarrow" : MTMathAtom(type: .relation, value: "\u{21AA}"),
+        "hookleftarrow" : MTMathAtom(type: .relation, value: "\u{21A9}"),
 
 
         // Relations
         "leq" : MTMathAtom(type: .relation, value: UnicodeSymbol.lessEqual),
         "geq" : MTMathAtom(type: .relation, value: UnicodeSymbol.greaterEqual),
+        "leqslant" : MTMathAtom(type: .relation, value: "\u{2A7D}"),
+        "geqslant" : MTMathAtom(type: .relation, value: "\u{2A7E}"),
         "neq" : MTMathAtom(type: .relation, value: UnicodeSymbol.notEqual),
         "in" : MTMathAtom(type: .relation, value: "\u{2208}"),
         "notin" : MTMathAtom(type: .relation, value: "\u{2209}"),
@@ -250,6 +265,8 @@ public class MTMathAtomFactory {
         "ll" : MTMathAtom(type: .relation, value: "\u{226A}"),
         "prec" : MTMathAtom(type: .relation, value: "\u{227A}"),
         "succ" : MTMathAtom(type: .relation, value: "\u{227B}"),
+        "preceq" : MTMathAtom(type: .relation, value: "\u{2AAF}"),
+        "succeq" : MTMathAtom(type: .relation, value: "\u{2AB0}"),
         "subset" : MTMathAtom(type: .relation, value: "\u{2282}"),
         "supset" : MTMathAtom(type: .relation, value: "\u{2283}"),
         "subseteq" : MTMathAtom(type: .relation, value: "\u{2286}"),
@@ -259,8 +276,78 @@ public class MTMathAtomFactory {
         "sqsubseteq" : MTMathAtom(type: .relation, value: "\u{2291}"),
         "sqsupseteq" : MTMathAtom(type: .relation, value: "\u{2292}"),
         "models" : MTMathAtom(type: .relation, value: "\u{22A7}"),
+        "vdash" : MTMathAtom(type: .relation, value: "\u{22A2}"),
+        "dashv" : MTMathAtom(type: .relation, value: "\u{22A3}"),
+        "bowtie" : MTMathAtom(type: .relation, value: "\u{22C8}"),
         "perp" : MTMathAtom(type: .relation, value: "\u{27C2}"),
         "implies" : MTMathAtom(type: .relation, value: "\u{27F9}"),
+
+        // Negated relations (amssymb)
+        // Inequality negations
+        "nless" : MTMathAtom(type: .relation, value: "\u{226E}"),
+        "ngtr" : MTMathAtom(type: .relation, value: "\u{226F}"),
+        "nleq" : MTMathAtom(type: .relation, value: "\u{2270}"),
+        "ngeq" : MTMathAtom(type: .relation, value: "\u{2271}"),
+        "nleqslant" : MTMathAtom(type: .relation, value: "\u{2A87}"),
+        "ngeqslant" : MTMathAtom(type: .relation, value: "\u{2A88}"),
+        "lneq" : MTMathAtom(type: .relation, value: "\u{2A87}"),
+        "gneq" : MTMathAtom(type: .relation, value: "\u{2A88}"),
+        "lneqq" : MTMathAtom(type: .relation, value: "\u{2268}"),
+        "gneqq" : MTMathAtom(type: .relation, value: "\u{2269}"),
+        "lnsim" : MTMathAtom(type: .relation, value: "\u{22E6}"),
+        "gnsim" : MTMathAtom(type: .relation, value: "\u{22E7}"),
+        "lnapprox" : MTMathAtom(type: .relation, value: "\u{2A89}"),
+        "gnapprox" : MTMathAtom(type: .relation, value: "\u{2A8A}"),
+
+        // Ordering negations
+        "nprec" : MTMathAtom(type: .relation, value: "\u{2280}"),
+        "nsucc" : MTMathAtom(type: .relation, value: "\u{2281}"),
+        "npreceq" : MTMathAtom(type: .relation, value: "\u{22E0}"),
+        "nsucceq" : MTMathAtom(type: .relation, value: "\u{22E1}"),
+        "precneqq" : MTMathAtom(type: .relation, value: "\u{2AB5}"),
+        "succneqq" : MTMathAtom(type: .relation, value: "\u{2AB6}"),
+        "precnsim" : MTMathAtom(type: .relation, value: "\u{22E8}"),
+        "succnsim" : MTMathAtom(type: .relation, value: "\u{22E9}"),
+        "precnapprox" : MTMathAtom(type: .relation, value: "\u{2AB9}"),
+        "succnapprox" : MTMathAtom(type: .relation, value: "\u{2ABA}"),
+
+        // Similarity/congruence negations
+        "nsim" : MTMathAtom(type: .relation, value: "\u{2241}"),
+        "ncong" : MTMathAtom(type: .relation, value: "\u{2247}"),
+        "nmid" : MTMathAtom(type: .relation, value: "\u{2224}"),
+        "nshortmid" : MTMathAtom(type: .relation, value: "\u{2224}"),
+        "nparallel" : MTMathAtom(type: .relation, value: "\u{2226}"),
+        "nshortparallel" : MTMathAtom(type: .relation, value: "\u{2226}"),
+
+        // Set relation negations
+        "nsubseteq" : MTMathAtom(type: .relation, value: "\u{2288}"),
+        "nsupseteq" : MTMathAtom(type: .relation, value: "\u{2289}"),
+        "subsetneq" : MTMathAtom(type: .relation, value: "\u{228A}"),
+        "supsetneq" : MTMathAtom(type: .relation, value: "\u{228B}"),
+        "subsetneqq" : MTMathAtom(type: .relation, value: "\u{2ACB}"),
+        "supsetneqq" : MTMathAtom(type: .relation, value: "\u{2ACC}"),
+        "varsubsetneq" : MTMathAtom(type: .relation, value: "\u{228A}"),
+        "varsupsetneq" : MTMathAtom(type: .relation, value: "\u{228B}"),
+        "varsubsetneqq" : MTMathAtom(type: .relation, value: "\u{2ACB}"),
+        "varsupsetneqq" : MTMathAtom(type: .relation, value: "\u{2ACC}"),
+        "notni" : MTMathAtom(type: .relation, value: "\u{220C}"),
+        "nni" : MTMathAtom(type: .relation, value: "\u{220C}"),
+
+        // Triangle negations
+        "ntriangleleft" : MTMathAtom(type: .relation, value: "\u{22EA}"),
+        "ntriangleright" : MTMathAtom(type: .relation, value: "\u{22EB}"),
+        "ntrianglelefteq" : MTMathAtom(type: .relation, value: "\u{22EC}"),
+        "ntrianglerighteq" : MTMathAtom(type: .relation, value: "\u{22ED}"),
+
+        // Turnstile negations
+        "nvdash" : MTMathAtom(type: .relation, value: "\u{22AC}"),
+        "nvDash" : MTMathAtom(type: .relation, value: "\u{22AD}"),
+        "nVdash" : MTMathAtom(type: .relation, value: "\u{22AE}"),
+        "nVDash" : MTMathAtom(type: .relation, value: "\u{22AF}"),
+
+        // Square subset negations
+        "nsqsubseteq" : MTMathAtom(type: .relation, value: "\u{22E2}"),
+        "nsqsupseteq" : MTMathAtom(type: .relation, value: "\u{22E3}"),
 
         // operators
         "times" : MTMathAtomFactory.times(),
@@ -288,7 +375,32 @@ public class MTMathAtomFactory {
         "odot" : MTMathAtom(type: .binaryOperator, value: "\u{2299}"),
         "star"  : MTMathAtom(type: .binaryOperator, value: "\u{22C6}"),
         "cdot"  : MTMathAtom(type: .binaryOperator, value: "\u{22C5}"),
+        "diamond" : MTMathAtom(type: .binaryOperator, value: "\u{22C4}"),
         "amalg" : MTMathAtom(type: .binaryOperator, value: "\u{2A3F}"),
+
+        // Additional binary operators (amssymb)
+        "ltimes" : MTMathAtom(type: .binaryOperator, value: "\u{22C9}"),  // left semidirect product
+        "rtimes" : MTMathAtom(type: .binaryOperator, value: "\u{22CA}"),  // right semidirect product
+        "circledast" : MTMathAtom(type: .binaryOperator, value: "\u{229B}"),
+        "circledcirc" : MTMathAtom(type: .binaryOperator, value: "\u{229A}"),
+        "circleddash" : MTMathAtom(type: .binaryOperator, value: "\u{229D}"),
+        "boxdot" : MTMathAtom(type: .binaryOperator, value: "\u{22A1}"),
+        "boxminus" : MTMathAtom(type: .binaryOperator, value: "\u{229F}"),
+        "boxplus" : MTMathAtom(type: .binaryOperator, value: "\u{229E}"),
+        "boxtimes" : MTMathAtom(type: .binaryOperator, value: "\u{22A0}"),
+        "divideontimes" : MTMathAtom(type: .binaryOperator, value: "\u{22C7}"),
+        "dotplus" : MTMathAtom(type: .binaryOperator, value: "\u{2214}"),
+        "lhd" : MTMathAtom(type: .binaryOperator, value: "\u{22B2}"),  // left normal subgroup
+        "rhd" : MTMathAtom(type: .binaryOperator, value: "\u{22B3}"),  // right normal subgroup
+        "unlhd" : MTMathAtom(type: .binaryOperator, value: "\u{22B4}"),  // left normal subgroup or equal
+        "unrhd" : MTMathAtom(type: .binaryOperator, value: "\u{22B5}"),  // right normal subgroup or equal
+        "intercal" : MTMathAtom(type: .binaryOperator, value: "\u{22BA}"),
+        "barwedge" : MTMathAtom(type: .binaryOperator, value: "\u{22BC}"),
+        "veebar" : MTMathAtom(type: .binaryOperator, value: "\u{22BB}"),
+        "curlywedge" : MTMathAtom(type: .binaryOperator, value: "\u{22CF}"),
+        "curlyvee" : MTMathAtom(type: .binaryOperator, value: "\u{22CE}"),
+        "doublebarwedge" : MTMathAtom(type: .binaryOperator, value: "\u{2A5E}"),
+        "centerdot" : MTMathAtom(type: .binaryOperator, value: "\u{22C5}"),  // alias for cdot
 
         // No limit operators
         "log" : MTMathAtomFactory.operatorWithName( "log", limits: false),
@@ -307,6 +419,20 @@ public class MTMathAtomFactory {
         "coth" : MTMathAtomFactory.operatorWithName( "coth", limits: false),
         "sec" : MTMathAtomFactory.operatorWithName( "sec", limits: false),
         "csc" : MTMathAtomFactory.operatorWithName( "csc", limits: false),
+        // Additional inverse trig functions
+        "arccot" : MTMathAtomFactory.operatorWithName( "arccot", limits: false),
+        "arcsec" : MTMathAtomFactory.operatorWithName( "arcsec", limits: false),
+        "arccsc" : MTMathAtomFactory.operatorWithName( "arccsc", limits: false),
+        // Additional hyperbolic functions
+        "sech" : MTMathAtomFactory.operatorWithName( "sech", limits: false),
+        "csch" : MTMathAtomFactory.operatorWithName( "csch", limits: false),
+        // Inverse hyperbolic functions
+        "arcsinh" : MTMathAtomFactory.operatorWithName( "arcsinh", limits: false),
+        "arccosh" : MTMathAtomFactory.operatorWithName( "arccosh", limits: false),
+        "arctanh" : MTMathAtomFactory.operatorWithName( "arctanh", limits: false),
+        "arccoth" : MTMathAtomFactory.operatorWithName( "arccoth", limits: false),
+        "arcsech" : MTMathAtomFactory.operatorWithName( "arcsech", limits: false),
+        "arccsch" : MTMathAtomFactory.operatorWithName( "arccsch", limits: false),
         "arg" : MTMathAtomFactory.operatorWithName( "arg", limits: false),
         "ker" : MTMathAtomFactory.operatorWithName( "ker", limits: false),
         "dim" : MTMathAtomFactory.operatorWithName( "dim", limits: false),
@@ -388,19 +514,25 @@ public class MTMathAtomFactory {
         "Re" : MTMathAtom(type: .ordinary, value: "\u{211C}"),
         "mho" : MTMathAtom(type: .ordinary, value: "\u{2127}"),
         "aleph" : MTMathAtom(type: .ordinary, value: "\u{2135}"),
+        "beth" : MTMathAtom(type: .ordinary, value: "\u{2136}"),
+        "gimel" : MTMathAtom(type: .ordinary, value: "\u{2137}"),
+        "daleth" : MTMathAtom(type: .ordinary, value: "\u{2138}"),
         "forall" : MTMathAtom(type: .ordinary, value: "\u{2200}"),
         "exists" : MTMathAtom(type: .ordinary, value: "\u{2203}"),
         "nexists" : MTMathAtom(type: .ordinary, value: "\u{2204}"),
         "emptyset" : MTMathAtom(type: .ordinary, value: "\u{2205}"),
+        "varnothing" : MTMathAtom(type: .ordinary, value: "\u{2205}"),
         "nabla" : MTMathAtom(type: .ordinary, value: "\u{2207}"),
         "infty" : MTMathAtom(type: .ordinary, value: "\u{221E}"),
         "angle" : MTMathAtom(type: .ordinary, value: "\u{2220}"),
+        "measuredangle" : MTMathAtom(type: .ordinary, value: "\u{2221}"),
         "top" : MTMathAtom(type: .ordinary, value: "\u{22A4}"),
         "bot" : MTMathAtom(type: .ordinary, value: "\u{22A5}"),
         "vdots" : MTMathAtom(type: .ordinary, value: "\u{22EE}"),
         "cdots" : MTMathAtom(type: .ordinary, value: "\u{22EF}"),
         "ddots" : MTMathAtom(type: .ordinary, value: "\u{22F1}"),
         "triangle" : MTMathAtom(type: .ordinary, value: "\u{25B3}"),
+        "Box" : MTMathAtom(type: .ordinary, value: "\u{25A1}"),
         "imath" : MTMathAtom(type: .ordinary, value: "\u{0001D6A4}"),
         "jmath" : MTMathAtom(type: .ordinary, value: "\u{0001D6A5}"),
         "upquote" : MTMathAtom(type: .ordinary, value: "\u{0027}"),
@@ -527,8 +659,9 @@ public class MTMathAtomFactory {
         "mathbb": .blackboard,
         "mathbfit": .boldItalic,
         "bm": .boldItalic,
+        "boldsymbol": .boldItalic,
         "text": .roman,
-        "operatorname": .roman,
+        // Note: operatorname is handled specially in MTMathListBuilder to create proper operators
     ]
     
     public static func fontStyleWithName(_ fontName:String) -> MTFontStyle? {

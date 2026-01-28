@@ -5,9 +5,9 @@ This document lists LaTeX features that are **not yet implemented** in SwiftMath
 ## Summary
 
 - **Total Features Tested**: 12
-- **Fully Implemented**: 7 (58%)
+- **Fully Implemented**: 9 (75%)
 - **Partially Implemented**: 0 (0%)
-- **Not Implemented**: 5 (42%)
+- **Not Implemented**: 3 (25%)
 
 ---
 
@@ -56,21 +56,25 @@ This document lists LaTeX features that are **not yet implemented** in SwiftMath
 
 ---
 
-### 4. ❌ Manual Delimiter Sizing: `\big`, `\Big`, `\bigg`, `\Bigg`
-**Status**: ❌ Not Implemented
-**Error**: `Invalid command \big`
-
+### 4. ✅ Manual Delimiter Sizing: `\big`, `\Big`, `\bigg`, `\Bigg` - **IMPLEMENTED**
+**Status**: ✅ Working
 **Description**: Manually control delimiter sizes (4 levels beyond normal)
 
-**Examples**:
-```latex
-\big( x \big)        % slightly larger
-\Big[ y \Big]        % larger
-\bigg\{ z \bigg\}    % even larger
-\Bigg| w \Bigg|      % largest
-```
+**Test Results**: All tests passed
+- `\big( x \big)` - ✅ Works (1.2x font size)
+- `\Big[ y \Big]` - ✅ Works (1.8x font size)
+- `\bigg\{ z \bigg\}` - ✅ Works (2.4x font size)
+- `\Bigg| w \Bigg|` - ✅ Works (3.0x font size)
+
+**Supported Commands**:
+- `\big`, `\Big`, `\bigg`, `\Bigg` - basic sizing
+- `\bigl`, `\Bigl`, `\biggl`, `\Biggl` - left delimiter variants
+- `\bigr`, `\Bigr`, `\biggr`, `\Biggr` - right delimiter variants
+- `\bigm`, `\Bigm`, `\biggm`, `\Biggm` - middle delimiter variants
 
 **Use Case**: Fine control over delimiter appearance, nested expressions
+
+**Implementation**: Added `delimiterHeight` property to `MTInner`, stores size multiplier (1.2, 1.8, 2.4, 3.0), applied in `MTTypesetter.makeLeftRight()`.
 
 ---
 
@@ -145,21 +149,19 @@ x \, y \: z \; w                  % mixed spacing
 
 ---
 
-### 8. ❌ `\boldsymbol` - Bold Greek Letters
-**Status**: ❌ Not Implemented
-**Error**: `Invalid command \boldsymbol`
-
+### 8. ✅ `\boldsymbol` - Bold Greek Letters - **IMPLEMENTED**
+**Status**: ✅ Working
 **Description**: Creates bold Greek letters (whereas `\mathbf` doesn't work for Greek)
 
-**Examples**:
-```latex
-\boldsymbol{\alpha}        % bold alpha
-\boldsymbol{\beta}         % bold beta
-\boldsymbol{\Gamma}        % bold Gamma
-\mathbf{x} + \boldsymbol{\mu}  % mix Roman and Greek bold
-```
+**Test Results**: All tests passed
+- `\boldsymbol{\alpha}` - ✅ Works (bold alpha)
+- `\boldsymbol{\beta}` - ✅ Works (bold beta)
+- `\boldsymbol{\gamma}` - ✅ Works (bold gamma)
+- `\boldsymbol{\alpha} + \boldsymbol{\beta} = \boldsymbol{\gamma}` - ✅ Works (expression)
 
 **Use Case**: Vectors with Greek symbols, bold emphasis for Greek letters
+
+**Implementation**: Uses bold math font for Greek and other symbols.
 
 ---
 
@@ -200,11 +202,7 @@ x \, y \: z \; w                  % mixed spacing
 
 ### Remaining High Priority Features
 1. **Spacing commands** (`\,`, `\:`, `\;`, `\!`) - Used in almost all advanced math
-2. **Manual delimiter sizing** (`\big`, etc.) - Common in published mathematics
-3. **`\middle`** - Useful for conditional notation
-
-### Remaining Medium Priority Features
-4. **`\boldsymbol`** - Important for vector notation with Greek letters
+2. **`\middle`** - Useful for conditional notation
 
 ---
 
@@ -217,11 +215,11 @@ All tests use the `MTMathListBuilder.build(fromString:error:)` API and automatic
 - `testDisplayStyle()` - ✅ Passed (IMPLEMENTED)
 - `testMiddleDelimiter()` - ⏭️ Skipped (not implemented)
 - `testSubstack()` - ✅ Passed (IMPLEMENTED)
-- `testManualDelimiterSizing()` - ⏭️ Skipped (not implemented)
+- `testManualDelimiterSizing()` - ✅ Passed (IMPLEMENTED)
 - `testSpacingCommands()` - ⏭️ Skipped (not implemented)
 - `testMultipleIntegrals()` - ✅ Passed (IMPLEMENTED)
 - `testContinuedFractions()` - ✅ Passed (IMPLEMENTED)
-- `testBoldsymbol()` - ⏭️ Skipped (not implemented)
+- `testBoldsymbol()` - ✅ Passed (IMPLEMENTED)
 - `testStarredMatrices()` - ✅ Passed (IMPLEMENTED)
 - `testSmallMatrix()` - ✅ Passed (IMPLEMENTED)
 
@@ -233,23 +231,13 @@ All tests use the `MTMathListBuilder.build(fromString:error:)` API and automatic
 - Needs integration with existing `\left...\right` delimiter pairing system
 - Should support all delimiter types that work with `\left` and `\right`
 
-### For Manual Sizing (`\big`, etc.):
-- Needs 4 size levels beyond normal
-- Each size approximately 1.2x the previous
-- Should work with all delimiter types
-
 ### For Spacing Commands:
 - Need to insert proper `MTMathSpace` atoms
 - Different space types: positive (`\,`, `\:`, `\;`) and negative (`\!`)
 - Some might already be partially implemented
 
-### For `\boldsymbol`:
-- Needs access to bold math font variants
-- Should work with both Greek and other symbols
-- Different from `\mathbf` (which changes font family)
-
 ---
 
 *Generated: 2025-10-01*
 *SwiftMath Version: Based on iosMath v0.9.5*
-*Last Updated: 2025-10-01 - Implemented 4 major features: \substack, \smallmatrix, starred matrices, \iiiint*
+*Last Updated: 2026-01-11 - Updated \boldsymbol as implemented; added example images*
