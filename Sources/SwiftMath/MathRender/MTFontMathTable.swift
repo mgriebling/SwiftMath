@@ -103,16 +103,15 @@ class MTFontMathTable {
     /// specified in the OpenType Math specification. Rather these are proposed LuaTeX extensions
     /// for the TeX parameters \sigma_20 (delim1) and \sigma_21 (delim2). Since these do not
     /// exist in the fonts that we have, we use the same approach as LuaTeX and use the fontSize
-    /// to determine these values. The constants used are the same as LuaTeX and KaTeX and match the
-    /// metrics values of the original TeX fonts.
+    /// to determine these values. The constants used match the metrics values of the original TeX fonts.
     /// Note: An alternative approach is to use DelimitedSubFormulaMinHeight for \sigma21 and use a factor
     /// of 2 to get \sigma 20 as proposed in Vieth paper.
     /// The XeTeX implementation sets \sigma21 = fontSize and \sigma20 = DelimitedSubFormulaMinHeight which
     /// will produce smaller delimiters.
     /// Of all the approaches we've implemented LuaTeX's approach since it mimics LaTeX most accurately.
     var fractionDelimiterSize: CGFloat { 1.01 * _fontSize }
-    
-    /// Modified constant from 2.4 to 2.39, it matches KaTeX and looks better.
+
+    /// Modified constant from 2.4 to 2.39 for better visual appearance.
     var fractionDelimiterDisplayStyleSize: CGFloat { 2.39 * _fontSize }
 
     // MARK: - Stacks
@@ -220,8 +219,13 @@ class MTFontMathTable {
 
     /** Returns a larger vertical variant of the given glyph if any.
      If there is no larger version, this returns the current glyph.
+
+     - Parameter glyph: The glyph to find a larger variant for
+     - Parameter forDisplayStyle: If true, selects the largest appropriate variant for display style.
+                                  If false, selects the next larger variant (incremental sizing).
+     - Returns: A larger glyph variant, or the original glyph if no variants exist
      */
-    func getLargerGlyph(_ glyph:CGGlyph) -> CGGlyph {
+    func getLargerGlyph(_ glyph:CGGlyph, forDisplayStyle: Bool = false) -> CGGlyph {
         let variants = _mathTable[kVertVariants] as! NSDictionary?
         let glyphName = self.font?.get(nameForGlyph: glyph)
         let variantGlyphs = variants![glyphName!] as! NSArray?
@@ -229,14 +233,43 @@ class MTFontMathTable {
             // There are no extra variants, so just returnt the current glyph.
             return glyph
         }
-        // Find the first variant with a different name.
-        for gvn in variantGlyphs! {
-            let glyphVariantName = gvn as! String?
-            if glyphVariantName != glyphName {
-                let variantGlyph = self.font?.get(glyphWithName: glyphVariantName!)
+
+        if forDisplayStyle {
+            // For display style, select a large variant suitable for mathematical display mode
+            // Display integrals should be significantly larger (~2.2em) for visual prominence
+            let count = variantGlyphs!.count
+
+            // Strategy: Use the largest variant, but avoid extreme sizes for fonts with many variants
+            let targetIndex: Int
+            if count <= 2 {
+                // Small variant list: use the last one (e.g., integral.size1 at ~2.2em)
+                targetIndex = count - 1
+            } else if count <= 4 {
+                // Medium variant list: use second-to-last to avoid extremes
+                targetIndex = count - 2
+            } else {
+                // Large variant list (like texgyretermes with 6 variants):
+                // Use variant at ~60% position to get appropriate display size (~2.0em)
+                // For 7 variants (0-6), this gives index 4
+                targetIndex = min(count - 2, Int(Double(count) * 0.6))
+            }
+
+            if let glyphVariantName = variantGlyphs![targetIndex] as? String {
+                let variantGlyph = self.font?.get(glyphWithName: glyphVariantName)
                 return variantGlyph!
             }
+        } else {
+            // Text/inline style: use incremental sizing for moderate enlargement
+            // Find the first variant with a different name
+            for gvn in variantGlyphs! {
+                let glyphVariantName = gvn as! String?
+                if glyphVariantName != glyphName {
+                    let variantGlyph = self.font?.get(glyphWithName: glyphVariantName!)
+                    return variantGlyph!
+                }
+            }
         }
+
         // We did not find any variants of this glyph so return it.
         return glyph;
     }

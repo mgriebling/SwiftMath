@@ -241,3 +241,4 @@ All tests use the `MTMathListBuilder.build(fromString:error:)` API and automatic
 *Generated: 2025-10-01*
 *SwiftMath Version: Based on iosMath v0.9.5*
 *Last Updated: 2026-01-11 - Updated \boldsymbol as implemented; added example images*
+*Last Updated: 2026-01-07 - All features from October 2025 remain current. Recent work has focused on line breaking improvements and tokenization infrastructure.*
