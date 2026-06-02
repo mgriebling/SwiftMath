@@ -328,7 +328,11 @@ public class MTFraction: MTMathAtom {
     public var rightDelimiter = ""
     public var numerator: MTMathList?
     public var denominator: MTMathList?
-    
+    /// If set, forces the fraction to be laid out as if it occurred in the given
+    /// line style, regardless of the surrounding style. This is used to implement
+    /// `\dfrac` (forced `.display`) and `\tfrac` (forced `.text`).
+    public var forcedStyle: MTLineStyle? = nil
+
     init(_ frac: MTFraction?) {
         super.init(frac)
         self.type = .fraction
@@ -338,6 +342,7 @@ public class MTFraction: MTMathAtom {
             self.hasRule = frac.hasRule
             self.leftDelimiter = frac.leftDelimiter
             self.rightDelimiter = frac.rightDelimiter
+            self.forcedStyle = frac.forcedStyle
         }
     }
     
@@ -509,23 +514,34 @@ public class MTInner: MTMathAtom {
     }
 }
 
+/// The kind of embellishment drawn above/below an `MTOverLine`/`MTUnderLine`.
+public enum MTUnderOverStyle {
+    /// A straight horizontal bar, i.e. `\overline` / `\underline`.
+    case line
+    /// A stretchy horizontal curly brace, i.e. `\overbrace` / `\underbrace`.
+    case brace
+}
+
 // MARK: - MTOverLIne
-/** An atom with a line over the contained math list. */
+/** An atom with a line (or brace) over the contained math list. */
 public class MTOverLine: MTMathAtom {
     public var innerList:  MTMathList?
-    
+    /// Whether a straight line (`\overline`) or a curly brace (`\overbrace`) is drawn.
+    public var overStyle: MTUnderOverStyle = .line
+
     override public var finalized: MTMathAtom {
         let newOverline = MTOverLine(self)
         newOverline.innerList = newOverline.innerList?.finalized
         return newOverline
     }
-    
+
     init(_ over: MTOverLine?) {
         super.init(over)
         self.type = .overline
         self.innerList = MTMathList(over!.innerList)
+        self.overStyle = over!.overStyle
     }
-    
+
     override init() {
         super.init()
         self.type = .overline
@@ -533,22 +549,25 @@ public class MTOverLine: MTMathAtom {
 }
 
 // MARK: - MTUnderLine
-/** An atom with a line under the contained math list. */
+/** An atom with a line (or brace) under the contained math list. */
 public class MTUnderLine: MTMathAtom {
     public var innerList:  MTMathList?
-    
+    /// Whether a straight line (`\underline`) or a curly brace (`\underbrace`) is drawn.
+    public var underStyle: MTUnderOverStyle = .line
+
     override public var finalized: MTMathAtom {
         let newUnderline = super.finalized as! MTUnderLine
         newUnderline.innerList = newUnderline.innerList?.finalized
         return newUnderline
     }
-    
+
     init(_ under: MTUnderLine?) {
         super.init(under)
         self.type = .underline
         self.innerList = MTMathList(under?.innerList)
+        self.underStyle = under!.underStyle
     }
-    
+
     override init() {
         super.init()
         self.type = .underline

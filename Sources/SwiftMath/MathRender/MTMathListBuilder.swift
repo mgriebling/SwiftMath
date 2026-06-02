@@ -350,7 +350,13 @@ public struct MTMathListBuilder {
                 if atom.type == .fraction {
                     if let frac = atom as? MTFraction {
                         if frac.hasRule {
-                            str += "\\frac{\(mathListToString(frac.numerator!))}{\(mathListToString(frac.denominator!))}"
+                            let fracCommand: String
+                            switch frac.forcedStyle {
+                                case .display: fracCommand = "dfrac"
+                                case .text: fracCommand = "tfrac"
+                                default: fracCommand = "frac"
+                            }
+                            str += "\\\(fracCommand){\(mathListToString(frac.numerator!))}{\(mathListToString(frac.denominator!))}"
                         } else {
                             let command: String
                             if frac.leftDelimiter.isEmpty && frac.rightDelimiter.isEmpty {
@@ -432,12 +438,12 @@ public struct MTMathListBuilder {
                     }
                 } else if atom.type == .overline {
                     if let overline = atom as? MTOverLine {
-                        str += "\\overline"
+                        str += overline.overStyle == .brace ? "\\overbrace" : "\\overline"
                         str += "{\(mathListToString(overline.innerList!))}"
                     }
                 } else if atom.type == .underline {
                     if let underline = atom as? MTUnderLine {
-                        str += "\\underline"
+                        str += underline.underStyle == .brace ? "\\underbrace" : "\\underline"
                         str += "{\(mathListToString(underline.innerList!))}"
                     }
                 } else if atom.type == .accent {
@@ -529,6 +535,14 @@ public struct MTMathListBuilder {
             frac.numerator = self.buildInternal(true)
             frac.denominator = self.buildInternal(true)
             return frac;
+        } else if command == "tfrac" || command == "dfrac" {
+            // \tfrac and \dfrac are like \frac but force the layout style:
+            // \tfrac forces text style, \dfrac forces display style.
+            let frac = MTFraction()
+            frac.forcedStyle = (command == "dfrac") ? .display : .text
+            frac.numerator = self.buildInternal(true)
+            frac.denominator = self.buildInternal(true)
+            return frac;
         } else if command == "binom" {
             // A binom command has 2 arguments
             let frac = MTFraction(hasRule: false)
@@ -578,9 +592,23 @@ public struct MTMathListBuilder {
             let over = MTOverLine()
             over.innerList = self.buildInternal(true)
             return over
+        } else if command == "overbrace" {
+            // The overbrace command has 1 argument; an optional superscript
+            // label is attached via the usual ^ handling on the returned atom.
+            let over = MTOverLine()
+            over.overStyle = .brace
+            over.innerList = self.buildInternal(true)
+            return over
         } else if command == "underline" {
             // The underline command has 1 arguments
             let under = MTUnderLine()
+            under.innerList = self.buildInternal(true)
+            return under
+        } else if command == "underbrace" {
+            // The underbrace command has 1 argument; an optional subscript
+            // label is attached via the usual _ handling on the returned atom.
+            let under = MTUnderLine()
+            under.underStyle = .brace
             under.innerList = self.buildInternal(true)
             return under
         } else if command == "begin" {

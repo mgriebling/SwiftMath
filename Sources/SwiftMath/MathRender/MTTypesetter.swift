@@ -635,14 +635,27 @@ class MTTypesetter {
                     atom.type = .ordinary;
                     
                     let under = atom as! MTUnderLine?
-                    let display = self.makeUnderline(under)
-                    displayAtoms.append(display!)
-                    currentPosition.x += display!.width;
-                    // add super scripts || subscripts
-                    if atom.subScript != nil || atom.superScript != nil {
-                        self.makeScripts(atom, display:display, index:UInt(atom.indexRange.location), delta:0)
+                    if under?.underStyle == .brace {
+                        // \underbrace draws a stretchy curly brace below the
+                        // content with an optional subscript label centered
+                        // below the brace. The label is consumed here, so it is
+                        // not also laid out by makeScripts.
+                        let display = self.makeUnderOverBrace(under!.innerList, label: atom.subScript, isOver: false, range: atom.indexRange)
+                        atom.subScript = nil
+                        atom.superScript = nil
+                        display.position = currentPosition
+                        displayAtoms.append(display)
+                        currentPosition.x += display.width
+                    } else {
+                        let display = self.makeUnderline(under)
+                        displayAtoms.append(display!)
+                        currentPosition.x += display!.width;
+                        // add super scripts || subscripts
+                        if atom.subScript != nil || atom.superScript != nil {
+                            self.makeScripts(atom, display:display, index:UInt(atom.indexRange.location), delta:0)
+                        }
                     }
-                    
+
                 case .overline:
                     // stash the existing layout
                     if currentLine.length > 0 {
@@ -653,14 +666,27 @@ class MTTypesetter {
                     atom.type = .ordinary;
                     
                     let over = atom as! MTOverLine?
-                    let display = self.makeOverline(over)
-                    displayAtoms.append(display!)
-                    currentPosition.x += display!.width;
-                    // add super scripts || subscripts
-                    if atom.subScript != nil || atom.superScript != nil {
-                        self.makeScripts(atom, display:display, index:UInt(atom.indexRange.location), delta:0)
+                    if over?.overStyle == .brace {
+                        // \overbrace draws a stretchy curly brace above the
+                        // content with an optional superscript label centered
+                        // above the brace. The label is consumed here, so it is
+                        // not also laid out by makeScripts.
+                        let display = self.makeUnderOverBrace(over!.innerList, label: atom.superScript, isOver: true, range: atom.indexRange)
+                        atom.subScript = nil
+                        atom.superScript = nil
+                        display.position = currentPosition
+                        displayAtoms.append(display)
+                        currentPosition.x += display.width
+                    } else {
+                        let display = self.makeOverline(over)
+                        displayAtoms.append(display!)
+                        currentPosition.x += display!.width;
+                        // add super scripts || subscripts
+                        if atom.subScript != nil || atom.superScript != nil {
+                            self.makeScripts(atom, display:display, index:UInt(atom.indexRange.location), delta:0)
+                        }
                     }
-                    
+
                 case .accent:
                     // stash the existing layout
                     if currentLine.length > 0 {
@@ -995,6 +1021,21 @@ class MTTypesetter {
     }
     
     func makeFraction(_ frac:MTFraction?) -> MTDisplay? {
+        // \tfrac and \dfrac force the fraction to be laid out in a specific
+        // line style regardless of the surrounding style. We do this by
+        // temporarily swapping the typesetter's style (which controls both the
+        // numerator/denominator style via fractionStyle() and all the
+        // shift/gap metrics) for the duration of the layout, then restoring it.
+        if let forced = frac?.forcedStyle, forced != self.style {
+            let savedStyle = self.style
+            self.style = forced
+            defer { self.style = savedStyle }
+            return self.makeFractionInternal(frac)
+        }
+        return self.makeFractionInternal(frac)
+    }
+
+    func makeFractionInternal(_ frac:MTFraction?) -> MTDisplay? {
         // lay out the parts of the fraction
         let fractionStyle = self.fractionStyle;
         let numeratorDisplay = MTTypesetter.createLineForMathList(frac!.numerator, font:font, style:fractionStyle(), cramped:false)
@@ -1449,8 +1490,112 @@ class MTTypesetter {
         return overDisplay;
     }
     
+    // MARK: - Under/Over braces
+
+    /// Lays out a `\underbrace`/`\overbrace`: a stretchy horizontal curly brace
+    /// drawn below (`isOver == false`) or above (`isOver == true`) the inner
+    /// content, with an optional label centered below/above the brace.
+    ///
+    /// The brace is stretched using the font's horizontal glyph variants of the
+    /// curly-bracket glyph (U+23DF for under, U+23DE for over). The Latin Modern
+    /// and most OpenType math fonts ship a series of progressively wider variants
+    /// for these glyphs; we pick the widest variant that does not exceed the
+    /// content width (matching the behavior used for stretchy accents). Fonts do
+    /// not provide a horizontal glyph *assembly* for these, so for content wider
+    /// than the largest variant the brace is rendered at its maximum width and
+    /// centered, which is the standard fallback.
+    func makeUnderOverBrace(_ innerList:MTMathList?, label:MTMathList?, isOver:Bool, range:NSRange) -> MTDisplay {
+        // Lay out the content the brace spans, in the current style.
+        let content = MTTypesetter.createLineForMathList(innerList, font:font, style:style, cramped:cramped)!
+        let contentWidth = content.width
+
+        // Find a brace glyph stretched to (at most) the content width.
+        let braceChar = isOver ? "\u{23DE}" : "\u{23DF}"
+        let baseGlyph = self.findGlyphForCharacterAtIndex(braceChar.startIndex, inString:braceChar)
+        var glyphAscent = CGFloat(0), glyphDescent = CGFloat(0), glyphWidth = CGFloat(0)
+        let braceGlyph = self.findVariantGlyph(baseGlyph, withMaxWidth:contentWidth,
+                                               maxWidth:&glyphAscent, glyphDescent:&glyphDescent, glyphWidth:&glyphWidth)
+        // The total vertical extent of the brace glyph.
+        let braceThickness = glyphAscent + glyphDescent
+
+        // Gap between the content and the brace, and between the brace and the label.
+        // We reuse the OpenType "stretch stack" gaps, which are designed for this
+        // kind of over/under stacking, and the limit gaps for the label.
+        let gap = isOver ? styleFont.mathTable!.stretchStackGapBelowMin : styleFont.mathTable!.stretchStackGapAboveMin
+        let labelGap = isOver ? styleFont.mathTable!.upperLimitGapMin : styleFont.mathTable!.lowerLimitGapMin
+
+        // Lay out the label (if any) in script style.
+        var labelDisplay:MTMathListDisplay? = nil
+        if let label = label {
+            labelDisplay = MTTypesetter.createLineForMathList(label, font:font, style:self.scriptStyle(), cramped:cramped)
+        }
+
+        // The overall display width is the max of the content / brace / label widths.
+        let totalWidth = max(contentWidth, max(glyphWidth, labelDisplay?.width ?? 0))
+
+        var subDisplays = [MTDisplay]()
+
+        // Position the content. The content keeps its own baseline at y = 0 for
+        // \overbrace (so it acts like the operator nucleus), and for \underbrace
+        // we also keep the content on the baseline.
+        content.position = CGPointMake((totalWidth - contentWidth)/2, 0)
+        subDisplays.append(content)
+
+        // The brace is a glyph display; its position.y places its baseline.
+        let braceDisplay = MTGlyphDisplay(withGlpyh: braceGlyph, range: range, font: styleFont)
+        braceDisplay.ascent = glyphAscent
+        braceDisplay.descent = glyphDescent
+        braceDisplay.width = glyphWidth
+        let braceX = (totalWidth - glyphWidth)/2
+
+        var ascent:CGFloat
+        var descent:CGFloat
+        if isOver {
+            // Brace sits above the content. Its baseline is placed so the bottom
+            // of the brace glyph is a gap above the top of the content.
+            let braceBaselineY = content.ascent + gap + glyphDescent
+            braceDisplay.position = CGPointMake(braceX, braceBaselineY)
+            subDisplays.append(braceDisplay)
+
+            var topY = braceBaselineY + glyphAscent
+            if let labelDisplay = labelDisplay {
+                let labelBaselineY = topY + labelGap + labelDisplay.descent
+                labelDisplay.position = CGPointMake((totalWidth - labelDisplay.width)/2, labelBaselineY)
+                subDisplays.append(labelDisplay)
+                topY = labelBaselineY + labelDisplay.ascent
+            }
+            ascent = topY
+            descent = content.descent
+        } else {
+            // Brace sits below the content. Its baseline is placed so the top of
+            // the brace glyph is a gap below the bottom of the content.
+            let braceBaselineY = -(content.descent + gap + glyphAscent)
+            braceDisplay.position = CGPointMake(braceX, braceBaselineY)
+            subDisplays.append(braceDisplay)
+
+            var bottomY = braceBaselineY - glyphDescent
+            if let labelDisplay = labelDisplay {
+                let labelBaselineY = bottomY - labelGap - labelDisplay.ascent
+                labelDisplay.position = CGPointMake((totalWidth - labelDisplay.width)/2, labelBaselineY)
+                subDisplays.append(labelDisplay)
+                bottomY = labelBaselineY - labelDisplay.descent
+            }
+            ascent = content.ascent
+            descent = -bottomY
+        }
+
+        let display = MTMathListDisplay(withDisplays: subDisplays, range: range)
+        // recomputeDimensions already set ascent/descent/width from the children;
+        // override with our explicit values for consistent vertical metrics.
+        display.ascent = max(display.ascent, ascent)
+        display.descent = max(display.descent, descent)
+        display.width = totalWidth
+        _ = braceThickness // (kept for readability; not separately needed)
+        return display
+    }
+
     // MARK: - Accents
-    
+
     func isSingleCharAccentee(_ accent:MTAccent?) -> Bool {
         guard let accent = accent else { return false }
         if accent.innerList!.atoms.count != 1 {
