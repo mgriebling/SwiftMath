@@ -738,7 +738,12 @@ class MTTypesetter {
     }
     
     func numeratorGapMin() -> CGFloat {
-        if style == .display {
+        // TeX/KaTeX use the (small) text-style gap min for inline fractions, which
+        // makes the numerator hug the bar. We intentionally use the larger
+        // display-style clearance for text style too, so inline fractions get the
+        // same breathing room as display fractions. The smaller script styles keep
+        // their compact gap so deeply nested fractions are not over-spaced.
+        if style == .display || style == .text {
             return styleFont.mathTable!.fractionNumeratorDisplayStyleGapMin;
         } else {
             return styleFont.mathTable!.fractionNumeratorGapMin;
@@ -762,7 +767,9 @@ class MTTypesetter {
     }
     
     func denominatorGapMin() -> CGFloat {
-        if style == .display {
+        // See numeratorGapMin(): inline (text) fractions use the larger
+        // display-style clearance so the denominator does not hug the bar.
+        if style == .display || style == .text {
             return styleFont.mathTable!.fractionDenominatorDisplayStyleGapMin;
         } else {
             return styleFont.mathTable!.fractionDenominatorGapMin;
