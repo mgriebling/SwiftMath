@@ -2049,4 +2049,42 @@ class MTMathUILabelLineWrappingTests: XCTestCase {
                 "Script glyphs were duplicated during line-wrap layout: '\(fragment)'")
         }
     }
+
+    func testTextAfterScriptedAtomFillsRemainderOfLine() {
+        // Regression: after a scripted atom (x^{1/16}) flushes, the pen is mid-line. The following
+        // \text{...} run must continue on the SAME line and fill the remaining width — it must not be
+        // pushed wholesale to the next line (which wasted ~half the line).
+        let label = MTMathUILabel()
+        label.latex = "\\(\\text{Note that }x^{1/16}\\text{ is not real for negative }x" +
+                      "\\text{, so the integral over any interval containing negative values is not defined in the real numbers.}\\)"
+        label.font = MTFontManager.fontManager.defaultFont
+        let maxWidth: CGFloat = 300
+        label.preferredMaxLayoutWidth = maxWidth
+        _ = label.intrinsicContentSize
+        label.frame = CGRect(x: 0, y: 0, width: maxWidth, height: 200)
+        #if os(macOS)
+        label.layout()
+        #else
+        label.layoutSubviews()
+        #endif
+        XCTAssertNil(label.error, "Should render without error")
+
+        guard let subDisplays = label.displayList?.subDisplays, !subDisplays.isEmpty else {
+            XCTFail("Display list should be created")
+            return
+        }
+
+        // Identify the first (top) text line by the baseline of the text displays (the superscript
+        // of x^{1/16} sits above the baseline, so use MTCTLineDisplay positions, not all displays).
+        let textLines = subDisplays.compactMap { $0 as? MTCTLineDisplay }.filter { $0.width > 0 }
+        let firstLineY = textLines.map { $0.position.y }.max()!
+        // After the script, text must continue on the first line — its right edge must fill well past
+        // the base nucleus rather than wrapping the whole run to the next line.
+        let firstLineTextRight = textLines
+            .filter { abs($0.position.y - firstLineY) < 1.0 }
+            .map { $0.position.x + $0.width }
+            .max() ?? 0
+        XCTAssertGreaterThan(firstLineTextRight, maxWidth * 0.6,
+            "First line ends at \(firstLineTextRight) — text was not packed onto the line after the scripted atom (premature break)")
+    }
 }
