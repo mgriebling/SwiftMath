@@ -1657,12 +1657,15 @@ class MTTypesetter {
                 let minYCompensation = max(0, glyphMinY)
                 height = accentee.ascent + arrowSpacing - minYCompensation
             } else {
-                // Non-stretchy arrows (\vec): use tight spacing like regular accents
-                // This gives a more compact appearance suitable for single-character vectors
-                delta = min(accentee.ascent, mathTable.accentBaseHeight)
-                // Use same formula as regular accents (no minYCompensation adjustment)
-                // This places the arrow properly above the character
-                height = accentee.ascent - delta
+                // Non-stretchy arrows (\vec): place the arrow just above the accentee
+                // (centered, no horizontal scaling). A positive gap above the ascent
+                // prevents the arrow from overlapping the base character — the previous
+                // `ascent - delta` formula collapsed onto the letter for x-height glyphs.
+                delta = 0
+                let arrowSpacing = mathTable.upperLimitGapMin
+                // Compensate for internal glyph whitespace (minY > 0)
+                let minYCompensation = max(0, glyphMinY)
+                height = accentee.ascent + arrowSpacing - minYCompensation
             }
 
             // For stretchy arrow accents (\overrightarrow): if the largest glyph variant is still smaller than content width,

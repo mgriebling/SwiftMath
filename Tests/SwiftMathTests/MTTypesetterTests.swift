@@ -1794,6 +1794,31 @@ final class MTTypesetterTests: XCTestCase {
                              "Accent should increase ascent")
     }
 
+    func testVecAccentDoesNotOverlapContent() throws {
+        // Regression test: \vec arrow must sit above the base letter, not overlap it.
+        // Uses the reported expression \(\vec{a} \times \vec{b}\).
+        let mathList = try XCTUnwrap(MTMathListBuilder.build(fromString: "\\vec{a} \\times \\vec{b}"))
+
+        let display = try XCTUnwrap(
+            MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display)
+        )
+
+        let accentDisplays = display.subDisplays.compactMap { $0 as? MTAccentDisplay }
+        XCTAssertEqual(accentDisplays.count, 2, "Should have two \\vec accents")
+
+        for accentDisp in accentDisplays {
+            let accentee = try XCTUnwrap(accentDisp.accentee)
+            let glyphDisp = try XCTUnwrap(accentDisp.accent)
+            let glyph = try XCTUnwrap(glyphDisp.glyph)
+            var g = glyph
+            var rect = CGRect.zero
+            CTFontGetBoundingRectsForGlyphs(self.font.ctFont, .horizontal, &g, &rect, 1)
+            let arrowVisualBottom = glyphDisp.position.y + rect.minY
+            XCTAssertGreaterThanOrEqual(arrowVisualBottom, accentee.ascent,
+                "\\vec arrow should sit above the base letter, not overlap it")
+        }
+    }
+
     func testMultiCharacterArrowAccents() throws {
         // Test that multi-character arrow accents render correctly
         // This is the reported bug: arrow should be above both characters, not after the last one
