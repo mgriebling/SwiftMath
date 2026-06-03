@@ -2372,6 +2372,46 @@ final class MTTypesetterTests: XCTestCase {
         XCTAssertNotNil(display, "Matrices render (force breaks)")
     }
 
+    /// Regression for a crash in createDisplayAtoms: a delimited matrix (e.g. pmatrix) wraps an
+    /// MTMathTable in an MTInner. makeLeftRight typesets the inner content twice (once to size the
+    /// delimiters, once to lay it out). The typesetter used to mutate the table atom's `type` to
+    /// `.inner`, so on the second pass the same atom was routed into the `.inner` case and
+    /// `atom as! MTInner` crashed with "Could not cast MTMathTable to MTInner".
+    func testDelimitedMatrixDoesNotCrash() throws {
+        let latex = "\\(\\begin{pmatrix} x \\\\ y \\\\ z \\end{pmatrix}\\)"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Failed to parse LaTeX")
+
+        // A single typesetting pass already triggers the double layout inside makeLeftRight.
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display)
+        XCTAssertNotNil(display)
+        XCTAssertGreaterThan(display!.width, 0)
+
+        // pmatrix produces an MTInner wrapping the table; the table's type must be preserved.
+        let inner = mathList!.atoms.compactMap { $0 as? MTInner }.first
+        XCTAssertNotNil(inner, "Expected pmatrix to produce an MTInner")
+        let table = inner!.innerList!.atoms.compactMap { $0 as? MTMathTable }.first
+        XCTAssertNotNil(table, "Expected the inner list to contain an MTMathTable")
+        XCTAssertEqual(table!.type, .table, "Typesetting must not mutate the table atom's type")
+    }
+
+    /// Mirrors MTMathUILabel.intrinsicContentSize followed by drawing: the same MTMathList is
+    /// typeset more than once. The atom tree must be reusable across passes without corruption.
+    func testRepeatedTypesettingOfMatrixIsStable() throws {
+        let latex = "\\(\\begin{pmatrix} x \\\\ y \\\\ z \\end{pmatrix}\\)"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Failed to parse LaTeX")
+
+        let first = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display)
+        XCTAssertNotNil(first)
+        // Second pass on the same (shared) atom tree must not crash and must match the first.
+        let second = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display)
+        XCTAssertNotNil(second)
+        XCTAssertEqual(first!.width, second!.width, accuracy: 0.01)
+        XCTAssertEqual(first!.ascent, second!.ascent, accuracy: 0.01)
+        XCTAssertEqual(first!.descent, second!.descent, accuracy: 0.01)
+    }
+
     func testRealWorldExample_QuadraticFormula() throws {
         // Real-world test: quadratic formula with width constraint
         let latex = "x=\\frac{-b\\pm\\sqrt{b^{2}-4ac}}{2a}"

@@ -63,8 +63,9 @@ func getInterElementSpaceArrayIndexForType(_ type:MTMathAtomType, row:Bool) -> I
             return 5;
         case .punctuation:
             return 6;
-        case .fraction,  // Fraction and inner are treated the same.
-             .inner:
+        case .fraction,  // Fraction, inner and table are treated the same.
+             .inner,
+             .table:
             return 7;
         case .radical:
             if row {
@@ -83,7 +84,7 @@ func getInterElementSpaceArrayIndexForType(_ type:MTMathAtomType, row:Bool) -> I
         case .accent, .underline, .overline:
             return 0
         // Special types that don't typically participate in spacing are treated as ordinary
-        case .boundary, .space, .style, .table:
+        case .boundary, .space, .style:
             return 0
     }
 }
