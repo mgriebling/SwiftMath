@@ -441,10 +441,11 @@ class MTRadicalDisplay : MTDisplay {
         set {
             super.position = newValue
             self.updateRadicandPosition()
+            self.updateDegreePosition()
         }
         get { super.position }
     }
-    
+
     override var textColor: MTColor? {
         set {
             super.textColor = newValue
@@ -453,9 +454,15 @@ class MTRadicalDisplay : MTDisplay {
         }
         get { super.textColor }
     }
-    
+
     private var _radicalGlyph:MTDisplay?
     private var _radicalShift:CGFloat=0
+    // Offset of the degree relative to the radical's origin. Cached so the degree can be
+    // repositioned whenever the radical itself is moved (e.g. by inter-element spacing or
+    // line-wrap adjustments). `raise` depends only on ascent/descent, which are fixed before
+    // the degree is set, so caching it is safe.
+    private var _degreeKernBefore:CGFloat=0
+    private var _degreeRaise:CGFloat=0
     
     var topKern:CGFloat=0
     var lineThickness:CGFloat=0
@@ -489,12 +496,21 @@ class MTRadicalDisplay : MTDisplay {
             _radicalShift = 0;
         }
         
-        // Note: position of degree is relative to parent.
-        self.degree!.position = CGPointMake(self.position.x + kernBefore, self.position.y + raise);
+        // Cache the degree's offset relative to the radical origin so it tracks the radical
+        // if the radical is later repositioned, then place it.
+        _degreeKernBefore = kernBefore;
+        _degreeRaise = raise;
+        self.updateDegreePosition()
         // Update the width by the _radicalShift
         self.width = _radicalShift + _radicalGlyph!.width + self.radicand!.width;
         // update the position of the radicand
         self.updateRadicandPosition()
+    }
+
+    func updateDegreePosition() {
+        guard let degree = self.degree else { return }
+        // Note: position of degree is relative to parent.
+        degree.position = CGPointMake(self.position.x + _degreeKernBefore, self.position.y + _degreeRaise);
     }
 
     func updateRadicandPosition() {

@@ -430,6 +430,111 @@ final class MTTypesetterTests: XCTestCase {
         XCTAssertLessThan(display.width, 35, "Width should be reasonable")
     }
 
+    // MARK: - nth-root degree positioning regression tests
+
+    /// Recursively collects the absolute frames of every radical degree (paired with its
+    /// parent radical's absolute frame) and every superscript line in a display tree.
+    /// `origin` is the absolute coordinate of the frame in which `display.position` is expressed.
+    private func collectDegreesAndSuperscripts(_ display: MTDisplay,
+                                               origin: CGPoint,
+                                               degrees: inout [(radical: CGRect, degree: CGRect)],
+                                               superscripts: inout [CGRect]) {
+        func absFrame(_ d: MTDisplay) -> CGRect {
+            CGRect(x: origin.x + d.position.x,
+                   y: origin.y + d.position.y - d.descent,
+                   width: d.width,
+                   height: d.ascent + d.descent)
+        }
+        switch display {
+        case let radical as MTRadicalDisplay:
+            // radicand/degree positions share the radical's own coordinate frame (origin),
+            // so recurse them with the same origin.
+            if let degree = radical.degree {
+                degrees.append((radical: absFrame(radical), degree: absFrame(degree)))
+                collectDegreesAndSuperscripts(degree, origin: origin, degrees: &degrees, superscripts: &superscripts)
+            }
+            if let radicand = radical.radicand {
+                collectDegreesAndSuperscripts(radicand, origin: origin, degrees: &degrees, superscripts: &superscripts)
+            }
+        case let fraction as MTFractionDisplay:
+            if let n = fraction.numerator { collectDegreesAndSuperscripts(n, origin: origin, degrees: &degrees, superscripts: &superscripts) }
+            if let d = fraction.denominator { collectDegreesAndSuperscripts(d, origin: origin, degrees: &degrees, superscripts: &superscripts) }
+        case let op as MTLargeOpLimitsDisplay:
+            if let u = op.upperLimit { collectDegreesAndSuperscripts(u, origin: origin, degrees: &degrees, superscripts: &superscripts) }
+            if let l = op.lowerLimit { collectDegreesAndSuperscripts(l, origin: origin, degrees: &degrees, superscripts: &superscripts) }
+        case let line as MTLineDisplay:
+            if let inner = line.inner { collectDegreesAndSuperscripts(inner, origin: origin, degrees: &degrees, superscripts: &superscripts) }
+        case let accent as MTAccentDisplay:
+            if let accentee = accent.accentee { collectDegreesAndSuperscripts(accentee, origin: origin, degrees: &degrees, superscripts: &superscripts) }
+        case let list as MTMathListDisplay:
+            if list.type == .superscript {
+                superscripts.append(absFrame(list))
+            }
+            // Children of a math list are drawn after translating by the list's own position.
+            let childOrigin = CGPoint(x: origin.x + list.position.x, y: origin.y + list.position.y)
+            for sub in list.subDisplays {
+                collectDegreesAndSuperscripts(sub, origin: childOrigin, degrees: &degrees, superscripts: &superscripts)
+            }
+        default:
+            break
+        }
+    }
+
+    /// Focused regression: when a radical is preceded by inter-element spacing (here a binary
+    /// operator), its degree must not slide to the left of the radical sign. Before the fix the
+    /// degree kept the position computed before the inter-element space was added, ending up
+    /// shifted left and overlapping preceding content.
+    func testRadicalDegreeNotShiftedLeft() throws {
+        let mathList = MTMathListBuilder.build(fromString: "1+\\sqrt[3]{x}")
+        XCTAssertNotNil(mathList)
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display)!
+
+        let radical = display.subDisplays.compactMap { $0 as? MTRadicalDisplay }.first
+        XCTAssertNotNil(radical, "Expected a radical display")
+        let degree = radical!.degree
+        XCTAssertNotNil(degree, "Expected the radical to have a degree")
+
+        // The degree must sit at or to the right of the radical's origin, never to its left.
+        XCTAssertGreaterThanOrEqual(degree!.position.x, radical!.position.x,
+                                    "Degree is shifted left of its radical (position.x = \(degree!.position.x) < \(radical!.position.x))")
+        // The degree must also stay within the radical's overall bounds.
+        XCTAssertLessThanOrEqual(degree!.position.x + degree!.width,
+                                 radical!.position.x + radical!.width,
+                                 "Degree extends past the right edge of the radical")
+    }
+
+    /// For each of the originally reported inputs, the degree must (a) not be shifted left of its
+    /// own radical and (b) not overlap any superscript box elsewhere in the expression.
+    func testRadicalDegreeDoesNotOverlapSuperscripts() throws {
+        let inputs = [
+            "y^3=\\sqrt[3]{x}",
+            "\\frac{1}{\\sqrt[8]{x}}",
+            "\\sum_{\\frac{+1}{x}}^{\\frac{-1}{x}}\\int_{-\\infty}^{\\infty}\\sqrt[16]{x}dx",
+        ]
+        for input in inputs {
+            let mathList = MTMathListBuilder.build(fromString: input)
+            XCTAssertNotNil(mathList, "Failed to parse \(input)")
+            let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display)!
+
+            var degrees = [(radical: CGRect, degree: CGRect)]()
+            var superscripts = [CGRect]()
+            collectDegreesAndSuperscripts(display, origin: .zero, degrees: &degrees, superscripts: &superscripts)
+
+            XCTAssertFalse(degrees.isEmpty, "Expected at least one radical degree for \(input)")
+
+            for entry in degrees {
+                // (a) The degree's left edge must not be left of its radical's left edge.
+                XCTAssertGreaterThanOrEqual(entry.degree.minX, entry.radical.minX - 0.01,
+                                            "Degree shifted left of its radical for \(input): degree=\(entry.degree) radical=\(entry.radical)")
+                // (b) The degree must not overlap any superscript box.
+                for sup in superscripts {
+                    XCTAssertFalse(entry.degree.intersects(sup),
+                                   "Degree box \(entry.degree) overlaps superscript box \(sup) for \(input)")
+                }
+            }
+        }
+    }
+
     func testFraction() throws {
         let mathList = MTMathList()
         let frac = MTFraction(hasRule: true)
