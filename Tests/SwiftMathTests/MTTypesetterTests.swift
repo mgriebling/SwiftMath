@@ -430,6 +430,111 @@ final class MTTypesetterTests: XCTestCase {
         XCTAssertLessThan(display.width, 35, "Width should be reasonable")
     }
 
+    // MARK: - nth-root degree positioning regression tests
+
+    /// Recursively collects the absolute frames of every radical degree (paired with its
+    /// parent radical's absolute frame) and every superscript line in a display tree.
+    /// `origin` is the absolute coordinate of the frame in which `display.position` is expressed.
+    private func collectDegreesAndSuperscripts(_ display: MTDisplay,
+                                               origin: CGPoint,
+                                               degrees: inout [(radical: CGRect, degree: CGRect)],
+                                               superscripts: inout [CGRect]) {
+        func absFrame(_ d: MTDisplay) -> CGRect {
+            CGRect(x: origin.x + d.position.x,
+                   y: origin.y + d.position.y - d.descent,
+                   width: d.width,
+                   height: d.ascent + d.descent)
+        }
+        switch display {
+        case let radical as MTRadicalDisplay:
+            // radicand/degree positions share the radical's own coordinate frame (origin),
+            // so recurse them with the same origin.
+            if let degree = radical.degree {
+                degrees.append((radical: absFrame(radical), degree: absFrame(degree)))
+                collectDegreesAndSuperscripts(degree, origin: origin, degrees: &degrees, superscripts: &superscripts)
+            }
+            if let radicand = radical.radicand {
+                collectDegreesAndSuperscripts(radicand, origin: origin, degrees: &degrees, superscripts: &superscripts)
+            }
+        case let fraction as MTFractionDisplay:
+            if let n = fraction.numerator { collectDegreesAndSuperscripts(n, origin: origin, degrees: &degrees, superscripts: &superscripts) }
+            if let d = fraction.denominator { collectDegreesAndSuperscripts(d, origin: origin, degrees: &degrees, superscripts: &superscripts) }
+        case let op as MTLargeOpLimitsDisplay:
+            if let u = op.upperLimit { collectDegreesAndSuperscripts(u, origin: origin, degrees: &degrees, superscripts: &superscripts) }
+            if let l = op.lowerLimit { collectDegreesAndSuperscripts(l, origin: origin, degrees: &degrees, superscripts: &superscripts) }
+        case let line as MTLineDisplay:
+            if let inner = line.inner { collectDegreesAndSuperscripts(inner, origin: origin, degrees: &degrees, superscripts: &superscripts) }
+        case let accent as MTAccentDisplay:
+            if let accentee = accent.accentee { collectDegreesAndSuperscripts(accentee, origin: origin, degrees: &degrees, superscripts: &superscripts) }
+        case let list as MTMathListDisplay:
+            if list.type == .superscript {
+                superscripts.append(absFrame(list))
+            }
+            // Children of a math list are drawn after translating by the list's own position.
+            let childOrigin = CGPoint(x: origin.x + list.position.x, y: origin.y + list.position.y)
+            for sub in list.subDisplays {
+                collectDegreesAndSuperscripts(sub, origin: childOrigin, degrees: &degrees, superscripts: &superscripts)
+            }
+        default:
+            break
+        }
+    }
+
+    /// Focused regression: when a radical is preceded by inter-element spacing (here a binary
+    /// operator), its degree must not slide to the left of the radical sign. Before the fix the
+    /// degree kept the position computed before the inter-element space was added, ending up
+    /// shifted left and overlapping preceding content.
+    func testRadicalDegreeNotShiftedLeft() throws {
+        let mathList = MTMathListBuilder.build(fromString: "1+\\sqrt[3]{x}")
+        XCTAssertNotNil(mathList)
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display)!
+
+        let radical = display.subDisplays.compactMap { $0 as? MTRadicalDisplay }.first
+        XCTAssertNotNil(radical, "Expected a radical display")
+        let degree = radical!.degree
+        XCTAssertNotNil(degree, "Expected the radical to have a degree")
+
+        // The degree must sit at or to the right of the radical's origin, never to its left.
+        XCTAssertGreaterThanOrEqual(degree!.position.x, radical!.position.x,
+                                    "Degree is shifted left of its radical (position.x = \(degree!.position.x) < \(radical!.position.x))")
+        // The degree must also stay within the radical's overall bounds.
+        XCTAssertLessThanOrEqual(degree!.position.x + degree!.width,
+                                 radical!.position.x + radical!.width,
+                                 "Degree extends past the right edge of the radical")
+    }
+
+    /// For each of the originally reported inputs, the degree must (a) not be shifted left of its
+    /// own radical and (b) not overlap any superscript box elsewhere in the expression.
+    func testRadicalDegreeDoesNotOverlapSuperscripts() throws {
+        let inputs = [
+            "y^3=\\sqrt[3]{x}",
+            "\\frac{1}{\\sqrt[8]{x}}",
+            "\\sum_{\\frac{+1}{x}}^{\\frac{-1}{x}}\\int_{-\\infty}^{\\infty}\\sqrt[16]{x}dx",
+        ]
+        for input in inputs {
+            let mathList = MTMathListBuilder.build(fromString: input)
+            XCTAssertNotNil(mathList, "Failed to parse \(input)")
+            let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display)!
+
+            var degrees = [(radical: CGRect, degree: CGRect)]()
+            var superscripts = [CGRect]()
+            collectDegreesAndSuperscripts(display, origin: .zero, degrees: &degrees, superscripts: &superscripts)
+
+            XCTAssertFalse(degrees.isEmpty, "Expected at least one radical degree for \(input)")
+
+            for entry in degrees {
+                // (a) The degree's left edge must not be left of its radical's left edge.
+                XCTAssertGreaterThanOrEqual(entry.degree.minX, entry.radical.minX - 0.01,
+                                            "Degree shifted left of its radical for \(input): degree=\(entry.degree) radical=\(entry.radical)")
+                // (b) The degree must not overlap any superscript box.
+                for sup in superscripts {
+                    XCTAssertFalse(entry.degree.intersects(sup),
+                                   "Degree box \(entry.degree) overlaps superscript box \(sup) for \(input)")
+                }
+            }
+        }
+    }
+
     func testFraction() throws {
         let mathList = MTMathList()
         let frac = MTFraction(hasRule: true)
@@ -1689,6 +1794,31 @@ final class MTTypesetterTests: XCTestCase {
                              "Accent should increase ascent")
     }
 
+    func testVecAccentDoesNotOverlapContent() throws {
+        // Regression test: \vec arrow must sit above the base letter, not overlap it.
+        // Uses the reported expression \(\vec{a} \times \vec{b}\).
+        let mathList = try XCTUnwrap(MTMathListBuilder.build(fromString: "\\vec{a} \\times \\vec{b}"))
+
+        let display = try XCTUnwrap(
+            MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display)
+        )
+
+        let accentDisplays = display.subDisplays.compactMap { $0 as? MTAccentDisplay }
+        XCTAssertEqual(accentDisplays.count, 2, "Should have two \\vec accents")
+
+        for accentDisp in accentDisplays {
+            let accentee = try XCTUnwrap(accentDisp.accentee)
+            let glyphDisp = try XCTUnwrap(accentDisp.accent)
+            let glyph = try XCTUnwrap(glyphDisp.glyph)
+            var g = glyph
+            var rect = CGRect.zero
+            CTFontGetBoundingRectsForGlyphs(self.font.ctFont, .horizontal, &g, &rect, 1)
+            let arrowVisualBottom = glyphDisp.position.y + rect.minY
+            XCTAssertGreaterThanOrEqual(arrowVisualBottom, accentee.ascent,
+                "\\vec arrow should sit above the base letter, not overlap it")
+        }
+    }
+
     func testMultiCharacterArrowAccents() throws {
         // Test that multi-character arrow accents render correctly
         // This is the reported bug: arrow should be above both characters, not after the last one
@@ -2265,6 +2395,46 @@ final class MTTypesetterTests: XCTestCase {
         // Current behavior: matrices force breaks
         // This test documents current behavior for future improvement
         XCTAssertNotNil(display, "Matrices render (force breaks)")
+    }
+
+    /// Regression for a crash in createDisplayAtoms: a delimited matrix (e.g. pmatrix) wraps an
+    /// MTMathTable in an MTInner. makeLeftRight typesets the inner content twice (once to size the
+    /// delimiters, once to lay it out). The typesetter used to mutate the table atom's `type` to
+    /// `.inner`, so on the second pass the same atom was routed into the `.inner` case and
+    /// `atom as! MTInner` crashed with "Could not cast MTMathTable to MTInner".
+    func testDelimitedMatrixDoesNotCrash() throws {
+        let latex = "\\(\\begin{pmatrix} x \\\\ y \\\\ z \\end{pmatrix}\\)"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Failed to parse LaTeX")
+
+        // A single typesetting pass already triggers the double layout inside makeLeftRight.
+        let display = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display)
+        XCTAssertNotNil(display)
+        XCTAssertGreaterThan(display!.width, 0)
+
+        // pmatrix produces an MTInner wrapping the table; the table's type must be preserved.
+        let inner = mathList!.atoms.compactMap { $0 as? MTInner }.first
+        XCTAssertNotNil(inner, "Expected pmatrix to produce an MTInner")
+        let table = inner!.innerList!.atoms.compactMap { $0 as? MTMathTable }.first
+        XCTAssertNotNil(table, "Expected the inner list to contain an MTMathTable")
+        XCTAssertEqual(table!.type, .table, "Typesetting must not mutate the table atom's type")
+    }
+
+    /// Mirrors MTMathUILabel.intrinsicContentSize followed by drawing: the same MTMathList is
+    /// typeset more than once. The atom tree must be reusable across passes without corruption.
+    func testRepeatedTypesettingOfMatrixIsStable() throws {
+        let latex = "\\(\\begin{pmatrix} x \\\\ y \\\\ z \\end{pmatrix}\\)"
+        let mathList = MTMathListBuilder.build(fromString: latex)
+        XCTAssertNotNil(mathList, "Failed to parse LaTeX")
+
+        let first = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display)
+        XCTAssertNotNil(first)
+        // Second pass on the same (shared) atom tree must not crash and must match the first.
+        let second = MTTypesetter.createLineForMathList(mathList, font: self.font, style: .display)
+        XCTAssertNotNil(second)
+        XCTAssertEqual(first!.width, second!.width, accuracy: 0.01)
+        XCTAssertEqual(first!.ascent, second!.ascent, accuracy: 0.01)
+        XCTAssertEqual(first!.descent, second!.descent, accuracy: 0.01)
     }
 
     func testRealWorldExample_QuadraticFormula() throws {

@@ -1901,4 +1901,190 @@ class MTMathUILabelLineWrappingTests: XCTestCase {
             }
         }
     }
+
+    // MARK: - Mixed text + math overflow regression
+
+    /// Lay out `latex` constrained to `maxWidth` and assert that no top-level display spills
+    /// past the right edge. A display whose right edge exceeds the constraint is rendered
+    /// off-screen and is effectively invisible — the symptom reported for `\sum`/`\int`/`x^{p}`
+    /// following text that nearly fills a line.
+    private func assertNoRightEdgeOverflow(_ latex: String, maxWidth: CGFloat,
+                                           file: StaticString = #file, line: UInt = #line) {
+        let label = MTMathUILabel()
+        label.latex = latex
+        label.font = MTFontManager.fontManager.defaultFont
+        XCTAssertNil(label.error, "Should parse without error: \(String(describing: label.error))", file: file, line: line)
+
+        label.preferredMaxLayoutWidth = maxWidth
+        let size = label.intrinsicContentSize
+        label.frame = CGRect(origin: .zero, size: size)
+        #if os(macOS)
+        label.layout()
+        #else
+        label.layoutSubviews()
+        #endif
+
+        guard let displayList = label.displayList else {
+            XCTFail("Display list should be created", file: file, line: line)
+            return
+        }
+        XCTAssertNil(label.error, "Should render without error", file: file, line: line)
+
+        // Allow a small tolerance for sub-pixel italic correction / spacing.
+        let tolerance: CGFloat = 2.0
+        for display in displayList.subDisplays {
+            if display.width <= 0 { continue }  // zero-width displays render nothing
+            let rightEdge = display.position.x + display.width
+            XCTAssertLessThanOrEqual(rightEdge, maxWidth + tolerance,
+                "A display's right edge (\(rightEdge)) overflows the width constraint (\(maxWidth)) — content is rendered off-screen",
+                file: file, line: line)
+        }
+    }
+
+    func testMixedTextWithSumIntegralRadicalDoesNotOverflow() {
+        // Reported entry 1 (in the single-\(...\) form the app feeds to SwiftMath): a long text
+        // run followed by \sum / \int / \sqrt. Before the fix the operators were placed past the
+        // right edge and never wrapped, so the whole math tail disappeared.
+        let latex = "\\(\\text{What would you like to do with the expression involving the sum and the integral }" +
+                    "\\sum_{-1/x}^{+1/x} \\int_{-\\infty}^{+\\infty} \\sqrt[16]{x}\\,dx\\text{?}\\)"
+        assertNoRightEdgeOverflow(latex, maxWidth: 250)
+    }
+
+    func testMixedTextWithScriptedAtomsDoesNotOverflow() {
+        // Reported entry 2: \text{} blocks interleaved with x^{p} and \int. Before the fix the
+        // scripted atoms broke between base and script (or were placed off-screen).
+        let latex = "\\(\\text{Check convergence on }[0,+\\infty)\\text{: for }x^{p}\\text{ with }p>-1\\text{, }" +
+                    "\\int_{0}^{1} x^{p} dx\\text{ converges, but }\\int_{1}^{+\\infty} x^{p} dx\\text{ diverges. Here, }" +
+                    "p=\\frac{1}{16}>-1\\text{, so the integral from 1 to }+\\infty\\text{ diverges.}\\)"
+        assertNoRightEdgeOverflow(latex, maxWidth: 250)
+    }
+
+    /// Lay out `latex` constrained to `maxWidth` and assert that no large operator (e.g. \sum with
+    /// stacked limits) sitting on a continuation line vertically intrudes into a display that sits
+    /// on a line above it and horizontally overlaps it. A tall operator must push its line down far
+    /// enough to clear the line above.
+    private func assertLargeOperatorsDoNotOverlapLinesAbove(_ latex: String, maxWidth: CGFloat,
+                                                            file: StaticString = #file, line: UInt = #line) {
+        let label = MTMathUILabel()
+        label.latex = latex
+        label.font = MTFontManager.fontManager.defaultFont
+        XCTAssertNil(label.error, "Should parse without error: \(String(describing: label.error))", file: file, line: line)
+
+        label.preferredMaxLayoutWidth = maxWidth
+        let size = label.intrinsicContentSize
+        label.frame = CGRect(origin: .zero, size: size)
+        #if os(macOS)
+        label.layout()
+        #else
+        label.layoutSubviews()
+        #endif
+
+        guard let displayList = label.displayList else {
+            XCTFail("Display list should be created", file: file, line: line)
+            return
+        }
+
+        // In the Y-up coordinate system: top = pos + ascent (higher Y), bottom = pos - descent.
+        // A display on a higher line has a larger baseline y. The operator (lower line) must sit
+        // entirely below any display above it that shares horizontal space.
+        let lineGap: CGFloat = 15.0
+        let ops = displayList.subDisplays.filter { $0 is MTLargeOpLimitsDisplay }
+        for op in ops {
+            let opTop = op.position.y + op.ascent
+            let opRange = op.position.x ... (op.position.x + op.width)
+            for other in displayList.subDisplays where other !== op {
+                // Only consider displays that are on a line above the operator.
+                guard other.position.y > op.position.y + lineGap else { continue }
+                let oLeft = other.position.x, oRight = other.position.x + other.width
+                let xOverlap = min(opRange.upperBound, oRight) - max(opRange.lowerBound, oLeft)
+                guard xOverlap > 0 else { continue }
+                let otherBottom = other.position.y - other.descent
+                XCTAssertLessThanOrEqual(opTop, otherBottom + 0.5,
+                    "Large operator (top \(opTop)) overlaps a display above it (bottom \(otherBottom))",
+                    file: file, line: line)
+            }
+        }
+    }
+
+    func testLargeOperatorWithLimitsOnSecondLineNoOverlap() {
+        // Reported issue: the \sum lands on the second line and its stacked superscript (+1/x)
+        // overlapped the first line of text. The operator's line must drop to clear the line above.
+        let latex = "\\(\\text{What would you like to do with the expression }" +
+                    "\\sum_{-1/x}^{+1/x} \\int_{-\\infty}^{+\\infty} \\sqrt[16]{x}\\,dx\\text{?}\\)"
+        assertLargeOperatorsDoNotOverlapLinesAbove(latex, maxWidth: 250)
+        assertNoRightEdgeOverflow(latex, maxWidth: 250)
+    }
+
+    func testLargeOperatorScriptsAreNotDuplicatedWhenWrapping() {
+        // Regression: the width-estimation used for line-break decisions must not mutate the live
+        // script lists. createLineForMathList runs preprocessMathList, which fuses adjacent ordinary
+        // atoms in place; measuring the real lists made the subsequent render fuse a second time,
+        // duplicating glyphs (the \sum / \int limits showed "+∞∞" / "−∞∞").
+        let label = MTMathUILabel()
+        label.latex = "\\(\\sum_{-1/x}^{+1/x}\\int_{-\\infty}^{+\\infty}\\sqrt[16]{x}\\,dx\\)"
+        label.font = MTFontManager.fontManager.defaultFont
+        label.preferredMaxLayoutWidth = 250
+        _ = label.intrinsicContentSize
+        label.frame = CGRect(x: 0, y: 0, width: 250, height: 200)
+        #if os(macOS)
+        label.layout()
+        #else
+        label.layoutSubviews()
+        #endif
+        XCTAssertNil(label.error, "Should render without error")
+
+        // Collect every rendered text fragment.
+        var fragments: [String] = []
+        func walk(_ d: MTDisplay) {
+            if let l = d as? MTCTLineDisplay, let s = l.attributedString?.string, !s.isEmpty {
+                fragments.append(s)
+            }
+            if let ml = d as? MTMathListDisplay { ml.subDisplays.forEach(walk) }
+        }
+        (label.displayList?.subDisplays ?? []).forEach(walk)
+
+        // No fragment should contain a repeated infinity glyph (the duplication signature).
+        for fragment in fragments {
+            XCTAssertFalse(fragment.contains("∞∞"),
+                "Script glyphs were duplicated during line-wrap layout: '\(fragment)'")
+        }
+    }
+
+    func testTextAfterScriptedAtomFillsRemainderOfLine() {
+        // Regression: after a scripted atom (x^{1/16}) flushes, the pen is mid-line. The following
+        // \text{...} run must continue on the SAME line and fill the remaining width — it must not be
+        // pushed wholesale to the next line (which wasted ~half the line).
+        let label = MTMathUILabel()
+        label.latex = "\\(\\text{Note that }x^{1/16}\\text{ is not real for negative }x" +
+                      "\\text{, so the integral over any interval containing negative values is not defined in the real numbers.}\\)"
+        label.font = MTFontManager.fontManager.defaultFont
+        let maxWidth: CGFloat = 300
+        label.preferredMaxLayoutWidth = maxWidth
+        _ = label.intrinsicContentSize
+        label.frame = CGRect(x: 0, y: 0, width: maxWidth, height: 200)
+        #if os(macOS)
+        label.layout()
+        #else
+        label.layoutSubviews()
+        #endif
+        XCTAssertNil(label.error, "Should render without error")
+
+        guard let subDisplays = label.displayList?.subDisplays, !subDisplays.isEmpty else {
+            XCTFail("Display list should be created")
+            return
+        }
+
+        // Identify the first (top) text line by the baseline of the text displays (the superscript
+        // of x^{1/16} sits above the baseline, so use MTCTLineDisplay positions, not all displays).
+        let textLines = subDisplays.compactMap { $0 as? MTCTLineDisplay }.filter { $0.width > 0 }
+        let firstLineY = textLines.map { $0.position.y }.max()!
+        // After the script, text must continue on the first line — its right edge must fill well past
+        // the base nucleus rather than wrapping the whole run to the next line.
+        let firstLineTextRight = textLines
+            .filter { abs($0.position.y - firstLineY) < 1.0 }
+            .map { $0.position.x + $0.width }
+            .max() ?? 0
+        XCTAssertGreaterThan(firstLineTextRight, maxWidth * 0.6,
+            "First line ends at \(firstLineTextRight) — text was not packed onto the line after the scripted atom (premature break)")
+    }
 }
