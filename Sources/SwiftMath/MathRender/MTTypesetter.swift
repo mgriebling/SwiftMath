@@ -597,8 +597,14 @@ class MTTypesetter {
         let spaceArray = getInterElementSpaces()[Int(leftIndex)]
         let spaceTypeObj = spaceArray[Int(rightIndex)]
         let spaceType = spaceTypeObj
-        assert(spaceType != .invalid, "Invalid space between \(left) and \(right)")
-        
+        // An "invalid" adjacency (e.g. a Relation immediately followed by a
+        // Binary Operator, as in `x = -1`) is a valid math list that simply has
+        // no defined inter-element spacing. Render it with zero spacing instead
+        // of trapping: the previous `assert(spaceType != .invalid, ...)` crashed
+        // debug builds on perfectly valid equations, while release builds (where
+        // assertions are compiled out) already fell through to `return 0`.
+        if spaceType == .invalid { return 0 }
+
         let spaceMultipler = self.getSpacingInMu(spaceType)
         if spaceMultipler > 0 {
             // 1 em = size of font in pt. space multipler is in multiples mu or 1/18 em
