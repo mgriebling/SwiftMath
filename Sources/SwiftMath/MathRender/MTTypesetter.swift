@@ -1230,6 +1230,15 @@ class MTTypesetter {
 
         let glyphHeight: CGFloat
 
+        // Typeset the inner content at most once. The resulting display is reused
+        // for both the delimiter height calculation and the placement below.
+        // Typesetting the inner list twice mutates its atoms in place
+        // (preprocessMathList fuses ordinary atoms via MTMathAtom.fuse, which is
+        // non-idempotent), which previously duplicated the rendered content of
+        // any \left...\right group containing a fraction or multi-atom run
+        // (GitHub issue #66).
+        var innerListDisplay: MTMathListDisplay? = nil
+
         // Check if we have an explicit delimiter height (from \big, \Big, etc.)
         if let delimiterMultiplier = inner!.delimiterHeight {
             // delimiterHeight is a multiplier (e.g., 1.2, 1.8, 2.4, 3.0)
@@ -1237,7 +1246,7 @@ class MTTypesetter {
             glyphHeight = styleFont.fontSize * delimiterMultiplier
         } else {
             // Calculate height based on inner content (for \left...\right)
-            let innerListDisplay = MTTypesetter.createLineForMathList(inner!.innerList, font:font, style:style, cramped:cramped, spaced:true, maxWidth:maxWidth)
+            innerListDisplay = MTTypesetter.createLineForMathList(inner!.innerList, font:font, style:style, cramped:cramped, spaced:true, maxWidth:maxWidth)
             let axisHeight = styleFont.mathTable!.axisHeight
             // delta is the max distance from the axis
             let delta = max(innerListDisplay!.ascent - axisHeight, innerListDisplay!.descent + axisHeight);
@@ -1265,12 +1274,13 @@ class MTTypesetter {
         }
 
         // Only include inner content if not using explicit delimiter height
-        // (explicit height commands like \big produce standalone delimiters)
-        if inner!.delimiterHeight == nil {
-            let innerListDisplay = MTTypesetter.createLineForMathList(inner!.innerList, font:font, style:style, cramped:cramped, spaced:true, maxWidth:maxWidth)
-            innerListDisplay!.position = position;
-            position.x += innerListDisplay!.width;
-            innerElements.append(innerListDisplay!)
+        // (explicit height commands like \big produce standalone delimiters).
+        // Reuse the display already typeset for the height calculation above so the
+        // inner list is never typeset twice (see issue #66).
+        if inner!.delimiterHeight == nil, let innerListDisplay {
+            innerListDisplay.position = position;
+            position.x += innerListDisplay.width;
+            innerElements.append(innerListDisplay)
         }
 
         if inner!.rightBoundary != nil && !inner!.rightBoundary!.nucleus.isEmpty {
