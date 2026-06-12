@@ -1232,11 +1232,6 @@ class MTTypesetter {
 
         // Typeset the inner content at most once. The resulting display is reused
         // for both the delimiter height calculation and the placement below.
-        // Typesetting the inner list twice mutates its atoms in place
-        // (preprocessMathList fuses ordinary atoms via MTMathAtom.fuse, which is
-        // non-idempotent), which previously duplicated the rendered content of
-        // any \left...\right group containing a fraction or multi-atom run
-        // (GitHub issue #66).
         var innerListDisplay: MTMathListDisplay? = nil
 
         // Check if we have an explicit delimiter height (from \big, \Big, etc.)
