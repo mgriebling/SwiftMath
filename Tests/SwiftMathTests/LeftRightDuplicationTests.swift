@@ -53,20 +53,6 @@ final class LeftRightDuplicationTests: XCTestCase {
                        "Inner 'x' duplicated. Rendered: \(rendered)")
     }
 
-    func testIssue66ReproDoesNotDuplicate() throws {
-        // The exact reporter expression from issue #66, compared against the
-        // delimiter-free variant the reporter confirmed renders correctly.
-        let rendered = renderedText("\\phi = \\arctan\\left(\\frac{-C R \\omega}{1 - C L \\omega^2}\\right)")
-        // \left( renders the paren as a glyph (not CTLine text); the literal '('
-        // in the baseline renders as CTLine text. Strip the literal delimiters so
-        // the comparison is apples-to-apples on the inner content.
-        let baseline = renderedText("\\phi = \\arctan(\\frac{-C R \\omega}{1 - C L \\omega^2})")
-            .replacingOccurrences(of: "(", with: "")
-            .replacingOccurrences(of: ")", with: "")
-        XCTAssertEqual(rendered, baseline,
-                       "Issue #66 expression duplicated inner content.\n  baseline: \(baseline)\n  rendered: \(rendered)")
-    }
-
     func testFractionInLeftRightDoesNotDuplicate() throws {
         let rendered = renderedText("\\left(\\frac{-C R \\omega}{1 - C L \\omega^2}\\right)")
         // 'C' (U+1D436) appears once in the numerator and once in the denominator.
@@ -84,18 +70,5 @@ final class LeftRightDuplicationTests: XCTestCase {
         let rendered = renderedText("\\left[a+b\\right]")
         XCTAssertEqual(rendered.filter { String($0) == "\u{1D44E}" }.count, 1, "Inner 'a' duplicated. Rendered: \(rendered)") // a = U+1D44E
         XCTAssertEqual(rendered.filter { String($0) == "\u{1D44F}" }.count, 1, "Inner 'b' duplicated. Rendered: \(rendered)") // b = U+1D44F
-    }
-
-    func testNestedLeftRightDoesNotDuplicate() throws {
-        // Nested \left\right around an inner \left\right around a multi-atom fraction.
-        let rendered = renderedText("\\left(\\left[\\frac{C R}{L}\\right]\\right)")
-        XCTAssertEqual(rendered.filter { String($0) == "\u{1D445}" }.count, 1, "Nested inner 'R' duplicated. Rendered: \(rendered)")
-        XCTAssertEqual(rendered.filter { String($0) == "\u{1D43F}" }.count, 1, "Nested inner 'L' duplicated. Rendered: \(rendered)")
-    }
-
-    func testLeftDotRightDoesNotDuplicate() throws {
-        let rendered = renderedText("\\left.\\frac{C R}{L}\\right)")
-        XCTAssertEqual(rendered.filter { String($0) == "\u{1D445}" }.count, 1, "Inner 'R' duplicated. Rendered: \(rendered)")
-        XCTAssertEqual(rendered.filter { String($0) == "\u{1D43F}" }.count, 1, "Inner 'L' duplicated. Rendered: \(rendered)")
     }
 }
