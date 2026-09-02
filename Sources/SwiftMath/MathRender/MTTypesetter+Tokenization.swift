@@ -33,7 +33,21 @@ extension MTTypesetter {
         // Phase 0: Preprocess atoms to fuse ordinary characters
         // This is critical for accents and other structures where multi-character
         // text like "xyzw" should stay together as a single atom
-        let preprocessedAtoms = MTTypesetter.preprocessMathList(mathList)
+        //
+        // INVARIANT: typesetting never changes its input.
+        // `preprocessMathList` mutates the atoms it is handed (it rewrites `type`
+        // and `nucleus`, and `MTMathAtom.fuse(with:)` appends the next atom's
+        // nucleus onto the previous atom). Every internal typeset request funnels
+        // through this function, and several of them typeset the same list more
+        // than once (delimiter measurement, accent re-layout), so preprocessing
+        // the caller's atoms made typesetting non-idempotent: pass 1 fused
+        // "3","y" into "3y", pass 2 fused "3y","y" into "3yy" (issue #66).
+        // Preprocess a deep copy instead. `MTMathAtom.copy()` is the
+        // type-dispatched deep copy (sublists included); `finalized` is
+        // deliberately not used here because it re-applies TeX rules 5 & 6.
+        let atomsToPreprocess = MTMathList()
+        atomsToPreprocess.atoms = mathList.atoms.map { $0.copy() }
+        let preprocessedAtoms = MTTypesetter.preprocessMathList(atomsToPreprocess)
 
         // Phase 1: Tokenize atoms into breakable elements
         let tokenizer = MTAtomTokenizer(font: font, style: style, cramped: cramped, maxWidth: maxWidth)
