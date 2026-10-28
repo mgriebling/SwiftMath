@@ -1529,7 +1529,12 @@ public struct MTMathListBuilder {
             currentCol+=1
             if currentEnv!.numRows > currentRow {
                 currentRow = currentEnv!.numRows
-                rows.append([MTMathList]())
+                // A row break consumed inside a sub-list (e.g. `x^\\`) can advance
+                // numRows by more than one per cell, so grow to the row we're on
+                // rather than by exactly one, or the subscript above traps.
+                while rows.count <= currentRow {
+                    rows.append([MTMathList]())
+                }
                 currentCol = 0
             }
         }
