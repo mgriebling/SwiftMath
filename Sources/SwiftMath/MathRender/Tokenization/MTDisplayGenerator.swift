@@ -102,17 +102,17 @@ class MTDisplayGenerator {
                 switch element.content {
                 case .text(let text):
                     let display = createTextDisplay(text, at: elementPosition, element: element)
-                    displays.append(display)
+                    displays.append(colored(display, element))
 
                 case .display(let preRenderedDisplay):
                     // Use pre-rendered display (fraction, radical, etc.)
                     var mutableDisplay = preRenderedDisplay
                     mutableDisplay.position = elementPosition
-                    displays.append(mutableDisplay)
+                    displays.append(colored(mutableDisplay, element))
 
                 case .operator(let op, _):
                     let display = createTextDisplay(op, at: elementPosition, element: element)
-                    displays.append(display)
+                    displays.append(colored(display, element))
 
                 case .script:
                     // Standalone script (shouldn't happen, but handle gracefully)
@@ -162,14 +162,14 @@ class MTDisplayGenerator {
                 switch element.content {
                 case .text(let text):
                     let display = createTextDisplay(text, at: basePosition, element: element, hasScript: hasScripts)
-                    displays.append(display)
+                    displays.append(colored(display, element))
                 case .display(let preRenderedDisplay):
                     var mutableDisplay = preRenderedDisplay
                     mutableDisplay.position = basePosition
-                    displays.append(mutableDisplay)
+                    displays.append(colored(mutableDisplay, element))
                 case .operator(let op, _):
                     let display = createTextDisplay(op, at: basePosition, element: element, hasScript: hasScripts)
-                    displays.append(display)
+                    displays.append(colored(display, element))
                 default:
                     break
                 }
@@ -303,7 +303,7 @@ class MTDisplayGenerator {
                 wrappedScript.position = scriptPosition
                 wrappedScript.index = 0  // Index of the base atom this script belongs to
 
-                displays.append(wrappedScript)
+                displays.append(colored(wrappedScript, element))
             }
         }
 
@@ -343,6 +343,14 @@ class MTDisplayGenerator {
     }
 
     /// Create a text display for a character or string
+    /// Gives the display the color of its element (from \color or \textcolor), if it has one
+    private func colored(_ display: MTDisplay, _ element: MTBreakableElement) -> MTDisplay {
+        if let color = element.color {
+            display.localTextColor = color
+        }
+        return display
+    }
+
     private func createTextDisplay(_ text: String, at position: CGPoint, element: MTBreakableElement, hasScript: Bool = false) -> MTDisplay {
         let attrString = NSMutableAttributedString(string: text)
         attrString.addAttribute(

@@ -64,11 +64,26 @@ class MTAtomTokenizer {
             }
 
             let start = elements.count
+            // Types for the spaces on each side of the atom; a colored argument has those of its own atoms
+            var leftType = atom.type
+            var rightType = atom.type
 
             if Self.isBrace(atom) {
                 // \underbrace and \overbrace set their scripts as limits (the label) themselves
                 if let element = atomTokenizer.tokenizeAtom(atom, prevAtom: prevAtom, atomIndex: index, allAtoms: atoms) {
                     elements.append(element)
+                }
+            } else if let (innerList, colorString) = Self.textColorArgument(atom) {
+                // \color and \textcolor: the argument is laid out in line, so it breaks across lines like the
+                // rest of the formula, and drawn in the color (a nested color command keeps its own)
+                let copy = MTMathList()
+                copy.atoms = innerList.atoms.map { $0.copy() }
+                let innerAtoms = MTTypesetter.preprocessMathList(copy)
+                let color = MTColor(fromHexString: colorString)
+                elements.append(contentsOf: atomTokenizer.tokenize(innerAtoms).map { Self.element($0, coloredWith: color) })
+                if let first = innerAtoms.first, let last = innerAtoms.last {
+                    leftType = first.type
+                    rightType = last.type
                 }
             } else if atom.superScript != nil || atom.subScript != nil {
                 // Handle scripts (subscript/superscript) - these must be grouped with their base
@@ -97,12 +112,12 @@ class MTAtomTokenizer {
             // spaces such as \quad add to it and don't count as atoms.
             if atom.type != .space && elements.count > start {
                 if let previousType, start > 0 {
-                    let space = atomTokenizer.widthCalculator.getInterElementSpacing(left: previousType, right: atom.type)
+                    let space = atomTokenizer.widthCalculator.getInterElementSpacing(left: previousType, right: leftType)
                     if space > 0 {
                         elements.insert(interAtomSpace(space, after: elements[start - 1]), at: start)
                     }
                 }
-                previousType = atom.type
+                previousType = rightType
             }
 
             index += 1
@@ -194,10 +209,9 @@ class MTAtomTokenizer {
         case .style:
             return nil
 
-        // Color - extract inner content with color attribute
+        // Color - the argument laid out as one piece, in its color or on its background
         case .color, .colorBox, .textcolor:
-            // For now, treat as ordinary (color will be handled in display generation)
-            return tokenizeTextAtom(atom, prevAtom: prevAtom, atomIndex: atomIndex, allAtoms: allAtoms)
+            return tokenizeColor(atom, prevAtom: prevAtom, atomIndex: atomIndex)
 
         default:
             // Treat unknown types as ordinary
@@ -1116,6 +1130,84 @@ class MTAtomTokenizer {
             parentId: nil,
             originalAtom: overline,
             indexRange: overline.indexRange,
+            color: nil,
+            backgroundColor: nil,
+            indivisible: true
+        )
+    }
+
+    /// The argument and color of \color and \textcolor
+    static func textColorArgument(_ atom: MTMathAtom) -> (MTMathList, String)? {
+        switch atom {
+        case let color as MTMathColor:
+            return color.innerList.map { ($0, color.colorString) }
+        case let color as MTMathTextColor:
+            return color.innerList.map { ($0, color.colorString) }
+        default:
+            return nil
+        }
+    }
+
+    /// The element drawn in `color`, unless it already has a color of its own
+    static func element(_ element: MTBreakableElement, coloredWith color: MTColor?) -> MTBreakableElement {
+        guard let color, element.color == nil else { return element }
+        return MTBreakableElement(
+            content: element.content,
+            width: element.width,
+            height: element.height,
+            ascent: element.ascent,
+            descent: element.descent,
+            isBreakBefore: element.isBreakBefore,
+            isBreakAfter: element.isBreakAfter,
+            penaltyBefore: element.penaltyBefore,
+            penaltyAfter: element.penaltyAfter,
+            groupId: element.groupId,
+            parentId: element.parentId,
+            originalAtom: element.originalAtom,
+            indexRange: element.indexRange,
+            color: color,
+            backgroundColor: element.backgroundColor,
+            indivisible: element.indivisible
+        )
+    }
+
+    /// \colorbox, and \color or \textcolor wherever their argument cannot be laid out in line. Their
+    /// nucleus is empty, so tokenizing them as text dropped the whole argument: the argument is
+    /// typeset as one piece and drawn in the color or on the background (a \colorbox does not break).
+    private func tokenizeColor(_ atom: MTMathAtom, prevAtom: MTMathAtom?, atomIndex: Int) -> MTBreakableElement? {
+        let innerList: MTMathList?
+        let colorString: String
+        switch atom {
+        case let color as MTMathColor:
+            (innerList, colorString) = (color.innerList, color.colorString)
+        case let color as MTMathTextColor:
+            (innerList, colorString) = (color.innerList, color.colorString)
+        case let box as MTMathColorbox:
+            (innerList, colorString) = (box.innerList, box.colorString)
+        default:
+            return nil
+        }
+        guard let display = MTTypesetter.createLineForMathList(innerList ?? MTMathList(), font: font, style: style, cramped: cramped) else { return nil }
+        if atom.type == .colorBox {
+            display.localBackgroundColor = MTColor(fromHexString: colorString)
+        } else {
+            display.localTextColor = MTColor(fromHexString: colorString)
+        }
+
+        return MTBreakableElement(
+            content: .display(display),
+            width: display.width,
+            height: display.ascent + display.descent,
+            ascent: display.ascent,
+            descent: display.descent,
+            isBreakBefore: true,
+            isBreakAfter: true,
+            penaltyBefore: MTBreakPenalty.good,
+            penaltyAfter: MTBreakPenalty.good,
+            groupId: nil,
+            parentId: nil,
+            originalAtom: atom,
+            indexRange: atom.indexRange,
             color: nil,
             backgroundColor: nil,
             indivisible: true
