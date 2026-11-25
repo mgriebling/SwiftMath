@@ -951,7 +951,7 @@ class MTAtomTokenizer {
         //   → makeLargeOp() would create scripts via makeScripts(), causing duplication
         //   → We MUST clear scripts and let tokenizeAtomWithScripts() handle them separately
 
-        let limits = op.limits && (style == .display || style == .text)
+        let limits = MTTypesetter.limitsAboveAndBelow(op, style: style)
 
         let originalSuperScript = op.superScript
         let originalSubScript = op.subScript

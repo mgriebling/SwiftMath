@@ -486,6 +486,9 @@ class MTTypesetter {
     
     static var placeholderColor: MTColor { MTColor.blue }
 
+    /// Layout conventions for fractions and limits, see `MTLayoutConventions.current`
+    static var conventions: MTLayoutConventions { MTLayoutConventions.current }
+
     init(withFont font:MTFont?, style:MTLineStyle, cramped:Bool, spaced:Bool, maxWidth:CGFloat = 0) {
         self.font = font
         self.displayAtoms = [MTDisplay]()
@@ -799,11 +802,26 @@ class MTTypesetter {
     }
     
     func fractionStyle() -> MTLineStyle {
+        if Self.conventions == .tex {
+            // TeX: numerator and denominator one style smaller (display → text → script → scriptscript)
+            return style == .scriptOfScript ? .scriptOfScript : style.inc()
+        }
         // Keep fractions at the same style level instead of incrementing.
         // This ensures that fraction numerators/denominators have the same
         // font size as regular text, preventing them from appearing too small
         // in inline mode or when nested.
         return style
+    }
+
+    /// Whether the limits of an operator with limits (\sum, \lim, ...) go above and below it in the
+    /// current style; otherwise they are set to its side like scripts.
+    func limitsAboveAndBelow(_ op: MTLargeOperator) -> Bool {
+        Self.limitsAboveAndBelow(op, style: style)
+    }
+
+    static func limitsAboveAndBelow(_ op: MTLargeOperator, style: MTLineStyle) -> Bool {
+        guard op.limits else { return false }
+        return style == .display || (style == .text && conventions == .readable)
     }
 
     /// The font for laying out a part in `newStyle` inside a list laid out in `style` with `font`,
@@ -893,6 +911,15 @@ class MTTypesetter {
         display.lineThickness = barThickness;
         display.linePosition = barLocation;
         if frac.leftDelimiter.isEmpty && frac.rightDelimiter.isEmpty {
+            if Self.conventions == .tex {
+                // TeX encloses a fraction in null delimiters of \nulldelimiterspace (1.2pt = 0.12em)
+                let space = styleFont.fontSize * 0.12
+                display.position = CGPoint(x: space, y: 0)
+                let padded = MTMathListDisplay(withDisplays: [display], range: frac.indexRange)
+                padded.width = display.width + 2 * space
+                padded.position = currentPosition
+                return padded
+            }
             return display
         } else {
             return self.addDelimitersToFractionDisplay(display, forFraction: frac)
@@ -1142,7 +1169,8 @@ class MTTypesetter {
     func makeLargeOp(_ op:MTLargeOperator!) -> MTDisplay?  {
         // Show limits above/below in display mode
         // For inline mode, we still center limits below for operators like \lim, but with tighter spacing
-        let limits = op.limits && (style == .display || style == .text)
+        // (unless conventions is .tex, which sets them to the side like TeX)
+        let limits = limitsAboveAndBelow(op)
         var delta = CGFloat(0)
         if op.nucleus.count == 1 {
             var glyph = self.findGlyphForCharacterAtIndex(op.nucleus.startIndex, inString:op.nucleus)
@@ -1195,7 +1223,7 @@ class MTTypesetter {
             return display;
         }
         // Show limits above/below in both display and text (inline) modes
-        if op.limits && (style == .display || style == .text) {
+        if limitsAboveAndBelow(op) {
             // make limits (above/below positioning)
             var superScript:MTMathListDisplay? = nil, subScript:MTMathListDisplay? = nil
 

@@ -659,6 +659,17 @@ show the text instead of dropping it, and Unicode math symbols typed directly ar
 `36÷5`, `x≤3`, `a≠b` and `α+β` render exactly like `36\div 5`, `x\leq 3`, `a\neq b` and `\alpha+\beta`
 (as in KaTeX and MathJax). Text commands such as `\textbf{...}` keep their spaces like `\text{...}`.
 
+##### Layout Conventions
+By default fractions in text (inline) style keep the size of the text and the limits of `\sum`, `\lim`
+and the like go above and below the operator, which is easy to read but makes inline formulas tall.
+To lay out formulas the way TeX and KaTeX do (script-size numerators and denominators in text style,
+limits to the side of the operator in text style, and TeX's null delimiter space around fractions), set
+this once before typesetting:
+
+```swift
+MTLayoutConventions.current = .tex
+```
+
 ##### Custom Commands
 You can define your own commands that are not already predefined. This is
 similar to macros is LaTeX. To define your own command use:

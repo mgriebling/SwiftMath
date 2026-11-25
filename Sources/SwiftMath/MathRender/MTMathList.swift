@@ -638,6 +638,28 @@ public class MTMathSpace: MTMathAtom {
 }
 
 /**
+ Layout conventions of the typesetter. Choose them with `MTLayoutConventions.current`.
+ */
+public enum MTLayoutConventions {
+    /// Numerators, denominators and limits in text (inline) style keep the size of the surrounding
+    /// text, and the limits of operators like `\sum` and `\lim` go above and below them. Easy to read,
+    /// but inline formulas make taller lines.
+    case readable
+    /// As in TeX and KaTeX: numerators and denominators are one style smaller (script size in text
+    /// style), limits go to the side of the operator in text style, and a fraction has the null delimiter
+    /// space (0.12em) on each side. Inline formulas stay close to the height of the text around them.
+    case tex
+
+    /// The conventions used for typesetting (labels, images). Set it once, before typesetting.
+    public static var current: MTLayoutConventions {
+        get { lock.lock(); defer { lock.unlock() }; return _current }
+        set { lock.lock(); defer { lock.unlock() }; _current = newValue }
+    }
+    private static var _current: MTLayoutConventions = .readable
+    private static let lock = NSLock()
+}
+
+/**
  Styling of a line of math
  */
 public enum MTLineStyle:Int, Comparable {
