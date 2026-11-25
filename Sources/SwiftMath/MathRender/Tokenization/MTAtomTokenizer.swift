@@ -120,13 +120,17 @@ class MTAtomTokenizer {
             // operator name and its argument, and no medium or thick space inside scripts. Explicit
             // spaces such as \quad add to it and don't count as atoms.
             if atom.type != .space && elements.count > start {
-                if let previousType, start > 0 {
+                if let previousType {
                     let space = atomTokenizer.widthCalculator.getInterElementSpacing(left: previousType, right: leftType)
                     if space > 0 {
-                        elements.insert(interAtomSpace(space, after: elements[start - 1]), at: start)
+                        elements.insert(interAtomSpace(space, after: start > 0 ? elements[start - 1] : nil, atom: atom), at: start)
                     }
                 }
                 previousType = rightType
+            } else if elements.count == start && atom.type == .ordinary && atom.nucleus.isEmpty {
+                // An empty group draws nothing but is still an ordinary atom, like the {} that aligned
+                // environments put at the start of the second column so that "&=" is spaced as a relation
+                previousType = .ordinary
             }
 
             index += 1
@@ -137,7 +141,8 @@ class MTAtomTokenizer {
 
     /// The space between two atoms. A line can break here exactly where it could break between the
     /// two atoms; the break goes after the space, so it stays at the end of the line and is not seen.
-    private func interAtomSpace(_ width: CGFloat, after previous: MTBreakableElement) -> MTBreakableElement {
+    /// Without a previous element (after an empty group at the start of the list) it doesn't break.
+    private func interAtomSpace(_ width: CGFloat, after previous: MTBreakableElement?, atom: MTMathAtom) -> MTBreakableElement {
         MTBreakableElement(
             content: .space(width),
             width: width,
@@ -145,13 +150,13 @@ class MTAtomTokenizer {
             ascent: 0,
             descent: 0,
             isBreakBefore: false,
-            isBreakAfter: previous.isBreakAfter,
+            isBreakAfter: previous?.isBreakAfter ?? false,
             penaltyBefore: MTBreakPenalty.never,
-            penaltyAfter: previous.penaltyAfter,
+            penaltyAfter: previous?.penaltyAfter ?? MTBreakPenalty.never,
             groupId: nil,
             parentId: nil,
-            originalAtom: previous.originalAtom,
-            indexRange: previous.indexRange,
+            originalAtom: previous?.originalAtom ?? atom,
+            indexRange: previous?.indexRange ?? atom.indexRange,
             color: nil,
             backgroundColor: nil,
             indivisible: true

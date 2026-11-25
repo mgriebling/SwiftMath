@@ -131,3 +131,56 @@ final class NaturalWidthLineBreakTests: XCTestCase {
         }
     }
 }
+
+/// Spacing inside environments: cells are lists of their own
+final class EnvironmentSpacingTests: XCTestCase {
+    private var font: MTFont!
+    private var mu: CGFloat { font.mathTable!.muUnit }
+
+    override func setUp() {
+        super.setUp()
+        font = MTFontManager.manager.latinModernFont(withSize: 20)
+    }
+
+    /// The cell displays of the first table in the line, row by row
+    private func cells(_ latex: String) throws -> [[MTMathListDisplay]] {
+        let list = try XCTUnwrap(MTMathListBuilder.build(fromString: latex))
+        let line = try XCTUnwrap(MTTypesetter.createLineForMathList(list, font: font, style: .display))
+        func table(_ display: MTDisplay) -> MTMathListDisplay? {
+            guard let list = display as? MTMathListDisplay else { return nil }
+            // A table is a list of rows, each a list of cell lists
+            if list.subDisplays.count > 0, list.subDisplays.allSatisfy({ ($0 as? MTMathListDisplay)?.subDisplays.allSatisfy { $0 is MTMathListDisplay } ?? false }) {
+                return list
+            }
+            return list.subDisplays.lazy.compactMap { table($0) }.first
+        }
+        let rows = try XCTUnwrap(line.subDisplays.lazy.compactMap { table($0) }.first, latex).subDisplays
+        return rows.map { ($0 as! MTMathListDisplay).subDisplays.map { $0 as! MTMathListDisplay } }
+    }
+
+    func testRelationAfterTheAlignmentPointIsSpaced() throws {
+        // amsmath puts {} before the second column: "&=" gets the thick space of a relation
+        let rows = try cells("\\begin{aligned} f(x) &= 1 \\\\ &= 2 \\end{aligned}")
+        for row in rows {
+            let parts = row[1].subDisplays.sorted { $0.position.x < $1.position.x }
+            XCTAssertEqual(parts.first?.position.x ?? -1, 5 * mu, accuracy: 0.01)
+        }
+    }
+
+    func testMinusAtTheStartOfACellIsUnary() throws {
+        let list = try XCTUnwrap(MTMathListBuilder.build(fromString: "\\begin{pmatrix} -1 & 2 \\end{pmatrix}"))
+        let finalized = list.finalized
+        let inner = try XCTUnwrap(finalized.atoms.first as? MTInner)
+        let table = try XCTUnwrap(inner.innerList?.atoms.first as? MTMathTable)
+        // Matrix cells start with a style change, which TeX's rule does not count as an atom
+        XCTAssertEqual(table.cells[0][0].atoms.first { $0.type != .style }?.type, .unaryOperator)
+
+        // Laid out without the medium space of a binary operator: "−1" is one piece of text
+        let line = try XCTUnwrap(MTTypesetter.createLineForMathList(list, font: font, style: .display))
+        func texts(_ display: MTDisplay) -> [String] {
+            if let text = (display as? MTCTLineDisplay)?.attributedString?.string { return [text] }
+            return (display as? MTMathListDisplay)?.subDisplays.flatMap(texts) ?? []
+        }
+        XCTAssertTrue(texts(line).contains("\u{2212}1"), "\(texts(line))")
+    }
+}

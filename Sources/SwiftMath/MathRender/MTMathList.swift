@@ -863,9 +863,11 @@ public class MTMathTable: MTMathAtom {
     
     override public var finalized: MTMathAtom {
         let table = super.finalized as! MTMathTable
-        for var row in table.cells {
-            for i in 0..<row.count {
-                row[i] = row[i].finalized
+        // Assign through the table: `for var row in table.cells` changed a copy of each row, so cells
+        // were never finalized (a minus at the start of a cell stayed a binary operator, "− 1")
+        for row in table.cells.indices {
+            for column in table.cells[row].indices {
+                table.cells[row][column] = table.cells[row][column].finalized
             }
         }
         return table
@@ -985,7 +987,11 @@ public class MTMathList : NSObject {
         let finalizedList = MTMathList()
         let zeroRange = NSMakeRange(0, 0)
         
+        // The previous atom for TeX's rules 5 and 6. Style changes and spaces are not atoms in TeX,
+        // so "\textstyle -1" (the start of a matrix cell) or "a\quad -" don't count them.
         var prevNode: MTMathAtom? = nil
+        // The atom added last, for index ranges and joining digits into one number
+        var lastAdded: MTMathAtom? = nil
         for atom in self.atoms {
             let newNode = atom.finalized
             
@@ -994,12 +1000,12 @@ public class MTMathList : NSObject {
                 // If location is NSNotFound, treat as if there's no prevNode
                 // This prevents negative overflow when creating NSMakeRange
                 let index: Int
-                if prevNode == nil || prevNode!.indexRange.location == NSNotFound {
+                if lastAdded == nil || lastAdded!.indexRange.location == NSNotFound {
                     index = 0
                 } else {
                     // Additional safety: check for potential overflow
-                    let location = prevNode!.indexRange.location
-                    let length = prevNode!.indexRange.length
+                    let location = lastAdded!.indexRange.location
+                    let length = lastAdded!.indexRange.length
                     // If either value is suspicious (negative or too large), reset to 0
                     if location < 0 || length < 0 || location > Int.max - length {
                         index = 0
@@ -1020,14 +1026,17 @@ public class MTMathList : NSObject {
                     prevNode!.type = .unaryOperator
                 }
             case .number:
-                if prevNode != nil && prevNode!.type == .number && prevNode!.subScript == nil && prevNode!.superScript == nil {
-                    prevNode!.fuse(with: newNode)
+                if let lastAdded, lastAdded.type == .number && lastAdded.subScript == nil && lastAdded.superScript == nil {
+                    lastAdded.fuse(with: newNode)
                     continue // skip the current node, we are done here.
                 }
             default: break
             }
             finalizedList.add(newNode)
-            prevNode = newNode
+            lastAdded = newNode
+            if newNode.type != .style && newNode.type != .space {
+                prevNode = newNode
+            }
         }
         if prevNode != nil && prevNode!.type == .binaryOperator {
             prevNode!.type = .unaryOperator
