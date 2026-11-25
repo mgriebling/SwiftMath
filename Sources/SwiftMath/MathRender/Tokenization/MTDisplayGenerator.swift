@@ -18,14 +18,12 @@ class MTDisplayGenerator {
 
     let font: MTFont
     let style: MTLineStyle
-    let widthCalculator: MTElementWidthCalculator
 
     // MARK: - Initialization
 
     init(font: MTFont, style: MTLineStyle) {
         self.font = font
         self.style = style
-        self.widthCalculator = MTElementWidthCalculator(font: font, style: style)
     }
 
     // MARK: - Display Generation
@@ -97,20 +95,9 @@ class MTDisplayGenerator {
                 xOffset += groupAdvance
                 i = j
             } else {
-                // Regular element (not part of a group)
-
-                // CRITICAL: For operators, spacing should be split evenly before and after
-                // The element.width includes both spacing, but we need to position the operator
-                // with half spacing before it
-                var spacingBefore: CGFloat = 0
-                if case .operator(let op, _) = element.content {
-                    // Get the actual text width vs element width to calculate spacing
-                    let textWidth = widthCalculator.measureText(op)
-                    let totalSpacing = element.width - textWidth
-                    spacingBefore = totalSpacing / 2
-                }
-
-                let elementPosition = CGPoint(x: position.x + xOffset + spacingBefore, y: baseline)
+                // Regular element (not part of a group). Spaces around operators are separate
+                // elements, so every element is drawn where it starts.
+                let elementPosition = CGPoint(x: position.x + xOffset, y: baseline)
 
                 switch element.content {
                 case .text(let text):

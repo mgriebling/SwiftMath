@@ -460,7 +460,7 @@ This is a list of formula types that the library currently supports:
 * Combinatorics (`\binom`, `\choose` etc.)
 * Geometry symbols (e.g. angle, congruence etc.)
 * Ratios, proportions, percentages
-* Math spacing
+* Math spacing (TeX spacing between atoms, and `\,` `\:` `\;` `\!` `\quad` `\qquad`)
 * Overline and underline
 * Math accents (including `\hat`, `\tilde`, `\bar`, `\vec`, `\dot`, `\ddot`, etc.)
 * Vector arrows (`\vec`, `\overrightarrow`, `\overleftarrow`, `\overleftrightarrow` with automatic stretching)
@@ -696,7 +696,6 @@ Note this is not a complete implementation of LaTeX math mode. There are
 some pieces that are missing and may be included in future updates:
 
 * `\middle` delimiter for use between `\left` and `\right`
-* Some fine spacing commands (`\:`, `\;`, `\!` - note that `\,` works)
 
 For a complete list of features and their implementation status, see [MISSING_FEATURES.md](MISSING_FEATURES.md).
 

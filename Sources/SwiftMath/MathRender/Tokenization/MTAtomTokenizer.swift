@@ -40,6 +40,8 @@ class MTAtomTokenizer {
         var elements: [MTBreakableElement] = []
         var index = 0
         var currentStyle = self.style
+        // Type of the previous atom, for the TeX space between it and the next one
+        var previousType: MTMathAtomType? = nil
 
         while index < atoms.count {
             let atom = atoms[index]
@@ -60,6 +62,8 @@ class MTAtomTokenizer {
             } else {
                 atomTokenizer = self
             }
+
+            let start = elements.count
 
             // Handle scripts (subscript/superscript) - these must be grouped with their base
             if atom.superScript != nil || atom.subScript != nil {
@@ -82,10 +86,47 @@ class MTAtomTokenizer {
                 }
             }
 
+            // Space between this atom and the previous one, from both types and the current style
+            // (TeXbook Appendix G): none at the start of a list, thin after punctuation and between an
+            // operator name and its argument, and no medium or thick space inside scripts. Explicit
+            // spaces such as \quad add to it and don't count as atoms.
+            if atom.type != .space && elements.count > start {
+                if let previousType, start > 0 {
+                    let space = atomTokenizer.widthCalculator.getInterElementSpacing(left: previousType, right: atom.type)
+                    if space > 0 {
+                        elements.insert(interAtomSpace(space, after: elements[start - 1]), at: start)
+                    }
+                }
+                previousType = atom.type
+            }
+
             index += 1
         }
 
         return elements
+    }
+
+    /// The space between two atoms. A line can break here exactly where it could break between the
+    /// two atoms; the break goes after the space, so it stays at the end of the line and is not seen.
+    private func interAtomSpace(_ width: CGFloat, after previous: MTBreakableElement) -> MTBreakableElement {
+        MTBreakableElement(
+            content: .space(width),
+            width: width,
+            height: 0,
+            ascent: 0,
+            descent: 0,
+            isBreakBefore: false,
+            isBreakAfter: previous.isBreakAfter,
+            penaltyBefore: MTBreakPenalty.never,
+            penaltyAfter: previous.penaltyAfter,
+            groupId: nil,
+            parentId: nil,
+            originalAtom: previous.originalAtom,
+            indexRange: previous.indexRange,
+            color: nil,
+            backgroundColor: nil,
+            indivisible: true
+        )
     }
 
     // MARK: - Atom Tokenization
@@ -604,8 +645,9 @@ class MTAtomTokenizer {
         let op = atom.nucleus
         guard !op.isEmpty else { return nil }
 
-        // Calculate width with operator spacing
-        let width = widthCalculator.measureOperator(op, type: atom.type)
+        // The spaces around the operator depend on its neighbours and the style, so they are added
+        // between atoms by tokenize(_:) rather than included here
+        let width = widthCalculator.measureText(op)
 
         let ascent = font.fontSize * 0.5
         let descent = font.fontSize * 0.2
@@ -1120,8 +1162,8 @@ class MTAtomTokenizer {
 
     private func tokenizeSpace(_ atom: MTMathAtom, prevAtom: MTMathAtom?, atomIndex: Int) -> MTBreakableElement? {
         // Space atoms typically don't participate in breaking
-        // They are rendered as-is
-        let width = widthCalculator.measureSpace(atom.type)
+        // They are rendered as-is, with the amount given by the command (\quad is 1em, \! is negative)
+        let width = widthCalculator.measureSpace((atom as? MTMathSpace)?.space ?? 0)
 
         return MTBreakableElement(
             content: .space(width),

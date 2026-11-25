@@ -540,6 +540,7 @@ public class MTMathAtomFactory {
 
         // Spacing
         "," : MTMathSpace(space: 3),
+        ":" : MTMathSpace(space: 4),
         ">" : MTMathSpace(space: 4),
         ";" : MTMathSpace(space: 5),
         "!" : MTMathSpace(space: -3),
