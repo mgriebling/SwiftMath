@@ -24,7 +24,8 @@ public class MTMathAtomFactory {
         "gets" : "leftarrow",
         "to" : "rightarrow",
         "iff" : "Longleftrightarrow",
-        "AA" : "angstrom"
+        "AA" : "angstrom",
+        "dots" : "ldots",
     ]
     
     public static let delimiters = [
@@ -68,6 +69,11 @@ public class MTMathAtomFactory {
         // Double square brackets (strachey brackets)
         "llbracket" : "\u{27E6}",  // left double bracket
         "rrbracket" : "\u{27E7}",  // right double bracket
+        // amsmath delimiters that say which side they are on
+        "lvert" : "|",
+        "rvert" : "|",
+        "lVert" : "\u{2016}",
+        "rVert" : "\u{2016}",
     ]
     
     private static let delimValueLock = NSLock()
@@ -107,6 +113,7 @@ public class MTMathAtomFactory {
         "dot" :  "\u{0307}",
         "ddot" :  "\u{0308}",
         "check" :  "\u{030C}",
+        "mathring" :  "\u{030A}",
         "vec" :  "\u{20D7}",
         "widehat" :  "\u{0302}",
         "widetilde" :  "\u{0303}",
@@ -281,6 +288,9 @@ public class MTMathAtomFactory {
         "bowtie" : MTMathAtom(type: .relation, value: "\u{22C8}"),
         "perp" : MTMathAtom(type: .relation, value: "\u{27C2}"),
         "implies" : MTMathAtom(type: .relation, value: "\u{27F9}"),
+        "impliedby" : MTMathAtom(type: .relation, value: "\u{27F8}"),
+        "therefore" : MTMathAtom(type: .relation, value: "\u{2234}"),
+        "because" : MTMathAtom(type: .relation, value: "\u{2235}"),
 
         // Negated relations (amssymb)
         // Inequality negations
@@ -504,6 +514,13 @@ public class MTMathAtomFactory {
 		"OE" : MTMathAtom(type: .ordinary, value: "\u{0152}"),	// NEW Œ
         "|" : MTMathAtom(type: .ordinary, value: "\u{2016}"),
         "vert" : MTMathAtom(type: .ordinary, value: "|"),
+        "lvert" : MTMathAtom(type: .open, value: "|"),
+        "rvert" : MTMathAtom(type: .close, value: "|"),
+        "lVert" : MTMathAtom(type: .open, value: "\u{2016}"),
+        "rVert" : MTMathAtom(type: .close, value: "\u{2016}"),
+        "bmod" : MTMathAtom(type: .binaryOperator, value: "mod"),
+        "checkmark" : MTMathAtom(type: .ordinary, value: "\u{2713}"),
+        "blacksquare" : MTMathAtom(type: .ordinary, value: "\u{25A0}"),
         "ldots" : MTMathAtom(type: .ordinary, value: "\u{2026}"),
         "prime" : MTMathAtom(type: .ordinary, value: "\u{2032}"),
         "hbar" : MTMathAtom(type: .ordinary, value: "\u{210F}"),
@@ -648,6 +665,7 @@ public class MTMathAtomFactory {
         "bf": .bold,
         "textbf": .bold,
         "mathcal": .caligraphic,
+        "mathscr": .caligraphic,
         "cal": .caligraphic,
         "mathtt": .typewriter,
         "texttt": .typewriter,

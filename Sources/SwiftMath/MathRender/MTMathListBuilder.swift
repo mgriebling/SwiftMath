@@ -117,6 +117,18 @@ public struct MTMathListBuilder {
     }
 
     // Peek at next command without consuming it (for \not lookahead)
+    /// Reads the next character if \not can negate it (\not=, \not<, \not>) and returns the negated symbol;
+    /// otherwise leaves the input as it was.
+    mutating func readNegatableCharacter() -> String? {
+        let savedIndex = currentCharIndex
+        skipSpaces()
+        if hasCharacters, let negated = Self.notCombinations[String(getNextCharacter())] {
+            return negated
+        }
+        currentCharIndex = savedIndex
+        return nil
+    }
+
     mutating func peekNextCommand() -> String {
         let savedIndex = currentCharIndex
         skipSpaces()
@@ -203,6 +215,14 @@ public struct MTMathListBuilder {
         "supset": "\u{2285}",   // ⊅ Not superset
         "supseteq": "\u{2289}", // ⊉ Not superset or equal
         "=": "\u{2260}",        // ≠ Not equal (alternative to \neq)
+        "<": "\u{226E}",        // ≮
+        ">": "\u{226F}",        // ≯
+        "leq": "\u{2270}",      // ≰
+        "le": "\u{2270}",
+        "geq": "\u{2271}",      // ≱
+        "ge": "\u{2271}",
+        "ni": "\u{220C}",       // ∌
+        "mid": "\u{2224}",      // ∤
     ]
 
     /// Delimiter sizing commands with their size multipliers (relative to font size).
@@ -831,11 +851,16 @@ public struct MTMathListBuilder {
             frac.numerator = numerator
             frac.denominator = denominator
             return frac;
-        } else if command == "binom" {
-            // A binom command has 2 arguments
+        } else if command == "binom" || command == "tbinom" || command == "dbinom" {
+            // A binom command has 2 arguments; \tbinom and \dbinom force the style of both, like \tfrac and \dfrac
             let frac = MTFraction(hasRule: false)
             frac.numerator = self.buildInternal(true)
             frac.denominator = self.buildInternal(true)
+            if command != "binom" {
+                let style: MTLineStyle = command == "dbinom" ? .display : .text
+                frac.numerator?.insert(MTMathStyle(style: style), at: 0)
+                frac.denominator?.insert(MTMathStyle(style: style), at: 0)
+            }
             frac.leftDelimiter = "(";
             frac.rightDelimiter = ")";
             return frac;
@@ -1059,6 +1084,9 @@ public struct MTMathListBuilder {
 
             if let negatedUnicode = Self.notCombinations[nextCommand] {
                 self.consumeNextCommand() // Remove base symbol from stream
+                return MTMathAtom(type: .relation, value: negatedUnicode)
+            } else if nextCommand.isEmpty, let negatedUnicode = self.readNegatableCharacter() {
+                // \not followed by a character: \not= \not< \not>
                 return MTMathAtom(type: .relation, value: negatedUnicode)
             } else {
                 let errorMessage = "Unsupported \\not\\\(nextCommand) combination"
@@ -1613,7 +1641,7 @@ public struct MTMathListBuilder {
     }
     
     mutating func readCommand() -> String {
-        let singleChars = "{}$#%_| ,:>;!\\"
+        let singleChars = "{}$#%&_| ,:>;!\\"
         if self.hasCharacters {
             let char = self.getNextCharacter()
             if let _ = singleChars.firstIndex(of: char)  {
