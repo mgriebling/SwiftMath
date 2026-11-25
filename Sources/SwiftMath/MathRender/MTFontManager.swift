@@ -11,9 +11,9 @@ import Foundation
 
 public class MTFontManager {
     
-    static public private(set) var manager: MTFontManager = {
-        MTFontManager()
-    }()
+    /// The shared font manager. A constant, so that apps built with Swift 6 can use it (it was a
+    /// variable with a private setter, which strict concurrency rejects as shared mutable state).
+    public static let manager = MTFontManager()
     
     let kDefaultFontSize = CGFloat(20)
     
