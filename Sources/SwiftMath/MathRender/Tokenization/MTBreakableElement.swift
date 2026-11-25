@@ -89,6 +89,9 @@ struct MTBreakableElement {
 
     /// If true, NEVER break this element internally
     let indivisible: Bool
+
+    /// Font of text content when it differs from the line's font (after \scriptstyle and the like)
+    var font: MTFont? = nil
 }
 
 // MARK: - Penalty Constants

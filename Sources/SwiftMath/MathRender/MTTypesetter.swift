@@ -805,6 +805,21 @@ class MTTypesetter {
         // in inline mode or when nested.
         return style
     }
+
+    /// The font for laying out a part in `newStyle` inside a list laid out in `style` with `font`,
+    /// which already has the size of `style`.
+    static func font(_ font: MTFont, from style: MTLineStyle, to newStyle: MTLineStyle) -> MTFont {
+        guard newStyle != style, let mathTable = font.mathTable else { return font }
+        func scale(_ style: MTLineStyle) -> CGFloat {
+            switch style {
+            case .display, .text: return 1
+            case .script: return mathTable.scriptScaleDown
+            case .scriptOfScript: return mathTable.scriptScriptScaleDown
+            }
+        }
+        let ratio = scale(newStyle) / scale(style)
+        return ratio == 1 ? font : font.copy(withSize: max(font.fontSize * ratio, 6.0))
+    }
     
     func makeFraction(_ frac:MTFraction?) -> MTDisplay? {
         guard let frac = frac else { return nil }
@@ -818,14 +833,14 @@ class MTTypesetter {
             numeratorStyle = .display
             denominatorStyle = .display
         } else {
-            // Regular fractions use adaptive style
+            // Regular fractions use adaptive style; \dfrac and \tfrac start both parts with the style to use
             let fractionStyle = self.fractionStyle;
-            numeratorStyle = fractionStyle()
-            denominatorStyle = fractionStyle()
+            numeratorStyle = (frac.numerator?.atoms.first as? MTMathStyle)?.style ?? fractionStyle()
+            denominatorStyle = (frac.denominator?.atoms.first as? MTMathStyle)?.style ?? fractionStyle()
         }
 
-        let numeratorDisplay = MTTypesetter.createLineForMathList(frac.numerator, font:font, style:numeratorStyle, cramped:false)
-        let denominatorDisplay = MTTypesetter.createLineForMathList(frac.denominator, font:font, style:denominatorStyle, cramped:true)
+        let numeratorDisplay = MTTypesetter.createLineForMathList(frac.numerator, font:Self.font(font, from: style, to: numeratorStyle), style:numeratorStyle, cramped:false)
+        let denominatorDisplay = MTTypesetter.createLineForMathList(frac.denominator, font:Self.font(font, from: style, to: denominatorStyle), style:denominatorStyle, cramped:true)
 
         // Handle empty numerator or denominator by creating empty displays
         let numDisplay = numeratorDisplay ?? MTMathListDisplay(withDisplays: [], range: NSMakeRange(0, 0))

@@ -352,6 +352,7 @@ class MTDisplayGenerator {
     }
 
     private func createTextDisplay(_ text: String, at position: CGPoint, element: MTBreakableElement, hasScript: Bool = false) -> MTDisplay {
+        let font = element.font ?? self.font
         let attrString = NSMutableAttributedString(string: text)
         attrString.addAttribute(
             NSAttributedString.Key(kCTFontAttributeName as String),

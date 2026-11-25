@@ -55,10 +55,12 @@ class MTAtomTokenizer {
                 continue
             }
 
-            // Create a tokenizer with the current style for this atom
+            // Create a tokenizer with the current style for this atom, and a font of its size
+            // (\scriptstyle makes the rest of the list smaller, \displaystyle in a script larger)
             let atomTokenizer: MTAtomTokenizer
             if currentStyle != self.style {
-                atomTokenizer = MTAtomTokenizer(font: font, style: currentStyle, cramped: cramped, maxWidth: maxWidth)
+                let styleFont = MTTypesetter.font(font, from: self.style, to: currentStyle)
+                atomTokenizer = MTAtomTokenizer(font: styleFont, style: currentStyle, cramped: cramped, maxWidth: maxWidth)
             } else {
                 atomTokenizer = self
             }
@@ -103,6 +105,13 @@ class MTAtomTokenizer {
                     if let element = atomTokenizer.tokenizeAtom(atom, prevAtom: prevAtom, atomIndex: index, allAtoms: atoms) {
                         elements.append(element)
                     }
+                }
+            }
+
+            if atomTokenizer.font !== font {
+                // Text drawn by the display generator needs the font it was measured with
+                for i in start..<elements.count {
+                    elements[i].font = atomTokenizer.font
                 }
             }
 
