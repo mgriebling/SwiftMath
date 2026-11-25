@@ -1034,6 +1034,13 @@ public class MTMathAtomFactory {
      - `cases`: 1 or 2 columns, left-aligned
      - `eqnarray`: Exactly 3 columns with r-c-l alignment
      */
+    /// Display environments laid out like aligned: in a formula there is no equation number to show
+    static let alignEnvs: Set<String> = ["align", "align*", "alignat", "alignat*", "alignedat", "flalign", "flalign*"]
+    /// Display environments with one centered column, laid out like gather
+    static let gatherEnvs: Set<String> = ["gather*", "gathered", "equation", "equation*", "multline", "multline*"]
+    /// Environments that take the number of column pairs as an argument, {2} in \begin{alignat}{2}
+    static let columnCountEnvs: Set<String> = ["alignat", "alignat*", "alignedat"]
+
     public static func table(withEnvironment env: String?, alignment: MTColumnAlignment? = nil, rows: [[MTMathList]], error:inout NSError?) -> MTMathAtom? {
         let table = MTMathTable(environment: env)
 
@@ -1085,7 +1092,7 @@ public class MTMathAtomFactory {
                 } else {
                     return table
                 }
-            } else if env == "eqalign" || env == "split" || env == "aligned" {
+            } else if env == "eqalign" || env == "split" || env == "aligned" || Self.alignEnvs.contains(env) {
                 // split is limited to max 2 columns per LaTeX/KaTeX spec
                 // aligned/eqalign can have any number of columns (1, 2, 3, 4+)
                 if env == "split" && table.numColumns > 2 {
@@ -1117,7 +1124,7 @@ public class MTMathAtomFactory {
                 }
 
                 return table
-            } else if env == "displaylines" || env == "gather" {
+            } else if env == "displaylines" || env == "gather" || Self.gatherEnvs.contains(env) {
                 if table.numColumns != 1 {
                     let message = "\(env) environment can only have 1 column"
                     if error == nil {
@@ -1149,7 +1156,7 @@ public class MTMathAtomFactory {
                 table.set(alignment: .left, forColumn: 2)
                 
                 return table
-            } else if env == "cases" {
+            } else if env == "cases" || env == "dcases" || env == "rcases" {
                 if table.numColumns != 1 && table.numColumns != 2 {
                     let message = "cases environment can have 1 or 2 columns"
                     if error == nil {
@@ -1166,7 +1173,8 @@ public class MTMathAtomFactory {
                     table.set(alignment: .left, forColumn: 1)
                 }
                 
-                let style = MTMathStyle(style: .text)
+                // dcases sets its cells in display style
+                let style = MTMathStyle(style: env == "dcases" ? .display : .text)
                 for i in 0..<table.cells.count {
                     for j in 0..<table.cells[i].count {
                         table.cells[i][j].insert(style, at: 0)
@@ -1174,11 +1182,17 @@ public class MTMathAtomFactory {
                 }
                 
                 let inner = MTInner()
-                inner.leftBoundary = Self.boundary(forDelimiter: "{")
-                inner.rightBoundary = Self.boundary(forDelimiter: ".")
                 let space = Self.atom(forLatexSymbol: ",")!
-                
-                inner.innerList = MTMathList(atoms: [space, table])
+                if env == "rcases" {
+                    // The brace on the right
+                    inner.leftBoundary = Self.boundary(forDelimiter: ".")
+                    inner.rightBoundary = Self.boundary(forDelimiter: "}")
+                    inner.innerList = MTMathList(atoms: [table, space])
+                } else {
+                    inner.leftBoundary = Self.boundary(forDelimiter: "{")
+                    inner.rightBoundary = Self.boundary(forDelimiter: ".")
+                    inner.innerList = MTMathList(atoms: [space, table])
+                }
                 
                 return inner
             } else {

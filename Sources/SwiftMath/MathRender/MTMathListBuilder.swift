@@ -1022,6 +1022,10 @@ public struct MTMathListBuilder {
             if env == nil {
                 return nil;
             }
+            if let env, MTMathAtomFactory.columnCountEnvs.contains(env) {
+                // The number of column pairs is not needed: columns come from the &s
+                _ = self.buildInternal(true)
+            }
             let table = self.buildTable(env: env, firstList:nil, isRow:false)
             return table
         } else if command == "color" {
