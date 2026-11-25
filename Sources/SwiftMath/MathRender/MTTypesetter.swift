@@ -1393,77 +1393,109 @@ class MTTypesetter {
         return display
     }
 
-    // MARK: - Horizontal braces
+    // MARK: - Braces, stacks and extensible arrows
 
-    /// `\underbrace{...}_{label}` and `\overbrace{...}^{label}`: the list with a curly brace as wide as
-    /// itself under or over it. Scripts are set as limits, the label on the brace side, centered.
-    func makeBrace(_ innerList: MTMathList?, over: Bool, atom: MTMathAtom) -> MTDisplay? {
+    /// `\underbrace{...}_{label}`, `\overbrace{...}^{label}`, `\overset`, `\underset`, `\stackrel` and
+    /// `\xrightarrow[below]{above}`: the list with a brace as wide as itself, nothing, or an arrow as wide
+    /// as its labels; the scripts are set above and below it like limits, centered.
+    func makeStack(_ innerList: MTMathList?, over: Bool, decoration: MTOverUnderDecoration, atom: MTMathAtom) -> MTDisplay? {
         guard let mathTable = styleFont.mathTable,
               let inner = MTTypesetter.createLineForMathList(innerList ?? MTMathList(), font: font, style: style, cramped: over || cramped) else { return nil }
-        // U+23DE TOP CURLY BRACKET, U+23DF BOTTOM CURLY BRACKET
-        var chars: [UniChar] = [over ? 0x23DE : 0x23DF]
-        var baseGlyph = CGGlyph(0)
-        let brace: MTDisplay
-        if CTFontGetGlyphsForCharacters(styleFont.ctFont, &chars, &baseGlyph, 1), baseGlyph != 0 {
-            // The narrowest variant at least as wide as the list, or the widest
-            var glyphs = mathTable.getHorizontalVariantsForGlyph(baseGlyph).compactMap { $0?.uint16Value }
-            if glyphs.isEmpty { glyphs = [baseGlyph] }
-            var advances = [CGSize](repeating: .zero, count: glyphs.count)
-            CTFontGetAdvancesForGlyphs(styleFont.ctFont, .horizontal, &glyphs, &advances, glyphs.count)
-            let index = advances.firstIndex { $0.width >= inner.width } ?? glyphs.count - 1
-            var glyph = glyphs[index]
-            let bounds = CTFontGetBoundingRectsForGlyphs(styleFont.ctFont, .horizontal, &glyph, nil, 1)
-
-            let braceDisplay = MTBraceDisplay(withInner: inner, glyph: glyph, glyphWidth: advances[index].width, font: styleFont, range: atom.indexRange)
-            if over {
-                // Gap between the list and the ink of the brace above it
-                braceDisplay.glyphShiftUp = inner.ascent + mathTable.stretchStackGapBelowMin - bounds.minY
-                braceDisplay.ascent = inner.ascent + mathTable.stretchStackGapBelowMin + bounds.height
-                braceDisplay.descent = inner.descent
-            } else {
-                braceDisplay.glyphShiftUp = -(inner.descent + mathTable.stretchStackGapAboveMin + bounds.maxY)
-                braceDisplay.ascent = inner.ascent
-                braceDisplay.descent = inner.descent + mathTable.stretchStackGapAboveMin + bounds.height
-            }
-            brace = braceDisplay
-        } else {
-            // A font without the brace: a line instead, the label is still set
-            let line = MTLineDisplay(withInner: inner, position: CGPoint.zero, range: atom.indexRange)
-            line.lineThickness = mathTable.underbarRuleThickness
-            line.width = inner.width
-            if over {
-                line.lineShiftUp = inner.ascent + mathTable.overbarVerticalGap
-                line.ascent = inner.ascent + mathTable.overbarVerticalGap + mathTable.overbarRuleThickness + mathTable.overbarExtraAscender
-                line.descent = inner.descent
-            } else {
-                line.lineShiftUp = -(inner.descent + mathTable.underbarVerticalGap)
-                line.ascent = inner.ascent
-                line.descent = inner.descent + mathTable.underbarVerticalGap + mathTable.underbarRuleThickness + mathTable.underbarExtraDescender
-            }
-            brace = line
-        }
-
-        guard atom.superScript != nil || atom.subScript != nil else {
-            brace.position = currentPosition
-            return brace
-        }
         let scriptStyle = self.scriptStyle()
         let scriptFont = font.copy(withSize: MTTypesetter.getStyleSize(scriptStyle, font: font))
         let upper = atom.superScript.flatMap { MTTypesetter.createLineForMathList($0, font: scriptFont, style: scriptStyle, cramped: self.superScriptCramped()) }
         let lower = atom.subScript.flatMap { MTTypesetter.createLineForMathList($0, font: scriptFont, style: scriptStyle, cramped: self.subscriptCramped()) }
-        let display = MTLargeOpLimitsDisplay(withNucleus: brace, upperLimit: upper, lowerLimit: lower, limitShift: 0, extraPadding: 0)
+
+        let nucleus: MTDisplay
+        switch decoration {
+        case .brace:
+            nucleus = makeBraceNucleus(inner, over: over, atom: atom)
+        case .arrow(let arrow):
+            // As wide as the wider label with 0.5em on each side, at least 1.75em; on the baseline like a relation
+            let labels = max(upper?.width ?? 0, lower?.width ?? 0)
+            let width = max(labels + styleFont.fontSize, styleFont.fontSize * 1.75)
+            nucleus = makeStretchedGlyph(arrow.character, bars: arrow.shafts, width: width, inner: nil, atom: atom) ?? inner
+        case .nothing, .line:
+            nucleus = inner
+        }
+
+        guard upper != nil || lower != nil else {
+            nucleus.position = currentPosition
+            return nucleus
+        }
+        let display = MTLargeOpLimitsDisplay(withNucleus: nucleus, upperLimit: upper, lowerLimit: lower, limitShift: 0, extraPadding: 0)
+        let arrowGap = styleFont.fontSize * 0.1
         if let upper {
-            // A label above an overbrace keeps the stretch stack gap; other limits the usual limit gap
-            display.upperLimitGap = over ? mathTable.stretchStackGapAboveMin
-                : max(mathTable.upperLimitGapMin, mathTable.upperLimitBaselineRiseMin - upper.descent)
+            switch decoration {
+            case .brace where over: display.upperLimitGap = mathTable.stretchStackGapAboveMin   // the label above an overbrace
+            case .arrow: display.upperLimitGap = arrowGap
+            default: display.upperLimitGap = max(mathTable.upperLimitGapMin, mathTable.upperLimitBaselineRiseMin - upper.descent)
+            }
         }
         if let lower {
-            display.lowerLimitGap = over ? max(mathTable.lowerLimitGapMin, mathTable.lowerLimitBaselineDropMin - lower.ascent)
-                : mathTable.stretchStackGapBelowMin
+            switch decoration {
+            case .brace where !over: display.lowerLimitGap = mathTable.stretchStackGapBelowMin   // the label below an underbrace
+            case .arrow: display.lowerLimitGap = arrowGap
+            default: display.lowerLimitGap = max(mathTable.lowerLimitGapMin, mathTable.lowerLimitBaselineDropMin - lower.ascent)
+            }
         }
         display.position = currentPosition
         display.range = atom.indexRange
         return display
+    }
+
+    /// A glyph stretched to `width`: the narrowest variant at least that wide, or the widest one
+    /// lengthened at its bars. Nil if the font does not have the character.
+    func makeStretchedGlyph(_ character: UniChar, bars: [CGFloat], width: CGFloat, inner: MTMathListDisplay?, atom: MTMathAtom) -> MTStretchedGlyphDisplay? {
+        guard let mathTable = styleFont.mathTable else { return nil }
+        var chars: [UniChar] = [character]
+        var baseGlyph = CGGlyph(0)
+        guard CTFontGetGlyphsForCharacters(styleFont.ctFont, &chars, &baseGlyph, 1), baseGlyph != 0 else { return nil }
+        var glyphs = mathTable.getHorizontalVariantsForGlyph(baseGlyph).compactMap { $0?.uint16Value }
+        if glyphs.isEmpty { glyphs = [baseGlyph] }
+        var advances = [CGSize](repeating: .zero, count: glyphs.count)
+        CTFontGetAdvancesForGlyphs(styleFont.ctFont, .horizontal, &glyphs, &advances, glyphs.count)
+        let index = advances.firstIndex { $0.width >= width } ?? glyphs.count - 1
+        var glyph = glyphs[index]
+        let bounds = CTFontGetBoundingRectsForGlyphs(styleFont.ctFont, .horizontal, &glyph, nil, 1)
+        let display = MTStretchedGlyphDisplay(withInner: inner, glyph: glyph, glyphWidth: advances[index].width, bars: bars, font: styleFont, width: width, range: atom.indexRange)
+        display.ascent = max(0, bounds.maxY)
+        display.descent = max(0, -bounds.minY)
+        return display
+    }
+
+    /// The list with a curly brace as wide as itself under or over it (or a rule, for a font without the brace)
+    private func makeBraceNucleus(_ inner: MTMathListDisplay, over: Bool, atom: MTMathAtom) -> MTDisplay {
+        let mathTable = styleFont.mathTable!
+        // U+23DE TOP CURLY BRACKET, U+23DF BOTTOM CURLY BRACKET; straight at a quarter and three quarters
+        if let brace = makeStretchedGlyph(over ? 0x23DE : 0x23DF, bars: [0.25, 0.75], width: inner.width, inner: inner, atom: atom) {
+            let inkTop = brace.ascent, inkBottom = -brace.descent   // the ink of the glyph around its origin
+            if over {
+                // Gap between the list and the ink of the brace above it
+                brace.glyphShiftUp = inner.ascent + mathTable.stretchStackGapBelowMin - inkBottom
+                brace.ascent = inner.ascent + mathTable.stretchStackGapBelowMin + (inkTop - inkBottom)
+                brace.descent = inner.descent
+            } else {
+                brace.glyphShiftUp = -(inner.descent + mathTable.stretchStackGapAboveMin + inkTop)
+                brace.ascent = inner.ascent
+                brace.descent = inner.descent + mathTable.stretchStackGapAboveMin + (inkTop - inkBottom)
+            }
+            return brace
+        }
+        // A font without the brace: a line instead, the label is still set
+        let line = MTLineDisplay(withInner: inner, position: CGPoint.zero, range: atom.indexRange)
+        line.lineThickness = mathTable.underbarRuleThickness
+        line.width = inner.width
+        if over {
+            line.lineShiftUp = inner.ascent + mathTable.overbarVerticalGap
+            line.ascent = inner.ascent + mathTable.overbarVerticalGap + mathTable.overbarRuleThickness + mathTable.overbarExtraAscender
+            line.descent = inner.descent
+        } else {
+            line.lineShiftUp = -(inner.descent + mathTable.underbarVerticalGap)
+            line.ascent = inner.ascent
+            line.descent = inner.descent + mathTable.underbarVerticalGap + mathTable.underbarRuleThickness + mathTable.underbarExtraDescender
+        }
+        return line
     }
 
     // MARK: - Accents

@@ -698,13 +698,25 @@ public struct MTMathListBuilder {
                     }
                 } else if atom.type == .overline {
                     if let overline = atom as? MTOverLine {
-                        str += overline.isBrace ? "\\overbrace" : "\\overline"
-                        str += "{\(mathListToString(overline.innerList!))}"
+                        let inner = mathListToString(overline.innerList ?? MTMathList())
+                        switch overline.decoration {
+                        case .line: str += "\\overline{\(inner)}"
+                        case .brace: str += "\\overbrace{\(inner)}"
+                        case .nothing: str += "\\overset{\(mathListToString(overline.superScript ?? MTMathList()))}{\(inner)}"
+                        case .arrow(let arrow):
+                            str += "\\\(arrow.rawValue)"
+                            if let below = overline.subScript { str += "[\(mathListToString(below))]" }
+                            str += "{\(mathListToString(overline.superScript ?? MTMathList()))}"
+                        }
                     }
                 } else if atom.type == .underline {
                     if let underline = atom as? MTUnderLine {
-                        str += underline.isBrace ? "\\underbrace" : "\\underline"
-                        str += "{\(mathListToString(underline.innerList!))}"
+                        let inner = mathListToString(underline.innerList ?? MTMathList())
+                        switch underline.decoration {
+                        case .line, .arrow: str += "\\underline{\(inner)}"
+                        case .brace: str += "\\underbrace{\(inner)}"
+                        case .nothing: str += "\\underset{\(mathListToString(underline.subScript ?? MTMathList()))}{\(inner)}"
+                        }
                     }
                 } else if atom.type == .boxed {
                     if let boxed = atom as? MTBoxed {
@@ -756,11 +768,15 @@ public struct MTMathListBuilder {
                     }
                 }
                 
-                if atom.superScript != nil {
+                // \overset, \underset and the extensible arrows wrote their scripts as arguments
+                let decoration = (atom as? MTOverLine)?.decoration ?? (atom as? MTUnderLine)?.decoration
+                let ownsScripts = decoration == .nothing || { if case .arrow = decoration { return true } else { return false } }()
+
+                if atom.superScript != nil && !ownsScripts {
                     str += "^{\(mathListToString(atom.superScript!))}"
                 }
                 
-                if atom.subScript != nil {
+                if atom.subScript != nil && !ownsScripts {
                     str += "_{\(mathListToString(atom.subScript!))}"
                 }
             }
@@ -982,6 +998,48 @@ public struct MTMathListBuilder {
             let over = MTOverLine()
             over.isBrace = true
             over.innerList = self.buildInternal(true)
+            return over
+        } else if command == "overset" || command == "underset" || command == "stackrel" {
+            // \overset{top}{base}, \underset{bottom}{base}, \stackrel{top}{base}: the first argument is set
+            // above or below the base like a limit. The construct is spaced like a one-atom base that is a
+            // relation, binary operator or operator (\overset{?}{=} is a relation); \stackrel always is a relation.
+            let label = self.buildInternal(true)
+            let baseList = self.buildInternal(true)
+            var atomClass: MTMathAtomType? = nil
+            if command == "stackrel" {
+                atomClass = .relation
+            } else if let only = baseList?.atoms.first, baseList?.atoms.count == 1,
+                      [.relation, .binaryOperator, .largeOperator].contains(only.type) {
+                atomClass = only.type
+            }
+            if command == "underset" {
+                let under = MTUnderLine()
+                under.decoration = .nothing
+                under.innerList = baseList
+                under.subScript = label
+                under.atomClass = atomClass
+                return under
+            }
+            let over = MTOverLine()
+            over.decoration = .nothing
+            over.innerList = baseList
+            over.superScript = label
+            over.atomClass = atomClass
+            return over
+        } else if let arrow = MTExtensibleArrow(rawValue: command) {
+            // \xrightarrow[below]{above}: an arrow as wide as its labels, spaced as a relation
+            let over = MTOverLine()
+            over.decoration = .arrow(arrow)
+            over.atomClass = .relation
+            over.innerList = MTMathList()
+            if self.hasCharacters {
+                if self.getNextCharacter() == "[" {
+                    over.subScript = self.buildInternal(false, stopChar: "]")
+                } else {
+                    self.unlookCharacter()
+                }
+            }
+            over.superScript = self.buildInternal(true)
             return over
         } else if command == "boxed" {
             // The boxed command has 1 argument

@@ -70,10 +70,15 @@ class MTAtomTokenizer {
             var leftType = atom.type
             var rightType = atom.type
 
-            if Self.isBrace(atom) {
-                // \underbrace and \overbrace set their scripts as limits (the label) themselves
+            if Self.setsOwnScripts(atom) {
+                // Braces, \overset and the like, and extensible arrows set their scripts above and below themselves
                 if let element = atomTokenizer.tokenizeAtom(atom, prevAtom: prevAtom, atomIndex: index, allAtoms: atoms) {
                     elements.append(element)
+                }
+                if let atomClass = (atom as? MTOverLine)?.atomClass ?? (atom as? MTUnderLine)?.atomClass {
+                    // \stackrel and the arrows are relations, \overset{?}{=} takes the class of its base
+                    leftType = atomClass
+                    rightType = atomClass
                 }
             } else if let (innerList, colorString) = Self.textColorArgument(atom) {
                 // \color and \textcolor: the argument is laid out in line, so it breaks across lines like the
@@ -1095,7 +1100,8 @@ class MTAtomTokenizer {
 
     private func tokenizeUnderline(_ underline: MTUnderLine, prevAtom: MTMathAtom?, atomIndex: Int) -> MTBreakableElement? {
         let typesetter = MTTypesetter(withFont: font, style: style, cramped: cramped, spaced: false)
-        let made = underline.isBrace ? typesetter.makeBrace(underline.innerList, over: false, atom: underline) : typesetter.makeUnderline(underline)
+        let made = underline.decoration == .line ? typesetter.makeUnderline(underline)
+            : typesetter.makeStack(underline.innerList, over: false, decoration: underline.decoration, atom: underline)
         guard let display = made else { return nil }
 
         return MTBreakableElement(
@@ -1120,7 +1126,8 @@ class MTAtomTokenizer {
 
     private func tokenizeOverline(_ overline: MTOverLine, prevAtom: MTMathAtom?, atomIndex: Int) -> MTBreakableElement? {
         let typesetter = MTTypesetter(withFont: font, style: style, cramped: cramped, spaced: false)
-        let made = overline.isBrace ? typesetter.makeBrace(overline.innerList, over: true, atom: overline) : typesetter.makeOverline(overline)
+        let made = overline.decoration == .line ? typesetter.makeOverline(overline)
+            : typesetter.makeStack(overline.innerList, over: true, decoration: overline.decoration, atom: overline)
         guard let display = made else { return nil }
 
         return MTBreakableElement(
@@ -1221,9 +1228,9 @@ class MTAtomTokenizer {
         )
     }
 
-    /// Whether the atom is a \underbrace or \overbrace, which sets its own scripts
-    static func isBrace(_ atom: MTMathAtom) -> Bool {
-        (atom as? MTUnderLine)?.isBrace == true || (atom as? MTOverLine)?.isBrace == true
+    /// Whether the atom sets its scripts above and below itself (braces, \overset and the like, arrows)
+    static func setsOwnScripts(_ atom: MTMathAtom) -> Bool {
+        (atom as? MTUnderLine)?.decoration.setsOwnScripts == true || (atom as? MTOverLine)?.decoration.setsOwnScripts == true
     }
 
     private func tokenizeBoxed(_ boxed: MTBoxed, prevAtom: MTMathAtom?, atomIndex: Int) -> MTBreakableElement? {

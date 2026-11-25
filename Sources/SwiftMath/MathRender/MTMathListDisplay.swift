@@ -893,34 +893,39 @@ class MTBoxDisplay : MTDisplay {
     }
 }
 
-// MARK: - MTBraceDisplay
+// MARK: - MTStretchedGlyphDisplay
 
-/// Rendering of a list with a horizontal curly brace under or over it (`\underbrace`, `\overbrace`).
+/// A glyph stretched to a width, over or under a list or on its own: the curly brace of
+/// `\underbrace` and `\overbrace`, the arrow of `\xrightarrow` and the like.
 ///
-/// Math fonts have the brace in a few widths and no way to assemble a longer one. A brace up to
-/// the widest one is drawn at the width of the list (the closest width is scaled a little). For a
-/// longer list the widest brace is cut at a quarter and at three quarters of its width, where it is
-/// a straight bar, and the bar is lengthened in both places, so the ends and the tip keep their shape.
-class MTBraceDisplay : MTDisplay {
+/// Math fonts have these glyphs in a few widths and no way to assemble a longer one. When the
+/// glyph is wider than needed it is drawn narrower; when it is too short it is cut where it is a
+/// straight bar (`bars`, as fractions of its width: a quarter and three quarters for a brace, the
+/// shaft for an arrow) and the bars are lengthened, so the hooks, the tip or the arrowhead keep
+/// their shape at any width.
+class MTStretchedGlyphDisplay : MTDisplay {
 
-    /** A display representing the list under or over the brace. Its position is relative
+    /** A display representing the list under or over the glyph, if any. Its position is relative
      to the parent and is not treated as a sub-display. */
     var inner: MTMathListDisplay?
     var glyph: CGGlyph
     var font: MTFont
     /// The advance of the glyph at its natural size
     var glyphWidth: CGFloat
-    /// Vertical position of the glyph origin relative to the baseline of the list
+    /// Where the glyph is a straight bar, as fractions of its width
+    var bars: [CGFloat]
+    /// Vertical position of the glyph origin relative to the baseline
     var glyphShiftUp: CGFloat = 0
 
-    init(withInner inner: MTMathListDisplay?, glyph: CGGlyph, glyphWidth: CGFloat, font: MTFont, range: NSRange) {
+    init(withInner inner: MTMathListDisplay?, glyph: CGGlyph, glyphWidth: CGFloat, bars: [CGFloat], font: MTFont, width: CGFloat, range: NSRange) {
         self.inner = inner
         self.glyph = glyph
         self.glyphWidth = glyphWidth
+        self.bars = bars.sorted()
         self.font = font
         super.init()
         self.range = range
-        self.width = inner?.width ?? 0
+        self.width = width
     }
 
     override var textColor: MTColor? {
@@ -934,7 +939,7 @@ class MTBraceDisplay : MTDisplay {
     override var position: CGPoint {
         set {
             super.position = newValue
-            inner?.position = newValue
+            inner?.position = CGPointMake(newValue.x + (width - (inner?.width ?? 0)) / 2, newValue.y)
         }
         get { super.position }
     }
@@ -949,18 +954,22 @@ class MTBraceDisplay : MTDisplay {
         context.translateBy(x: position.x, y: position.y + glyphShiftUp)
         context.textPosition = CGPoint.zero
         let extra = width - glyphWidth
-        if extra <= 0 {
+        if extra <= 0 || bars.isEmpty {
             context.scaleBy(x: width / glyphWidth, y: 1)
             drawGlyph(context)
         } else {
-            let quarter = glyphWidth / 4
-            let half = extra / 2
-            // left end, bar, middle with the tip, bar, right end
-            drawPart(context, from: 0, to: quarter, at: 0)
-            drawBar(context, at: quarter, length: half)
-            drawPart(context, from: quarter, to: 3 * quarter, at: quarter + half)
-            drawBar(context, at: 3 * quarter, length: half, shift: half)
-            drawPart(context, from: 3 * quarter, to: glyphWidth, at: 3 * quarter + extra)
+            // Pieces of the glyph between the bars, each followed by a lengthened bar
+            let share = extra / CGFloat(bars.count)
+            var from: CGFloat = 0
+            var at: CGFloat = 0
+            for bar in bars.map({ $0 * glyphWidth }) {
+                drawPart(context, from: from, to: bar, at: at)
+                at += bar - from
+                drawBar(context, around: bar, from: at, length: share)
+                at += share
+                from = bar
+            }
+            drawPart(context, from: from, to: glyphWidth, at: at)
         }
         context.restoreGState()
     }
@@ -987,15 +996,15 @@ class MTBraceDisplay : MTDisplay {
         context.restoreGState()
     }
 
-    /// Draws a straight piece of the bar `length` long, made by stretching a thin slice of the glyph
-    /// around `x`, between `x + shift` and `x + shift + length`.
-    private func drawBar(_ context: CGContext, at x: CGFloat, length: CGFloat, shift: CGFloat = 0) {
+    /// Draws a straight piece of bar `length` long starting at `x`, made by stretching a thin slice
+    /// of the glyph around `bar`.
+    private func drawBar(_ context: CGContext, around bar: CGFloat, from x: CGFloat, length: CGFloat) {
         let slice = glyphWidth / 100
         context.saveGState()
-        clip(context, x + shift, x + shift + length)
-        context.translateBy(x: x + shift, y: 0)
+        clip(context, x, x + length)
+        context.translateBy(x: x, y: 0)
         context.scaleBy(x: length / slice, y: 1)
-        context.translateBy(x: -(x - slice / 2), y: 0)
+        context.translateBy(x: -(bar - slice / 2), y: 0)
         drawGlyph(context)
         context.restoreGState()
     }

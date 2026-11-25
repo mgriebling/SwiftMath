@@ -88,7 +88,7 @@ final class BoxedAndBraceTests: XCTestCase {
 
     func testUnderbraceLabelIsCenteredBelowTheBrace() throws {
         let display = try XCTUnwrap(try line("\\underbrace{a+b+c+d+e+f}_{6}").subDisplays.first as? MTLargeOpLimitsDisplay)
-        let brace = try XCTUnwrap(display.nucleus as? MTBraceDisplay)
+        let brace = try XCTUnwrap(display.nucleus as? MTStretchedGlyphDisplay)
         let label = try XCTUnwrap(display.lowerLimit)
         XCTAssertNil(display.upperLimit)
         XCTAssertEqual(brace.width, try XCTUnwrap(brace.inner).width, accuracy: 0.01, "the brace is as wide as its content")
@@ -101,7 +101,7 @@ final class BoxedAndBraceTests: XCTestCase {
 
     func testOverbraceLabelIsAboveTheBrace() throws {
         let display = try XCTUnwrap(try line("\\overbrace{a+b+c+d+e+f}^{6}").subDisplays.first as? MTLargeOpLimitsDisplay)
-        let brace = try XCTUnwrap(display.nucleus as? MTBraceDisplay)
+        let brace = try XCTUnwrap(display.nucleus as? MTStretchedGlyphDisplay)
         let label = try XCTUnwrap(display.upperLimit)
         XCTAssertGreaterThan(brace.glyphShiftUp, 0, "the brace is above the content")
         XCTAssertGreaterThan(brace.ascent, try XCTUnwrap(brace.inner).ascent)
@@ -111,7 +111,7 @@ final class BoxedAndBraceTests: XCTestCase {
     func testBraceWithoutLabelAndAnyWidth() throws {
         // From narrower than the smallest brace to far wider than the widest one in the font
         for latex in ["\\underbrace{a}", "\\underbrace{a+b}", "\\overbrace{a+b+c+d+e+f+g+h+i+j+k+l+m+n}"] {
-            let brace = try XCTUnwrap(try line(latex).subDisplays.first as? MTBraceDisplay, latex)
+            let brace = try XCTUnwrap(try line(latex).subDisplays.first as? MTStretchedGlyphDisplay, latex)
             XCTAssertEqual(brace.width, try XCTUnwrap(brace.inner).width, accuracy: 0.01, latex)
             XCTAssertNotEqual(brace.glyph, 0, latex)
         }
@@ -131,6 +131,97 @@ final class BoxedAndBraceTests: XCTestCase {
             let (error, image) = MTMathImage(latex: latex, fontSize: 20, textColor: .black, labelMode: .display).asImage()
             XCTAssertNil(error, latex)
             XCTAssertNotNil(image, latex)
+        }
+    }
+}
+
+/// \overset, \underset, \stackrel and the extensible arrows
+final class StackAndArrowTests: XCTestCase {
+
+    private var font: MTFont!
+    private var mu: CGFloat { font.mathTable!.muUnit }
+
+    override func setUp() {
+        super.setUp()
+        font = MTFontManager.manager.latinModernFont(withSize: 20)
+    }
+
+    private func build(_ latex: String) throws -> MTMathList {
+        var error: NSError?
+        let list = MTMathListBuilder.build(fromString: latex, error: &error)
+        XCTAssertNil(error, latex)
+        return try XCTUnwrap(list, latex)
+    }
+
+    private func line(_ latex: String) throws -> MTMathListDisplay {
+        try XCTUnwrap(MTTypesetter.createLineForMathList(try build(latex), font: font, style: .text), latex)
+    }
+
+    func testStacksParseAndRoundTrip() throws {
+        let over = try XCTUnwrap(try build("\\overset{?}{=}").atoms.first as? MTOverLine)
+        XCTAssertEqual(over.decoration, .nothing)
+        XCTAssertEqual(over.superScript?.atoms.first?.nucleus, "?")
+        XCTAssertEqual(over.innerList?.atoms.first?.nucleus, "=")
+        XCTAssertEqual(over.atomClass, .relation, "takes the class of a one-atom base")
+        XCTAssertEqual(MTMathListBuilder.mathListToString(try build("\\overset{?}{=}")), "\\overset{?}{=}")
+
+        let under = try XCTUnwrap(try build("\\underset{n\\to\\infty}{\\lim}").atoms.first as? MTUnderLine)
+        XCTAssertEqual(under.decoration, .nothing)
+        XCTAssertEqual(under.atomClass, .largeOperator)
+
+        let stack = try XCTUnwrap(try build("\\stackrel{\\text{def}}{\\Delta}").atoms.first as? MTOverLine)
+        XCTAssertEqual(stack.atomClass, .relation, "\\stackrel is always a relation")
+
+        XCTAssertNil((try build("\\overset{a}{xy}").atoms.first as? MTOverLine)?.atomClass, "a longer base is ordinary")
+        let copied: MTMathAtom = over.copy()
+        XCTAssertEqual((copied as? MTOverLine)?.decoration, .nothing)
+    }
+
+    func testArrowsParseAndRoundTrip() throws {
+        let arrow = try XCTUnwrap(try build("\\xrightarrow[\\text{below}]{\\text{above}}").atoms.first as? MTOverLine)
+        XCTAssertEqual(arrow.decoration, .arrow(.right))
+        XCTAssertEqual(arrow.atomClass, .relation)
+        XCTAssertNotNil(arrow.superScript)
+        XCTAssertNotNil(arrow.subScript)
+        for latex in ["\\xrightarrow{x}", "\\xleftarrow[a]{b}", "\\xRightarrow{\\quad}", "\\xleftrightarrow{f}", "\\xmapsto{g}"] {
+            XCTAssertEqual(MTMathListBuilder.mathListToString(try build(latex)).replacingOccurrences(of: " ", with: ""),
+                           latex.replacingOccurrences(of: " ", with: ""), latex)
+        }
+    }
+
+    func testOversetIsLaidOutAboveAndSpacedLikeItsBase() throws {
+        let display = try line("a\\overset{?}{=}b")
+        let parts = display.subDisplays.sorted { $0.position.x < $1.position.x }
+        XCTAssertEqual(parts.count, 3)
+        let stack = try XCTUnwrap(parts[1] as? MTLargeOpLimitsDisplay)
+        XCTAssertNotNil(stack.upperLimit)
+        XCTAssertNil(stack.lowerLimit)
+        // Thick spaces on both sides, as for a relation
+        XCTAssertEqual(parts[1].position.x - (parts[0].position.x + parts[0].width), 5 * mu, accuracy: 0.6)
+        XCTAssertEqual(parts[2].position.x - (parts[1].position.x + parts[1].width), 5 * mu, accuracy: 0.6)
+    }
+
+    func testArrowIsAsWideAsItsLabels() throws {
+        let short = try XCTUnwrap(try line("\\xrightarrow{a}").subDisplays.first as? MTLargeOpLimitsDisplay)
+        let long = try XCTUnwrap(try line("\\xrightarrow{\\text{a long label}}").subDisplays.first as? MTLargeOpLimitsDisplay)
+        let shortArrow = try XCTUnwrap(short.nucleus as? MTStretchedGlyphDisplay)
+        let longArrow = try XCTUnwrap(long.nucleus as? MTStretchedGlyphDisplay)
+        XCTAssertEqual(shortArrow.width, 1.75 * 20, accuracy: 0.5, "at least 1.75em")
+        XCTAssertGreaterThan(longArrow.width, try XCTUnwrap(long.upperLimit).width + 19, "0.5em on each side of the label")
+        XCTAssertGreaterThan(longArrow.width, shortArrow.width)
+        // The label is above the arrow
+        let label = try XCTUnwrap(long.upperLimit)
+        XCTAssertGreaterThan(label.position.y - label.descent, long.position.y + longArrow.ascent - 0.01)
+    }
+
+    func testArrowWithBothLabelsAndAllKinds() throws {
+        let both = try XCTUnwrap(try line("A\\xrightarrow[\\text{下}]{\\text{加热}}B").subDisplays.first { $0 is MTLargeOpLimitsDisplay } as? MTLargeOpLimitsDisplay)
+        XCTAssertNotNil(both.upperLimit)
+        XCTAssertNotNil(both.lowerLimit)
+        for arrow in MTExtensibleArrow.allCases {
+            let display = try line("\\\(arrow.rawValue){\\text{label}}")
+            let stack = try XCTUnwrap(display.subDisplays.first as? MTLargeOpLimitsDisplay, arrow.rawValue)
+            XCTAssertNotEqual((stack.nucleus as? MTStretchedGlyphDisplay)?.glyph ?? 0, 0, arrow.rawValue)
         }
     }
 }

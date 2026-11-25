@@ -525,13 +525,68 @@ public class MTInner: MTMathAtom {
     }
 }
 
+// MARK: - MTOverUnderDecoration
+
+/** What an `MTOverLine` or `MTUnderLine` draws over or under its list. */
+public enum MTOverUnderDecoration: Equatable {
+    /// A rule (`\overline`, `\underline`)
+    case line
+    /// A horizontal curly brace (`\overbrace`, `\underbrace`); the script on that side is a label
+    case brace
+    /// Nothing: the script on that side is set above or below the list (`\overset`, `\underset`, `\stackrel`)
+    case nothing
+    /// An extensible arrow as wide as its labels, over an empty list (`\xrightarrow[below]{above}` and the like)
+    case arrow(MTExtensibleArrow)
+
+    /// The scripts are part of the construct (labels, set above and below) rather than scripts beside it
+    public var setsOwnScripts: Bool { self != .line }
+}
+
+/** The extensible arrows, named by their command. */
+public enum MTExtensibleArrow: String, CaseIterable {
+    case right = "xrightarrow", left = "xleftarrow", leftRight = "xleftrightarrow"
+    case doubleRight = "xRightarrow", doubleLeft = "xLeftarrow", doubleLeftRight = "xLeftrightarrow"
+    case mapsTo = "xmapsto"
+
+    /// The arrow character
+    var character: UniChar {
+        switch self {
+        case .right: return 0x2192
+        case .left: return 0x2190
+        case .leftRight: return 0x2194
+        case .doubleRight: return 0x21D2
+        case .doubleLeft: return 0x21D0
+        case .doubleLeftRight: return 0x21D4
+        case .mapsTo: return 0x21A6
+        }
+    }
+
+    /// Where the arrow is a straight shaft, as fractions of its width: it is lengthened there
+    var shafts: [CGFloat] {
+        switch self {
+        case .right, .doubleRight: return [0.35]
+        case .left, .doubleLeft: return [0.65]
+        case .leftRight, .doubleLeftRight: return [0.5]
+        case .mapsTo: return [0.4]
+        }
+    }
+}
+
 // MARK: - MTOverLIne
 /** An atom with a line over the contained math list. */
 public class MTOverLine: MTMathAtom {
     public var innerList:  MTMathList?
+    /// What is drawn over the list (a line by default)
+    public var decoration = MTOverUnderDecoration.line
+    /// The TeX class of the whole construct for spacing, if not ordinary (`\stackrel` and the
+    /// extensible arrows are relations, `\overset` takes the class of a one-atom base)
+    public var atomClass: MTMathAtomType?
     /// Draw a horizontal curly brace over the list instead of a line (`\overbrace`).
     /// The superscript is then set above the brace as a label.
-    public var isBrace = false
+    public var isBrace: Bool {
+        get { decoration == .brace }
+        set { decoration = newValue ? .brace : .line }
+    }
     
     override public var finalized: MTMathAtom {
         let newOverline = MTOverLine(self)
@@ -543,7 +598,8 @@ public class MTOverLine: MTMathAtom {
         super.init(over)
         self.type = .overline
         self.innerList = MTMathList(over!.innerList)
-        self.isBrace = over?.isBrace ?? false
+        self.decoration = over?.decoration ?? .line
+        self.atomClass = over?.atomClass
     }
     
     override init() {
@@ -556,9 +612,17 @@ public class MTOverLine: MTMathAtom {
 /** An atom with a line under the contained math list. */
 public class MTUnderLine: MTMathAtom {
     public var innerList:  MTMathList?
+    /// What is drawn under the list (a line by default; never an arrow)
+    public var decoration = MTOverUnderDecoration.line
+    /// The TeX class of the whole construct for spacing, if not ordinary (`\underset` takes the
+    /// class of a one-atom base)
+    public var atomClass: MTMathAtomType?
     /// Draw a horizontal curly brace under the list instead of a line (`\underbrace`).
     /// The subscript is then set below the brace as a label.
-    public var isBrace = false
+    public var isBrace: Bool {
+        get { decoration == .brace }
+        set { decoration = newValue ? .brace : .line }
+    }
     
     override public var finalized: MTMathAtom {
         let newUnderline = super.finalized as! MTUnderLine
@@ -570,7 +634,8 @@ public class MTUnderLine: MTMathAtom {
         super.init(under)
         self.type = .underline
         self.innerList = MTMathList(under?.innerList)
-        self.isBrace = under?.isBrace ?? false
+        self.decoration = under?.decoration ?? .line
+        self.atomClass = under?.atomClass
     }
     
     override init() {
