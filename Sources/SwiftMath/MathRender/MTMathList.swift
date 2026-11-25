@@ -66,6 +66,8 @@ public enum MTMathAtomType: Int, CustomStringConvertible, Comparable {
     case color
     case textcolor
     case colorBox
+    /// A math list with a frame around it (\boxed). Does not exist in TeX.
+    case boxed
     
     // Atoms after this point are not part of TeX and do not have the usual structure.
     
@@ -109,6 +111,7 @@ public enum MTMathAtomType: Int, CustomStringConvertible, Comparable {
             case .color:          return "Color"
             case .textcolor:      return "TextColor"
             case .colorBox:       return "Colorbox"
+            case .boxed:          return "Boxed"
             case .table:          return "Table"
         }
     }
@@ -241,6 +244,8 @@ public class MTMathAtom: NSObject {
                 return MTMathTextColor(self as? MTMathTextColor)
             case .colorBox:
                 return MTMathColorbox(self as? MTMathColorbox)
+            case .boxed:
+                return MTBoxed(self as? MTBoxed)
             case .table:
                 return MTMathTable(self as! MTMathTable)
             default:
@@ -524,6 +529,9 @@ public class MTInner: MTMathAtom {
 /** An atom with a line over the contained math list. */
 public class MTOverLine: MTMathAtom {
     public var innerList:  MTMathList?
+    /// Draw a horizontal curly brace over the list instead of a line (`\overbrace`).
+    /// The superscript is then set above the brace as a label.
+    public var isBrace = false
     
     override public var finalized: MTMathAtom {
         let newOverline = MTOverLine(self)
@@ -535,6 +543,7 @@ public class MTOverLine: MTMathAtom {
         super.init(over)
         self.type = .overline
         self.innerList = MTMathList(over!.innerList)
+        self.isBrace = over?.isBrace ?? false
     }
     
     override init() {
@@ -547,6 +556,9 @@ public class MTOverLine: MTMathAtom {
 /** An atom with a line under the contained math list. */
 public class MTUnderLine: MTMathAtom {
     public var innerList:  MTMathList?
+    /// Draw a horizontal curly brace under the list instead of a line (`\underbrace`).
+    /// The subscript is then set below the brace as a label.
+    public var isBrace = false
     
     override public var finalized: MTMathAtom {
         let newUnderline = super.finalized as! MTUnderLine
@@ -558,6 +570,7 @@ public class MTUnderLine: MTMathAtom {
         super.init(under)
         self.type = .underline
         self.innerList = MTMathList(under?.innerList)
+        self.isBrace = under?.isBrace ?? false
     }
     
     override init() {
@@ -761,6 +774,34 @@ public class MTMathColorbox: MTMathAtom {
         let newColor = super.finalized as! MTMathColorbox
         newColor.innerList = newColor.innerList?.finalized
         return newColor
+    }
+}
+
+// MARK: - MTBoxed
+/** An atom representing a boxed math list (`\boxed`): the list is typeset in display
+ style with a frame around it, as LaTeX does with `\fbox`. */
+public class MTBoxed: MTMathAtom {
+    public var innerList: MTMathList?
+
+    init(_ boxed: MTBoxed?) {
+        super.init(boxed)
+        self.type = .boxed
+        self.innerList = MTMathList(boxed?.innerList)
+    }
+
+    override init() {
+        super.init()
+        self.type = .boxed
+    }
+
+    public override var string: String {
+        "\\boxed{\(self.innerList?.string ?? "")}"
+    }
+
+    override public var finalized: MTMathAtom {
+        let newBoxed = super.finalized as! MTBoxed
+        newBoxed.innerList = newBoxed.innerList?.finalized
+        return newBoxed
     }
 }
 

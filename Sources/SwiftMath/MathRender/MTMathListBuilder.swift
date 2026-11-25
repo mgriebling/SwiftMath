@@ -678,13 +678,17 @@ public struct MTMathListBuilder {
                     }
                 } else if atom.type == .overline {
                     if let overline = atom as? MTOverLine {
-                        str += "\\overline"
+                        str += overline.isBrace ? "\\overbrace" : "\\overline"
                         str += "{\(mathListToString(overline.innerList!))}"
                     }
                 } else if atom.type == .underline {
                     if let underline = atom as? MTUnderLine {
-                        str += "\\underline"
+                        str += underline.isBrace ? "\\underbrace" : "\\underline"
                         str += "{\(mathListToString(underline.innerList!))}"
+                    }
+                } else if atom.type == .boxed {
+                    if let boxed = atom as? MTBoxed {
+                        str += "\\boxed{\(mathListToString(boxed.innerList ?? MTMathList()))}"
                     }
                 } else if atom.type == .accent {
                     if let accent = atom as? MTAccent {
@@ -941,6 +945,24 @@ public struct MTMathListBuilder {
             let under = MTUnderLine()
             under.innerList = self.buildInternal(true)
             return under
+        } else if command == "underbrace" || command == "overbrace" {
+            // A brace under or over its argument; a following subscript (\underbrace) or
+            // superscript (\overbrace) is the label set below or above the brace.
+            if command == "underbrace" {
+                let under = MTUnderLine()
+                under.isBrace = true
+                under.innerList = self.buildInternal(true)
+                return under
+            }
+            let over = MTOverLine()
+            over.isBrace = true
+            over.innerList = self.buildInternal(true)
+            return over
+        } else if command == "boxed" {
+            // The boxed command has 1 argument
+            let boxed = MTBoxed()
+            boxed.innerList = self.buildInternal(true)
+            return boxed
         } else if command == "substack" {
             // \substack reads ONE braced argument containing rows separated by \\
             // Similar to how \frac reads {numerator}{denominator}

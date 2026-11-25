@@ -462,6 +462,8 @@ This is a list of formula types that the library currently supports:
 * Ratios, proportions, percentages
 * Math spacing (TeX spacing between atoms, and `\,` `\:` `\;` `\!` `\quad` `\qquad`)
 * Overline and underline
+* Horizontal braces with labels (`\underbrace{...}_{...}`, `\overbrace{...}^{...}`)
+* Boxed formulas (`\boxed`)
 * Math accents (including `\hat`, `\tilde`, `\bar`, `\vec`, `\dot`, `\ddot`, etc.)
 * Vector arrows (`\vec`, `\overrightarrow`, `\overleftarrow`, `\overleftrightarrow` with automatic stretching)
 * Wide accents (`\widehat`, `\widetilde`)

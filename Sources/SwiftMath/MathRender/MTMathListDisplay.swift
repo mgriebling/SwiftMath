@@ -838,6 +838,169 @@ class MTLineDisplay : MTDisplay {
     
 }
 
+// MARK: - MTBoxDisplay
+
+/// Rendering of a list with a frame around it (`\boxed`)
+class MTBoxDisplay : MTDisplay {
+
+    /** A display representing the boxed list. Its position is relative to the parent and is
+     not treated as a sub-display. */
+    var inner: MTMathListDisplay?
+    /// Space between the list and the frame
+    var padding: CGFloat = 0
+    /// Thickness of the frame
+    var ruleThickness: CGFloat = 0
+
+    init(withInner inner: MTMathListDisplay?, padding: CGFloat, ruleThickness: CGFloat, range: NSRange) {
+        super.init()
+        self.inner = inner
+        self.padding = padding
+        self.ruleThickness = ruleThickness
+        self.range = range
+        let margin = padding + ruleThickness
+        self.width = (inner?.width ?? 0) + 2 * margin
+        self.ascent = (inner?.ascent ?? 0) + margin
+        self.descent = (inner?.descent ?? 0) + margin
+    }
+
+    override var textColor: MTColor? {
+        set {
+            super.textColor = newValue
+            inner?.textColor = newValue
+        }
+        get { super.textColor }
+    }
+
+    override var position: CGPoint {
+        set {
+            super.position = newValue
+            inner?.position = CGPointMake(newValue.x + padding + ruleThickness, newValue.y)
+        }
+        get { super.position }
+    }
+
+    override func draw(_ context: CGContext) {
+        super.draw(context)
+        inner?.draw(context)
+
+        context.saveGState()
+        context.setStrokeColor((textColor ?? MTColor.black).cgColor)
+        context.setLineWidth(ruleThickness)
+        // The frame is drawn inside the box: its outer edge is the edge of the display.
+        let frame = CGRect(x: position.x, y: position.y - descent, width: width, height: ascent + descent)
+        context.stroke(frame.insetBy(dx: ruleThickness / 2, dy: ruleThickness / 2))
+        context.restoreGState()
+    }
+}
+
+// MARK: - MTBraceDisplay
+
+/// Rendering of a list with a horizontal curly brace under or over it (`\underbrace`, `\overbrace`).
+///
+/// Math fonts have the brace in a few widths and no way to assemble a longer one. A brace up to
+/// the widest one is drawn at the width of the list (the closest width is scaled a little). For a
+/// longer list the widest brace is cut at a quarter and at three quarters of its width, where it is
+/// a straight bar, and the bar is lengthened in both places, so the ends and the tip keep their shape.
+class MTBraceDisplay : MTDisplay {
+
+    /** A display representing the list under or over the brace. Its position is relative
+     to the parent and is not treated as a sub-display. */
+    var inner: MTMathListDisplay?
+    var glyph: CGGlyph
+    var font: MTFont
+    /// The advance of the glyph at its natural size
+    var glyphWidth: CGFloat
+    /// Vertical position of the glyph origin relative to the baseline of the list
+    var glyphShiftUp: CGFloat = 0
+
+    init(withInner inner: MTMathListDisplay?, glyph: CGGlyph, glyphWidth: CGFloat, font: MTFont, range: NSRange) {
+        self.inner = inner
+        self.glyph = glyph
+        self.glyphWidth = glyphWidth
+        self.font = font
+        super.init()
+        self.range = range
+        self.width = inner?.width ?? 0
+    }
+
+    override var textColor: MTColor? {
+        set {
+            super.textColor = newValue
+            inner?.textColor = newValue
+        }
+        get { super.textColor }
+    }
+
+    override var position: CGPoint {
+        set {
+            super.position = newValue
+            inner?.position = newValue
+        }
+        get { super.position }
+    }
+
+    override func draw(_ context: CGContext) {
+        super.draw(context)
+        inner?.draw(context)
+        guard glyphWidth > 0, width > 0 else { return }
+
+        context.saveGState()
+        context.setFillColor((textColor ?? MTColor.black).cgColor)
+        context.translateBy(x: position.x, y: position.y + glyphShiftUp)
+        context.textPosition = CGPoint.zero
+        let extra = width - glyphWidth
+        if extra <= 0 {
+            context.scaleBy(x: width / glyphWidth, y: 1)
+            drawGlyph(context)
+        } else {
+            let quarter = glyphWidth / 4
+            let half = extra / 2
+            // left end, bar, middle with the tip, bar, right end
+            drawPart(context, from: 0, to: quarter, at: 0)
+            drawBar(context, at: quarter, length: half)
+            drawPart(context, from: quarter, to: 3 * quarter, at: quarter + half)
+            drawBar(context, at: 3 * quarter, length: half, shift: half)
+            drawPart(context, from: 3 * quarter, to: glyphWidth, at: 3 * quarter + extra)
+        }
+        context.restoreGState()
+    }
+
+    private func drawGlyph(_ context: CGContext) {
+        var glyph = self.glyph
+        var origin = CGPoint.zero
+        CTFontDrawGlyphs(font.ctFont, &glyph, &origin, 1, context)
+    }
+
+    /// Clip rectangle covering the glyph vertically, between two x positions. The pieces overlap
+    /// a little so that no hairline gap shows between them.
+    private func clip(_ context: CGContext, _ minX: CGFloat, _ maxX: CGFloat) {
+        let overlap = font.fontSize * 0.01
+        context.clip(to: CGRect(x: minX - overlap, y: -font.fontSize * 2, width: maxX - minX + 2 * overlap, height: font.fontSize * 4))
+    }
+
+    /// Draws the part of the glyph between `from` and `to` starting at `x`.
+    private func drawPart(_ context: CGContext, from: CGFloat, to: CGFloat, at x: CGFloat) {
+        context.saveGState()
+        clip(context, x, x + to - from)
+        context.translateBy(x: x - from, y: 0)
+        drawGlyph(context)
+        context.restoreGState()
+    }
+
+    /// Draws a straight piece of the bar `length` long, made by stretching a thin slice of the glyph
+    /// around `x`, between `x + shift` and `x + shift + length`.
+    private func drawBar(_ context: CGContext, at x: CGFloat, length: CGFloat, shift: CGFloat = 0) {
+        let slice = glyphWidth / 100
+        context.saveGState()
+        clip(context, x + shift, x + shift + length)
+        context.translateBy(x: x + shift, y: 0)
+        context.scaleBy(x: length / slice, y: 1)
+        context.translateBy(x: -(x - slice / 2), y: 0)
+        drawGlyph(context)
+        context.restoreGState()
+    }
+}
+
 // MARK: - MTAccentDisplay
 
 /// Rendering an accent as a display

@@ -80,8 +80,8 @@ func getInterElementSpaceArrayIndexForType(_ type:MTMathAtomType, row:Bool) -> I
         // Numbers, variables, and unary operators are treated as ordinary
         case .number, .variable, .unaryOperator:
             return 0
-        // Decorative types (accent, underline, overline) are treated as ordinary
-        case .accent, .underline, .overline:
+        // Decorative types (accent, underline, overline, boxed) are treated as ordinary
+        case .accent, .underline, .overline, .boxed:
             return 0
         // Special types that don't typically participate in spacing are treated as ordinary
         case .boundary, .space, .style:
@@ -1339,6 +1339,90 @@ class MTTypesetter {
         return overDisplay;
     }
     
+    // MARK: - Boxed
+
+    func makeBoxed(_ boxed: MTBoxed) -> MTDisplay? {
+        // Like \fbox{$\displaystyle ...$}: the list in display style, 0.3em from a frame as thick as a fraction rule
+        guard let mathTable = styleFont.mathTable,
+              let inner = MTTypesetter.createLineForMathList(boxed.innerList ?? MTMathList(), font: font, style: .display, cramped: cramped) else { return nil }
+        let display = MTBoxDisplay(withInner: inner, padding: styleFont.fontSize * 0.3, ruleThickness: mathTable.fractionRuleThickness, range: boxed.indexRange)
+        display.position = currentPosition
+        return display
+    }
+
+    // MARK: - Horizontal braces
+
+    /// `\underbrace{...}_{label}` and `\overbrace{...}^{label}`: the list with a curly brace as wide as
+    /// itself under or over it. Scripts are set as limits, the label on the brace side, centered.
+    func makeBrace(_ innerList: MTMathList?, over: Bool, atom: MTMathAtom) -> MTDisplay? {
+        guard let mathTable = styleFont.mathTable,
+              let inner = MTTypesetter.createLineForMathList(innerList ?? MTMathList(), font: font, style: style, cramped: over || cramped) else { return nil }
+        // U+23DE TOP CURLY BRACKET, U+23DF BOTTOM CURLY BRACKET
+        var chars: [UniChar] = [over ? 0x23DE : 0x23DF]
+        var baseGlyph = CGGlyph(0)
+        let brace: MTDisplay
+        if CTFontGetGlyphsForCharacters(styleFont.ctFont, &chars, &baseGlyph, 1), baseGlyph != 0 {
+            // The narrowest variant at least as wide as the list, or the widest
+            var glyphs = mathTable.getHorizontalVariantsForGlyph(baseGlyph).compactMap { $0?.uint16Value }
+            if glyphs.isEmpty { glyphs = [baseGlyph] }
+            var advances = [CGSize](repeating: .zero, count: glyphs.count)
+            CTFontGetAdvancesForGlyphs(styleFont.ctFont, .horizontal, &glyphs, &advances, glyphs.count)
+            let index = advances.firstIndex { $0.width >= inner.width } ?? glyphs.count - 1
+            var glyph = glyphs[index]
+            let bounds = CTFontGetBoundingRectsForGlyphs(styleFont.ctFont, .horizontal, &glyph, nil, 1)
+
+            let braceDisplay = MTBraceDisplay(withInner: inner, glyph: glyph, glyphWidth: advances[index].width, font: styleFont, range: atom.indexRange)
+            if over {
+                // Gap between the list and the ink of the brace above it
+                braceDisplay.glyphShiftUp = inner.ascent + mathTable.stretchStackGapBelowMin - bounds.minY
+                braceDisplay.ascent = inner.ascent + mathTable.stretchStackGapBelowMin + bounds.height
+                braceDisplay.descent = inner.descent
+            } else {
+                braceDisplay.glyphShiftUp = -(inner.descent + mathTable.stretchStackGapAboveMin + bounds.maxY)
+                braceDisplay.ascent = inner.ascent
+                braceDisplay.descent = inner.descent + mathTable.stretchStackGapAboveMin + bounds.height
+            }
+            brace = braceDisplay
+        } else {
+            // A font without the brace: a line instead, the label is still set
+            let line = MTLineDisplay(withInner: inner, position: CGPoint.zero, range: atom.indexRange)
+            line.lineThickness = mathTable.underbarRuleThickness
+            line.width = inner.width
+            if over {
+                line.lineShiftUp = inner.ascent + mathTable.overbarVerticalGap
+                line.ascent = inner.ascent + mathTable.overbarVerticalGap + mathTable.overbarRuleThickness + mathTable.overbarExtraAscender
+                line.descent = inner.descent
+            } else {
+                line.lineShiftUp = -(inner.descent + mathTable.underbarVerticalGap)
+                line.ascent = inner.ascent
+                line.descent = inner.descent + mathTable.underbarVerticalGap + mathTable.underbarRuleThickness + mathTable.underbarExtraDescender
+            }
+            brace = line
+        }
+
+        guard atom.superScript != nil || atom.subScript != nil else {
+            brace.position = currentPosition
+            return brace
+        }
+        let scriptStyle = self.scriptStyle()
+        let scriptFont = font.copy(withSize: MTTypesetter.getStyleSize(scriptStyle, font: font))
+        let upper = atom.superScript.flatMap { MTTypesetter.createLineForMathList($0, font: scriptFont, style: scriptStyle, cramped: self.superScriptCramped()) }
+        let lower = atom.subScript.flatMap { MTTypesetter.createLineForMathList($0, font: scriptFont, style: scriptStyle, cramped: self.subscriptCramped()) }
+        let display = MTLargeOpLimitsDisplay(withNucleus: brace, upperLimit: upper, lowerLimit: lower, limitShift: 0, extraPadding: 0)
+        if let upper {
+            // A label above an overbrace keeps the stretch stack gap; other limits the usual limit gap
+            display.upperLimitGap = over ? mathTable.stretchStackGapAboveMin
+                : max(mathTable.upperLimitGapMin, mathTable.upperLimitBaselineRiseMin - upper.descent)
+        }
+        if let lower {
+            display.lowerLimitGap = over ? max(mathTable.lowerLimitGapMin, mathTable.lowerLimitBaselineDropMin - lower.ascent)
+                : mathTable.stretchStackGapBelowMin
+        }
+        display.position = currentPosition
+        display.range = atom.indexRange
+        return display
+    }
+
     // MARK: - Accents
     
     func isSingleCharAccentee(_ accent:MTAccent?) -> Bool {
