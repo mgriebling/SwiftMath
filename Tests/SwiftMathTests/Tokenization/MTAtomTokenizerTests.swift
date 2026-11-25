@@ -25,6 +25,14 @@ class MTAtomTokenizerTests: XCTestCase {
         super.tearDown()
     }
 
+    /// The elements for the atoms themselves, without the spaces that tokenize(_:) puts between atoms
+    private func withoutSpaces(_ elements: [MTBreakableElement]) -> [MTBreakableElement] {
+        elements.filter { element in
+            if case .space = element.content { return false }
+            return true
+        }
+    }
+
     // MARK: - Basic Tokenization Tests
 
     func testTokenizeEmptyList() {
@@ -96,7 +104,16 @@ class MTAtomTokenizerTests: XCTestCase {
         ]
         let elements = tokenizer.tokenize(atoms)
 
-        XCTAssertEqual(elements.count, 3)
+        // x, +, y with a medium space (4mu) on each side of the binary operator
+        XCTAssertEqual(withoutSpaces(elements).count, 3)
+        XCTAssertEqual(elements.count, 5)
+        for index in [1, 3] {
+            guard case .space(let width) = elements[index].content else {
+                XCTFail("Expected a space at \(index)")
+                continue
+            }
+            XCTAssertEqual(width, 4 * font.mathTable!.muUnit, accuracy: 0.01)
+        }
     }
 
     // MARK: - Delimiter Tokenization Tests
@@ -242,7 +259,7 @@ class MTAtomTokenizerTests: XCTestCase {
             MTMathAtom(type: .variable, value: "z")
         ]
 
-        let elements = tokenizer.tokenize(atoms)
+        let elements = withoutSpaces(tokenizer.tokenize(atoms))
 
         XCTAssertEqual(elements.count, 5)
 
@@ -263,7 +280,7 @@ class MTAtomTokenizerTests: XCTestCase {
             MTMathAtom(type: .close, value: ")")
         ]
 
-        let elements = tokenizer.tokenize(atoms)
+        let elements = withoutSpaces(tokenizer.tokenize(atoms))
 
         XCTAssertEqual(elements.count, 5)
 

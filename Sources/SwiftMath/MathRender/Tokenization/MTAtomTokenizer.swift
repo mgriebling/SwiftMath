@@ -40,6 +40,8 @@ class MTAtomTokenizer {
         var elements: [MTBreakableElement] = []
         var index = 0
         var currentStyle = self.style
+        // Type of the previous atom, for the TeX space between it and the next one
+        var previousType: MTMathAtomType? = nil
 
         while index < atoms.count {
             let atom = atoms[index]
@@ -53,16 +55,45 @@ class MTAtomTokenizer {
                 continue
             }
 
-            // Create a tokenizer with the current style for this atom
+            // Create a tokenizer with the current style for this atom, and a font of its size
+            // (\scriptstyle makes the rest of the list smaller, \displaystyle in a script larger)
             let atomTokenizer: MTAtomTokenizer
             if currentStyle != self.style {
-                atomTokenizer = MTAtomTokenizer(font: font, style: currentStyle, cramped: cramped, maxWidth: maxWidth)
+                let styleFont = MTTypesetter.font(font, from: self.style, to: currentStyle)
+                atomTokenizer = MTAtomTokenizer(font: styleFont, style: currentStyle, cramped: cramped, maxWidth: maxWidth)
             } else {
                 atomTokenizer = self
             }
 
-            // Handle scripts (subscript/superscript) - these must be grouped with their base
-            if atom.superScript != nil || atom.subScript != nil {
+            let start = elements.count
+            // Types for the spaces on each side of the atom; a colored argument has those of its own atoms
+            var leftType = atom.type
+            var rightType = atom.type
+
+            if Self.setsOwnScripts(atom) {
+                // Braces, \overset and the like, and extensible arrows set their scripts above and below themselves
+                if let element = atomTokenizer.tokenizeAtom(atom, prevAtom: prevAtom, atomIndex: index, allAtoms: atoms) {
+                    elements.append(element)
+                }
+                if let atomClass = (atom as? MTOverLine)?.atomClass ?? (atom as? MTUnderLine)?.atomClass {
+                    // \stackrel and the arrows are relations, \overset{?}{=} takes the class of its base
+                    leftType = atomClass
+                    rightType = atomClass
+                }
+            } else if let (innerList, colorString) = Self.textColorArgument(atom) {
+                // \color and \textcolor: the argument is laid out in line, so it breaks across lines like the
+                // rest of the formula, and drawn in the color (a nested color command keeps its own)
+                let copy = MTMathList()
+                copy.atoms = innerList.atoms.map { $0.copy() }
+                let innerAtoms = MTTypesetter.preprocessMathList(copy)
+                let color = MTColor(fromHexString: colorString)
+                elements.append(contentsOf: atomTokenizer.tokenize(innerAtoms).map { Self.element($0, coloredWith: color) })
+                if let first = innerAtoms.first, let last = innerAtoms.last {
+                    leftType = first.type
+                    rightType = last.type
+                }
+            } else if atom.superScript != nil || atom.subScript != nil {
+                // Handle scripts (subscript/superscript) - these must be grouped with their base
                 let baseElements = atomTokenizer.tokenizeAtomWithScripts(atom, prevAtom: prevAtom, atomIndex: index, allAtoms: atoms)
                 elements.append(contentsOf: baseElements)
             } else {
@@ -82,10 +113,59 @@ class MTAtomTokenizer {
                 }
             }
 
+            if atomTokenizer.font !== font {
+                // Text drawn by the display generator needs the font it was measured with
+                for i in start..<elements.count {
+                    elements[i].font = atomTokenizer.font
+                }
+            }
+
+            // Space between this atom and the previous one, from both types and the current style
+            // (TeXbook Appendix G): none at the start of a list, thin after punctuation and between an
+            // operator name and its argument, and no medium or thick space inside scripts. Explicit
+            // spaces such as \quad add to it and don't count as atoms.
+            if atom.type != .space && elements.count > start {
+                if let previousType {
+                    let space = atomTokenizer.widthCalculator.getInterElementSpacing(left: previousType, right: leftType)
+                    if space > 0 {
+                        elements.insert(interAtomSpace(space, after: start > 0 ? elements[start - 1] : nil, atom: atom), at: start)
+                    }
+                }
+                previousType = rightType
+            } else if elements.count == start && atom.type == .ordinary && atom.nucleus.isEmpty {
+                // An empty group draws nothing but is still an ordinary atom, like the {} that aligned
+                // environments put at the start of the second column so that "&=" is spaced as a relation
+                previousType = .ordinary
+            }
+
             index += 1
         }
 
         return elements
+    }
+
+    /// The space between two atoms. A line can break here exactly where it could break between the
+    /// two atoms; the break goes after the space, so it stays at the end of the line and is not seen.
+    /// Without a previous element (after an empty group at the start of the list) it doesn't break.
+    private func interAtomSpace(_ width: CGFloat, after previous: MTBreakableElement?, atom: MTMathAtom) -> MTBreakableElement {
+        MTBreakableElement(
+            content: .space(width),
+            width: width,
+            height: 0,
+            ascent: 0,
+            descent: 0,
+            isBreakBefore: false,
+            isBreakAfter: previous?.isBreakAfter ?? false,
+            penaltyBefore: MTBreakPenalty.never,
+            penaltyAfter: previous?.penaltyAfter ?? MTBreakPenalty.never,
+            groupId: nil,
+            parentId: nil,
+            originalAtom: previous?.originalAtom ?? atom,
+            indexRange: previous?.indexRange ?? atom.indexRange,
+            color: nil,
+            backgroundColor: nil,
+            indivisible: true
+        )
     }
 
     // MARK: - Atom Tokenization
@@ -134,6 +214,9 @@ class MTAtomTokenizer {
         case .table:
             return tokenizeTable(atom as! MTMathTable, prevAtom: prevAtom, atomIndex: atomIndex)
 
+        case .boxed:
+            return tokenizeBoxed(atom as! MTBoxed, prevAtom: prevAtom, atomIndex: atomIndex)
+
         case .inner:
             return tokenizeInner(atom as! MTInner, prevAtom: prevAtom, atomIndex: atomIndex)
 
@@ -145,10 +228,9 @@ class MTAtomTokenizer {
         case .style:
             return nil
 
-        // Color - extract inner content with color attribute
+        // Color - the argument laid out as one piece, in its color or on its background
         case .color, .colorBox, .textcolor:
-            // For now, treat as ordinary (color will be handled in display generation)
-            return tokenizeTextAtom(atom, prevAtom: prevAtom, atomIndex: atomIndex, allAtoms: allAtoms)
+            return tokenizeColor(atom, prevAtom: prevAtom, atomIndex: atomIndex)
 
         default:
             // Treat unknown types as ordinary
@@ -267,10 +349,6 @@ class MTAtomTokenizer {
         let text = atom.nucleus
         guard text.count > 1 else { return [] }
 
-        let debugTokenization = false  // Enable to debug text tokenization
-        if debugTokenization {
-            print("\n=== Tokenizing multi-char text: '\(text)' ===")
-        }
 
         var charElements: [MTBreakableElement] = []
         let characters = Array(text)
@@ -316,9 +394,6 @@ class MTAtomTokenizer {
                 indivisible: false
             )
 
-            if debugTokenization {
-                print("  [\(charIndex)] '\(charString)' breakBefore=\(isBreakBefore) breakAfter=\(isBreakAfter) penaltyBefore=\(penaltyBefore) penaltyAfter=\(penaltyAfter) width=\(width)")
-            }
 
             charElements.append(element)
         }
@@ -604,8 +679,9 @@ class MTAtomTokenizer {
         let op = atom.nucleus
         guard !op.isEmpty else { return nil }
 
-        // Calculate width with operator spacing
-        let width = widthCalculator.measureOperator(op, type: atom.type)
+        // The spaces around the operator depend on its neighbours and the style, so they are added
+        // between atoms by tokenize(_:) rather than included here
+        let width = widthCalculator.measureText(op)
 
         let ascent = font.fontSize * 0.5
         let descent = font.fontSize * 0.2
@@ -878,7 +954,7 @@ class MTAtomTokenizer {
         //   → makeLargeOp() would create scripts via makeScripts(), causing duplication
         //   → We MUST clear scripts and let tokenizeAtomWithScripts() handle them separately
 
-        let limits = op.limits && (style == .display || style == .text)
+        let limits = MTTypesetter.limitsAboveAndBelow(op, style: style)
 
         let originalSuperScript = op.superScript
         let originalSubScript = op.subScript
@@ -1024,7 +1100,9 @@ class MTAtomTokenizer {
 
     private func tokenizeUnderline(_ underline: MTUnderLine, prevAtom: MTMathAtom?, atomIndex: Int) -> MTBreakableElement? {
         let typesetter = MTTypesetter(withFont: font, style: style, cramped: cramped, spaced: false)
-        guard let display = typesetter.makeUnderline(underline) else { return nil }
+        let made = underline.decoration == .line ? typesetter.makeUnderline(underline)
+            : typesetter.makeStack(underline.innerList, over: false, decoration: underline.decoration, atom: underline)
+        guard let display = made else { return nil }
 
         return MTBreakableElement(
             content: .display(display),
@@ -1048,7 +1126,9 @@ class MTAtomTokenizer {
 
     private func tokenizeOverline(_ overline: MTOverLine, prevAtom: MTMathAtom?, atomIndex: Int) -> MTBreakableElement? {
         let typesetter = MTTypesetter(withFont: font, style: style, cramped: cramped, spaced: false)
-        guard let display = typesetter.makeOverline(overline) else { return nil }
+        let made = overline.decoration == .line ? typesetter.makeOverline(overline)
+            : typesetter.makeStack(overline.innerList, over: true, decoration: overline.decoration, atom: overline)
+        guard let display = made else { return nil }
 
         return MTBreakableElement(
             content: .display(display),
@@ -1064,6 +1144,113 @@ class MTAtomTokenizer {
             parentId: nil,
             originalAtom: overline,
             indexRange: overline.indexRange,
+            color: nil,
+            backgroundColor: nil,
+            indivisible: true
+        )
+    }
+
+    /// The argument and color of \color and \textcolor
+    static func textColorArgument(_ atom: MTMathAtom) -> (MTMathList, String)? {
+        switch atom {
+        case let color as MTMathColor:
+            return color.innerList.map { ($0, color.colorString) }
+        case let color as MTMathTextColor:
+            return color.innerList.map { ($0, color.colorString) }
+        default:
+            return nil
+        }
+    }
+
+    /// The element drawn in `color`, unless it already has a color of its own
+    static func element(_ element: MTBreakableElement, coloredWith color: MTColor?) -> MTBreakableElement {
+        guard let color, element.color == nil else { return element }
+        return MTBreakableElement(
+            content: element.content,
+            width: element.width,
+            height: element.height,
+            ascent: element.ascent,
+            descent: element.descent,
+            isBreakBefore: element.isBreakBefore,
+            isBreakAfter: element.isBreakAfter,
+            penaltyBefore: element.penaltyBefore,
+            penaltyAfter: element.penaltyAfter,
+            groupId: element.groupId,
+            parentId: element.parentId,
+            originalAtom: element.originalAtom,
+            indexRange: element.indexRange,
+            color: color,
+            backgroundColor: element.backgroundColor,
+            indivisible: element.indivisible
+        )
+    }
+
+    /// \colorbox, and \color or \textcolor wherever their argument cannot be laid out in line. Their
+    /// nucleus is empty, so tokenizing them as text dropped the whole argument: the argument is
+    /// typeset as one piece and drawn in the color or on the background (a \colorbox does not break).
+    private func tokenizeColor(_ atom: MTMathAtom, prevAtom: MTMathAtom?, atomIndex: Int) -> MTBreakableElement? {
+        let innerList: MTMathList?
+        let colorString: String
+        switch atom {
+        case let color as MTMathColor:
+            (innerList, colorString) = (color.innerList, color.colorString)
+        case let color as MTMathTextColor:
+            (innerList, colorString) = (color.innerList, color.colorString)
+        case let box as MTMathColorbox:
+            (innerList, colorString) = (box.innerList, box.colorString)
+        default:
+            return nil
+        }
+        guard let display = MTTypesetter.createLineForMathList(innerList ?? MTMathList(), font: font, style: style, cramped: cramped) else { return nil }
+        if atom.type == .colorBox {
+            display.localBackgroundColor = MTColor(fromHexString: colorString)
+        } else {
+            display.localTextColor = MTColor(fromHexString: colorString)
+        }
+
+        return MTBreakableElement(
+            content: .display(display),
+            width: display.width,
+            height: display.ascent + display.descent,
+            ascent: display.ascent,
+            descent: display.descent,
+            isBreakBefore: true,
+            isBreakAfter: true,
+            penaltyBefore: MTBreakPenalty.good,
+            penaltyAfter: MTBreakPenalty.good,
+            groupId: nil,
+            parentId: nil,
+            originalAtom: atom,
+            indexRange: atom.indexRange,
+            color: nil,
+            backgroundColor: nil,
+            indivisible: true
+        )
+    }
+
+    /// Whether the atom sets its scripts above and below itself (braces, \overset and the like, arrows)
+    static func setsOwnScripts(_ atom: MTMathAtom) -> Bool {
+        (atom as? MTUnderLine)?.decoration.setsOwnScripts == true || (atom as? MTOverLine)?.decoration.setsOwnScripts == true
+    }
+
+    private func tokenizeBoxed(_ boxed: MTBoxed, prevAtom: MTMathAtom?, atomIndex: Int) -> MTBreakableElement? {
+        let typesetter = MTTypesetter(withFont: font, style: style, cramped: cramped, spaced: false)
+        guard let display = typesetter.makeBoxed(boxed) else { return nil }
+
+        return MTBreakableElement(
+            content: .display(display),
+            width: display.width,
+            height: display.ascent + display.descent,
+            ascent: display.ascent,
+            descent: display.descent,
+            isBreakBefore: true,
+            isBreakAfter: true,
+            penaltyBefore: MTBreakPenalty.good,
+            penaltyAfter: MTBreakPenalty.good,
+            groupId: nil,
+            parentId: nil,
+            originalAtom: boxed,
+            indexRange: boxed.indexRange,
             color: nil,
             backgroundColor: nil,
             indivisible: true
@@ -1120,8 +1307,8 @@ class MTAtomTokenizer {
 
     private func tokenizeSpace(_ atom: MTMathAtom, prevAtom: MTMathAtom?, atomIndex: Int) -> MTBreakableElement? {
         // Space atoms typically don't participate in breaking
-        // They are rendered as-is
-        let width = widthCalculator.measureSpace(atom.type)
+        // They are rendered as-is, with the amount given by the command (\quad is 1em, \! is negative)
+        let width = widthCalculator.measureSpace((atom as? MTMathSpace)?.space ?? 0)
 
         return MTBreakableElement(
             content: .space(width),

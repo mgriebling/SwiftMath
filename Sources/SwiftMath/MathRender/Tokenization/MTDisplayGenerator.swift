@@ -18,14 +18,12 @@ class MTDisplayGenerator {
 
     let font: MTFont
     let style: MTLineStyle
-    let widthCalculator: MTElementWidthCalculator
 
     // MARK: - Initialization
 
     init(font: MTFont, style: MTLineStyle) {
         self.font = font
         self.style = style
-        self.widthCalculator = MTElementWidthCalculator(font: font, style: style)
     }
 
     // MARK: - Display Generation
@@ -97,35 +95,24 @@ class MTDisplayGenerator {
                 xOffset += groupAdvance
                 i = j
             } else {
-                // Regular element (not part of a group)
-
-                // CRITICAL: For operators, spacing should be split evenly before and after
-                // The element.width includes both spacing, but we need to position the operator
-                // with half spacing before it
-                var spacingBefore: CGFloat = 0
-                if case .operator(let op, _) = element.content {
-                    // Get the actual text width vs element width to calculate spacing
-                    let textWidth = widthCalculator.measureText(op)
-                    let totalSpacing = element.width - textWidth
-                    spacingBefore = totalSpacing / 2
-                }
-
-                let elementPosition = CGPoint(x: position.x + xOffset + spacingBefore, y: baseline)
+                // Regular element (not part of a group). Spaces around operators are separate
+                // elements, so every element is drawn where it starts.
+                let elementPosition = CGPoint(x: position.x + xOffset, y: baseline)
 
                 switch element.content {
                 case .text(let text):
                     let display = createTextDisplay(text, at: elementPosition, element: element)
-                    displays.append(display)
+                    displays.append(colored(display, element))
 
                 case .display(let preRenderedDisplay):
                     // Use pre-rendered display (fraction, radical, etc.)
-                    var mutableDisplay = preRenderedDisplay
+                    let mutableDisplay = preRenderedDisplay
                     mutableDisplay.position = elementPosition
-                    displays.append(mutableDisplay)
+                    displays.append(colored(mutableDisplay, element))
 
                 case .operator(let op, _):
                     let display = createTextDisplay(op, at: elementPosition, element: element)
-                    displays.append(display)
+                    displays.append(colored(display, element))
 
                 case .script:
                     // Standalone script (shouldn't happen, but handle gracefully)
@@ -175,14 +162,14 @@ class MTDisplayGenerator {
                 switch element.content {
                 case .text(let text):
                     let display = createTextDisplay(text, at: basePosition, element: element, hasScript: hasScripts)
-                    displays.append(display)
+                    displays.append(colored(display, element))
                 case .display(let preRenderedDisplay):
-                    var mutableDisplay = preRenderedDisplay
+                    let mutableDisplay = preRenderedDisplay
                     mutableDisplay.position = basePosition
-                    displays.append(mutableDisplay)
+                    displays.append(colored(mutableDisplay, element))
                 case .operator(let op, _):
                     let display = createTextDisplay(op, at: basePosition, element: element, hasScript: hasScripts)
-                    displays.append(display)
+                    displays.append(colored(display, element))
                 default:
                     break
                 }
@@ -305,7 +292,7 @@ class MTDisplayGenerator {
                 let scriptPosition = CGPoint(x: position.x + baseWidth + deltaOffset, y: position.y + scriptShift)
 
                 // Reset the scriptDisplay's position to (0, 0) since it will be positioned by the wrapper
-                var mutableScript = scriptDisplay
+                let mutableScript = scriptDisplay
                 mutableScript.position = CGPoint.zero
 
                 let wrappedScript = MTMathListDisplay(
@@ -316,7 +303,7 @@ class MTDisplayGenerator {
                 wrappedScript.position = scriptPosition
                 wrappedScript.index = 0  // Index of the base atom this script belongs to
 
-                displays.append(wrappedScript)
+                displays.append(colored(wrappedScript, element))
             }
         }
 
@@ -345,7 +332,7 @@ class MTDisplayGenerator {
 
             // Update the first base display's dimensions to reflect the full extent
             // Width should be base + script, without the spaceAfterScript (that's for cursor advancement)
-            var baseDisplay = displays[baseDisplayStartIndex]
+            let baseDisplay = displays[baseDisplayStartIndex]
             baseDisplay.ascent = maxAscent
             baseDisplay.descent = maxDescent
             baseDisplay.width = baseWidth + scriptWidth
@@ -356,7 +343,16 @@ class MTDisplayGenerator {
     }
 
     /// Create a text display for a character or string
+    /// Gives the display the color of its element (from \color or \textcolor), if it has one
+    private func colored(_ display: MTDisplay, _ element: MTBreakableElement) -> MTDisplay {
+        if let color = element.color {
+            display.localTextColor = color
+        }
+        return display
+    }
+
     private func createTextDisplay(_ text: String, at position: CGPoint, element: MTBreakableElement, hasScript: Bool = false) -> MTDisplay {
+        let font = element.font ?? self.font
         let attrString = NSMutableAttributedString(string: text)
         attrString.addAttribute(
             NSAttributedString.Key(kCTFontAttributeName as String),

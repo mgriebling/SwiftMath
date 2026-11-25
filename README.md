@@ -455,12 +455,15 @@ This is a list of formula types that the library currently supports:
 * Big delimiters (using `\left` and `\right`)
 * Manual delimiter sizing (`\big`, `\Big`, `\bigg`, `\Bigg` and variants)
 * Greek alphabet
+* Unicode math symbols typed directly (`×`, `÷`, `≤`, `≠`, `→`, `α`, ...) and non-Latin text such as Chinese
 * Bold Greek symbols (`\boldsymbol`)
 * Combinatorics (`\binom`, `\choose` etc.)
 * Geometry symbols (e.g. angle, congruence etc.)
 * Ratios, proportions, percentages
-* Math spacing
+* Math spacing (TeX spacing between atoms, and `\,` `\:` `\;` `\!` `\quad` `\qquad`)
 * Overline and underline
+* Horizontal braces with labels (`\underbrace{...}_{...}`, `\overbrace{...}^{...}`)
+* Boxed formulas (`\boxed`)
 * Math accents (including `\hat`, `\tilde`, `\bar`, `\vec`, `\dot`, `\ddot`, etc.)
 * Vector arrows (`\vec`, `\overrightarrow`, `\overleftarrow`, `\overleftrightarrow` with automatic stretching)
 * Wide accents (`\widehat`, `\widetilde`)
@@ -651,7 +654,21 @@ This is particularly useful for:
 - Emoji: `\text{Math is fun! 🎉📐}`
 - Mixed scripts: `\text{Equation: 方程式}`
 
-**Note**: The fallback font only applies to characters within `\text{}` commands, not regular math mode.
+Characters that are not in the math font are kept in math mode as well, so `\frac{新}{原}` or `A：B`
+show the text instead of dropping it, and Unicode math symbols typed directly are read as their commands:
+`36÷5`, `x≤3`, `a≠b` and `α+β` render exactly like `36\div 5`, `x\leq 3`, `a\neq b` and `\alpha+\beta`
+(as in KaTeX and MathJax). Text commands such as `\textbf{...}` keep their spaces like `\text{...}`.
+
+##### Layout Conventions
+By default fractions in text (inline) style keep the size of the text and the limits of `\sum`, `\lim`
+and the like go above and below the operator, which is easy to read but makes inline formulas tall.
+To lay out formulas the way TeX and KaTeX do (script-size numerators and denominators in text style,
+limits to the side of the operator in text style, and TeX's null delimiter space around fractions), set
+this once before typesetting:
+
+```swift
+MTLayoutConventions.current = .tex
+```
 
 ##### Custom Commands
 You can define your own commands that are not already predefined. This is
@@ -692,7 +709,6 @@ Note this is not a complete implementation of LaTeX math mode. There are
 some pieces that are missing and may be included in future updates:
 
 * `\middle` delimiter for use between `\left` and `\right`
-* Some fine spacing commands (`\:`, `\;`, `\!` - note that `\,` works)
 
 For a complete list of features and their implementation status, see [MISSING_FEATURES.md](MISSING_FEATURES.md).
 

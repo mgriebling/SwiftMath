@@ -24,7 +24,8 @@ public class MTMathAtomFactory {
         "gets" : "leftarrow",
         "to" : "rightarrow",
         "iff" : "Longleftrightarrow",
-        "AA" : "angstrom"
+        "AA" : "angstrom",
+        "dots" : "ldots",
     ]
     
     public static let delimiters = [
@@ -68,6 +69,11 @@ public class MTMathAtomFactory {
         // Double square brackets (strachey brackets)
         "llbracket" : "\u{27E6}",  // left double bracket
         "rrbracket" : "\u{27E7}",  // right double bracket
+        // amsmath delimiters that say which side they are on
+        "lvert" : "|",
+        "rvert" : "|",
+        "lVert" : "\u{2016}",
+        "rVert" : "\u{2016}",
     ]
     
     private static let delimValueLock = NSLock()
@@ -107,6 +113,7 @@ public class MTMathAtomFactory {
         "dot" :  "\u{0307}",
         "ddot" :  "\u{0308}",
         "check" :  "\u{030C}",
+        "mathring" :  "\u{030A}",
         "vec" :  "\u{20D7}",
         "widehat" :  "\u{0302}",
         "widetilde" :  "\u{0303}",
@@ -281,6 +288,9 @@ public class MTMathAtomFactory {
         "bowtie" : MTMathAtom(type: .relation, value: "\u{22C8}"),
         "perp" : MTMathAtom(type: .relation, value: "\u{27C2}"),
         "implies" : MTMathAtom(type: .relation, value: "\u{27F9}"),
+        "impliedby" : MTMathAtom(type: .relation, value: "\u{27F8}"),
+        "therefore" : MTMathAtom(type: .relation, value: "\u{2234}"),
+        "because" : MTMathAtom(type: .relation, value: "\u{2235}"),
 
         // Negated relations (amssymb)
         // Inequality negations
@@ -504,6 +514,13 @@ public class MTMathAtomFactory {
 		"OE" : MTMathAtom(type: .ordinary, value: "\u{0152}"),	// NEW Œ
         "|" : MTMathAtom(type: .ordinary, value: "\u{2016}"),
         "vert" : MTMathAtom(type: .ordinary, value: "|"),
+        "lvert" : MTMathAtom(type: .open, value: "|"),
+        "rvert" : MTMathAtom(type: .close, value: "|"),
+        "lVert" : MTMathAtom(type: .open, value: "\u{2016}"),
+        "rVert" : MTMathAtom(type: .close, value: "\u{2016}"),
+        "bmod" : MTMathAtom(type: .binaryOperator, value: "mod"),
+        "checkmark" : MTMathAtom(type: .ordinary, value: "\u{2713}"),
+        "blacksquare" : MTMathAtom(type: .ordinary, value: "\u{25A0}"),
         "ldots" : MTMathAtom(type: .ordinary, value: "\u{2026}"),
         "prime" : MTMathAtom(type: .ordinary, value: "\u{2032}"),
         "hbar" : MTMathAtom(type: .ordinary, value: "\u{210F}"),
@@ -540,6 +557,7 @@ public class MTMathAtomFactory {
 
         // Spacing
         "," : MTMathSpace(space: 3),
+        ":" : MTMathSpace(space: 4),
         ">" : MTMathSpace(space: 4),
         ";" : MTMathSpace(space: 5),
         "!" : MTMathSpace(space: -3),
@@ -647,6 +665,7 @@ public class MTMathAtomFactory {
         "bf": .bold,
         "textbf": .bold,
         "mathcal": .caligraphic,
+        "mathscr": .caligraphic,
         "cal": .caligraphic,
         "mathtt": .typewriter,
         "texttt": .typewriter,
@@ -811,7 +830,39 @@ public class MTMathAtomFactory {
                 return nil
         }
     }
-    
+
+    /** Gets an atom for a non-ASCII character that `atom(forCharacter:)` does not map, so that
+     such characters are rendered instead of being silently dropped.
+     In math mode a character that is the output of a supported command becomes that command's
+     atom, so `a×b`, `x≤3` or `α+β` lay out exactly like `a\times b`, `x\leq 3` or `\alpha+\beta`
+     (KaTeX and MathJax accept these characters the same way). Any other visible character, such
+     as CJK text, full-width punctuation or emoji, becomes an ordinary atom that is drawn with the
+     system fallback font. In text mode (`\text{...}`) every character is kept as text.
+     Returns nil for ASCII characters, for whitespace in math mode and for invisible format characters.
+     */
+    public static func atom(forUnicodeCharacter ch: Character, inTextMode: Bool) -> MTMathAtom? {
+        guard let first = ch.unicodeScalars.first, first.value > 0x7E else { return nil }
+        if ch.isWhitespace {
+            // Non-breaking and ideographic spaces are spaces in text, and ignored in math like " ".
+            return inTextMode ? atom(forLatexSymbol: " ") : nil
+        }
+        if ch.unicodeScalars.allSatisfy({ $0.properties.generalCategory == .format || $0.properties.generalCategory == .control }) {
+            // Zero-width spaces, byte order marks, soft hyphens and the like draw nothing.
+            return nil
+        }
+        let chStr = String(ch)
+        if !inTextMode {
+            if chStr == "\u{2212}" {
+                // A typed minus sign is the same binary operator as "-".
+                return atom(forCharacter: "-")
+            }
+            if let name = textToLatexSymbolName[chStr], let atom = atom(forLatexSymbol: name) {
+                return atom
+            }
+        }
+        return MTMathAtom(type: .ordinary, value: chStr)
+    }
+
     /** Returns a `MTMathList` with one atom per character in the given string. This function
      does not do any LaTeX conversion or interpretation. It simply uses `atom(forCharacter:)` to
      convert the characters to atoms. Any character that cannot be converted is ignored. */
@@ -983,6 +1034,13 @@ public class MTMathAtomFactory {
      - `cases`: 1 or 2 columns, left-aligned
      - `eqnarray`: Exactly 3 columns with r-c-l alignment
      */
+    /// Display environments laid out like aligned: in a formula there is no equation number to show
+    static let alignEnvs: Set<String> = ["align", "align*", "alignat", "alignat*", "alignedat", "flalign", "flalign*"]
+    /// Display environments with one centered column, laid out like gather
+    static let gatherEnvs: Set<String> = ["gather*", "gathered", "equation", "equation*", "multline", "multline*"]
+    /// Environments that take the number of column pairs as an argument, {2} in \begin{alignat}{2}
+    static let columnCountEnvs: Set<String> = ["alignat", "alignat*", "alignedat"]
+
     public static func table(withEnvironment env: String?, alignment: MTColumnAlignment? = nil, rows: [[MTMathList]], error:inout NSError?) -> MTMathAtom? {
         let table = MTMathTable(environment: env)
 
@@ -1034,7 +1092,7 @@ public class MTMathAtomFactory {
                 } else {
                     return table
                 }
-            } else if env == "eqalign" || env == "split" || env == "aligned" {
+            } else if env == "eqalign" || env == "split" || env == "aligned" || Self.alignEnvs.contains(env) {
                 // split is limited to max 2 columns per LaTeX/KaTeX spec
                 // aligned/eqalign can have any number of columns (1, 2, 3, 4+)
                 if env == "split" && table.numColumns > 2 {
@@ -1066,7 +1124,7 @@ public class MTMathAtomFactory {
                 }
 
                 return table
-            } else if env == "displaylines" || env == "gather" {
+            } else if env == "displaylines" || env == "gather" || Self.gatherEnvs.contains(env) {
                 if table.numColumns != 1 {
                     let message = "\(env) environment can only have 1 column"
                     if error == nil {
@@ -1098,7 +1156,7 @@ public class MTMathAtomFactory {
                 table.set(alignment: .left, forColumn: 2)
                 
                 return table
-            } else if env == "cases" {
+            } else if env == "cases" || env == "dcases" || env == "rcases" {
                 if table.numColumns != 1 && table.numColumns != 2 {
                     let message = "cases environment can have 1 or 2 columns"
                     if error == nil {
@@ -1115,7 +1173,8 @@ public class MTMathAtomFactory {
                     table.set(alignment: .left, forColumn: 1)
                 }
                 
-                let style = MTMathStyle(style: .text)
+                // dcases sets its cells in display style
+                let style = MTMathStyle(style: env == "dcases" ? .display : .text)
                 for i in 0..<table.cells.count {
                     for j in 0..<table.cells[i].count {
                         table.cells[i][j].insert(style, at: 0)
@@ -1123,11 +1182,17 @@ public class MTMathAtomFactory {
                 }
                 
                 let inner = MTInner()
-                inner.leftBoundary = Self.boundary(forDelimiter: "{")
-                inner.rightBoundary = Self.boundary(forDelimiter: ".")
                 let space = Self.atom(forLatexSymbol: ",")!
-                
-                inner.innerList = MTMathList(atoms: [space, table])
+                if env == "rcases" {
+                    // The brace on the right
+                    inner.leftBoundary = Self.boundary(forDelimiter: ".")
+                    inner.rightBoundary = Self.boundary(forDelimiter: "}")
+                    inner.innerList = MTMathList(atoms: [table, space])
+                } else {
+                    inner.leftBoundary = Self.boundary(forDelimiter: "{")
+                    inner.rightBoundary = Self.boundary(forDelimiter: ".")
+                    inner.innerList = MTMathList(atoms: [space, table])
+                }
                 
                 return inner
             } else {

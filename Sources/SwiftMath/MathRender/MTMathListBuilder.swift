@@ -117,6 +117,18 @@ public struct MTMathListBuilder {
     }
 
     // Peek at next command without consuming it (for \not lookahead)
+    /// Reads the next character if \not can negate it (\not=, \not<, \not>) and returns the negated symbol;
+    /// otherwise leaves the input as it was.
+    mutating func readNegatableCharacter() -> String? {
+        let savedIndex = currentCharIndex
+        skipSpaces()
+        if hasCharacters, let negated = Self.notCombinations[String(getNextCharacter())] {
+            return negated
+        }
+        currentCharIndex = savedIndex
+        return nil
+    }
+
     mutating func peekNextCommand() -> String {
         let savedIndex = currentCharIndex
         skipSpaces()
@@ -203,6 +215,14 @@ public struct MTMathListBuilder {
         "supset": "\u{2285}",   // ⊅ Not superset
         "supseteq": "\u{2289}", // ⊉ Not superset or equal
         "=": "\u{2260}",        // ≠ Not equal (alternative to \neq)
+        "<": "\u{226E}",        // ≮
+        ">": "\u{226F}",        // ≯
+        "leq": "\u{2270}",      // ≰
+        "le": "\u{2270}",
+        "geq": "\u{2271}",      // ≱
+        "ge": "\u{2271}",
+        "ni": "\u{220C}",       // ∌
+        "mid": "\u{2224}",      // ∤
     ]
 
     /// Delimiter sizing commands with their size multipliers (relative to font size).
@@ -473,8 +493,9 @@ public struct MTMathListBuilder {
                 
                 if let fontStyle = MTMathAtomFactory.fontStyleWithName(command) {
                     let oldSpacesAllowed = spacesAllowed
-                    // Text has special consideration where it allows spaces without escaping.
-                    spacesAllowed = command == "text"
+                    // Text commands (\text, \textrm, \textbf, \textit, \textsf, \texttt) typeset their
+                    // argument as text, which keeps spaces without escaping.
+                    spacesAllowed = command.hasPrefix("text")
                     let oldFontStyle = currentFontStyle
                     currentFontStyle = fontStyle
                     if let sublist = self.buildInternal(true) {
@@ -518,13 +539,14 @@ public struct MTMathListBuilder {
             } else {
                 atom = MTMathAtomFactory.atom(forCharacter: char)
                 if atom == nil {
-                    // Not a recognized character in standard math mode
-                    // In text mode (spacesAllowed && roman style), accept any Unicode character for fallback font support
-                    // This enables Chinese, Japanese, Korean, emoji, etc. in \text{} commands
-                    if spacesAllowed && currentFontStyle == .roman {
-                        atom = MTMathAtom(type: .ordinary, value: String(char))
-                    } else {
-                        // In math mode or non-text commands, skip unrecognized characters
+                    // Not an ASCII math character. Unicode symbols map to their commands in math mode
+                    // (× is \times, ≤ is \leq, α is \alpha) and any other visible character (Chinese,
+                    // Japanese, Korean, emoji, full-width punctuation, ...) is kept as an ordinary atom
+                    // drawn with the fallback font, in math mode as well as in text commands.
+                    // Dropping these silently changed the meaning: "36÷5" rendered as "365".
+                    atom = MTMathAtomFactory.atom(forUnicodeCharacter: char, inTextMode: spacesAllowed)
+                    if atom == nil {
+                        // ASCII control characters, whitespace in math mode, invisible format characters
                         continue
                     }
                 }
@@ -676,13 +698,29 @@ public struct MTMathListBuilder {
                     }
                 } else if atom.type == .overline {
                     if let overline = atom as? MTOverLine {
-                        str += "\\overline"
-                        str += "{\(mathListToString(overline.innerList!))}"
+                        let inner = mathListToString(overline.innerList ?? MTMathList())
+                        switch overline.decoration {
+                        case .line: str += "\\overline{\(inner)}"
+                        case .brace: str += "\\overbrace{\(inner)}"
+                        case .nothing: str += "\\overset{\(mathListToString(overline.superScript ?? MTMathList()))}{\(inner)}"
+                        case .arrow(let arrow):
+                            str += "\\\(arrow.rawValue)"
+                            if let below = overline.subScript { str += "[\(mathListToString(below))]" }
+                            str += "{\(mathListToString(overline.superScript ?? MTMathList()))}"
+                        }
                     }
                 } else if atom.type == .underline {
                     if let underline = atom as? MTUnderLine {
-                        str += "\\underline"
-                        str += "{\(mathListToString(underline.innerList!))}"
+                        let inner = mathListToString(underline.innerList ?? MTMathList())
+                        switch underline.decoration {
+                        case .line, .arrow: str += "\\underline{\(inner)}"
+                        case .brace: str += "\\underbrace{\(inner)}"
+                        case .nothing: str += "\\underset{\(mathListToString(underline.subScript ?? MTMathList()))}{\(inner)}"
+                        }
+                    }
+                } else if atom.type == .boxed {
+                    if let boxed = atom as? MTBoxed {
+                        str += "\\boxed{\(mathListToString(boxed.innerList ?? MTMathList()))}"
                     }
                 } else if atom.type == .accent {
                     if let accent = atom as? MTAccent {
@@ -730,11 +768,15 @@ public struct MTMathListBuilder {
                     }
                 }
                 
-                if atom.superScript != nil {
+                // \overset, \underset and the extensible arrows wrote their scripts as arguments
+                let decoration = (atom as? MTOverLine)?.decoration ?? (atom as? MTUnderLine)?.decoration
+                let ownsScripts = decoration == .nothing || { if case .arrow = decoration { return true } else { return false } }()
+
+                if atom.superScript != nil && !ownsScripts {
                     str += "^{\(mathListToString(atom.superScript!))}"
                 }
                 
-                if atom.subScript != nil {
+                if atom.subScript != nil && !ownsScripts {
                     str += "_{\(mathListToString(atom.subScript!))}"
                 }
             }
@@ -825,11 +867,16 @@ public struct MTMathListBuilder {
             frac.numerator = numerator
             frac.denominator = denominator
             return frac;
-        } else if command == "binom" {
-            // A binom command has 2 arguments
+        } else if command == "binom" || command == "tbinom" || command == "dbinom" {
+            // A binom command has 2 arguments; \tbinom and \dbinom force the style of both, like \tfrac and \dfrac
             let frac = MTFraction(hasRule: false)
             frac.numerator = self.buildInternal(true)
             frac.denominator = self.buildInternal(true)
+            if command != "binom" {
+                let style: MTLineStyle = command == "dbinom" ? .display : .text
+                frac.numerator?.insert(MTMathStyle(style: style), at: 0)
+                frac.denominator?.insert(MTMathStyle(style: style), at: 0)
+            }
             frac.leftDelimiter = "(";
             frac.rightDelimiter = ")";
             return frac;
@@ -939,6 +986,66 @@ public struct MTMathListBuilder {
             let under = MTUnderLine()
             under.innerList = self.buildInternal(true)
             return under
+        } else if command == "underbrace" || command == "overbrace" {
+            // A brace under or over its argument; a following subscript (\underbrace) or
+            // superscript (\overbrace) is the label set below or above the brace.
+            if command == "underbrace" {
+                let under = MTUnderLine()
+                under.isBrace = true
+                under.innerList = self.buildInternal(true)
+                return under
+            }
+            let over = MTOverLine()
+            over.isBrace = true
+            over.innerList = self.buildInternal(true)
+            return over
+        } else if command == "overset" || command == "underset" || command == "stackrel" {
+            // \overset{top}{base}, \underset{bottom}{base}, \stackrel{top}{base}: the first argument is set
+            // above or below the base like a limit. The construct is spaced like a one-atom base that is a
+            // relation, binary operator or operator (\overset{?}{=} is a relation); \stackrel always is a relation.
+            let label = self.buildInternal(true)
+            let baseList = self.buildInternal(true)
+            var atomClass: MTMathAtomType? = nil
+            if command == "stackrel" {
+                atomClass = .relation
+            } else if let only = baseList?.atoms.first, baseList?.atoms.count == 1,
+                      [.relation, .binaryOperator, .largeOperator].contains(only.type) {
+                atomClass = only.type
+            }
+            if command == "underset" {
+                let under = MTUnderLine()
+                under.decoration = .nothing
+                under.innerList = baseList
+                under.subScript = label
+                under.atomClass = atomClass
+                return under
+            }
+            let over = MTOverLine()
+            over.decoration = .nothing
+            over.innerList = baseList
+            over.superScript = label
+            over.atomClass = atomClass
+            return over
+        } else if let arrow = MTExtensibleArrow(rawValue: command) {
+            // \xrightarrow[below]{above}: an arrow as wide as its labels, spaced as a relation
+            let over = MTOverLine()
+            over.decoration = .arrow(arrow)
+            over.atomClass = .relation
+            over.innerList = MTMathList()
+            if self.hasCharacters {
+                if self.getNextCharacter() == "[" {
+                    over.subScript = self.buildInternal(false, stopChar: "]")
+                } else {
+                    self.unlookCharacter()
+                }
+            }
+            over.superScript = self.buildInternal(true)
+            return over
+        } else if command == "boxed" {
+            // The boxed command has 1 argument
+            let boxed = MTBoxed()
+            boxed.innerList = self.buildInternal(true)
+            return boxed
         } else if command == "substack" {
             // \substack reads ONE braced argument containing rows separated by \\
             // Similar to how \frac reads {numerator}{denominator}
@@ -972,6 +1079,10 @@ public struct MTMathListBuilder {
             let env = self.readEnvironment()
             if env == nil {
                 return nil;
+            }
+            if let env, MTMathAtomFactory.columnCountEnvs.contains(env) {
+                // The number of column pairs is not needed: columns come from the &s
+                _ = self.buildInternal(true)
             }
             let table = self.buildTable(env: env, firstList:nil, isRow:false)
             return table
@@ -1035,6 +1146,9 @@ public struct MTMathListBuilder {
 
             if let negatedUnicode = Self.notCombinations[nextCommand] {
                 self.consumeNextCommand() // Remove base symbol from stream
+                return MTMathAtom(type: .relation, value: negatedUnicode)
+            } else if nextCommand.isEmpty, let negatedUnicode = self.readNegatableCharacter() {
+                // \not followed by a character: \not= \not< \not>
                 return MTMathAtom(type: .relation, value: negatedUnicode)
             } else {
                 let errorMessage = "Unsupported \\not\\\(nextCommand) combination"
@@ -1589,7 +1703,7 @@ public struct MTMathListBuilder {
     }
     
     mutating func readCommand() -> String {
-        let singleChars = "{}$#%_| ,>;!\\"
+        let singleChars = "{}$#%&_| ,:>;!\\"
         if self.hasCharacters {
             let char = self.getNextCharacter()
             if let _ = singleChars.firstIndex(of: char)  {

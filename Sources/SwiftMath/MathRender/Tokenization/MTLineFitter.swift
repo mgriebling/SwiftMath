@@ -17,12 +17,15 @@ class MTLineFitter {
 
     let maxWidth: CGFloat
     let margin: CGFloat
+    /// Space the display generator puts after a group with scripts
+    let spaceAfterScript: CGFloat
 
     // MARK: - Initialization
 
-    init(maxWidth: CGFloat, margin: CGFloat = 0) {
+    init(maxWidth: CGFloat, margin: CGFloat = 0, spaceAfterScript: CGFloat = 0) {
         self.maxWidth = maxWidth
         self.margin = margin
+        self.spaceAfterScript = spaceAfterScript
     }
 
     // MARK: - Line Fitting
@@ -32,16 +35,7 @@ class MTLineFitter {
         guard !elements.isEmpty else { return [] }
         guard maxWidth > 0 else { return [elements] }  // No width constraint
 
-        let debugPunctuation = false  // Enable to debug line breaking issues
 
-        if debugPunctuation {
-            print("\n=== MTLineFitter: fitting \(elements.count) elements, maxWidth=\(maxWidth) ===")
-            for (idx, elem) in elements.enumerated() {
-                if case .text(let t) = elem.content {
-                    print("[\(idx)] '\(t)' breakBefore=\(elem.isBreakBefore) breakAfter=\(elem.isBreakAfter) width=\(elem.width)")
-                }
-            }
-        }
 
         var lines: [[MTBreakableElement]] = [[]]
         var currentWidth: CGFloat = 0
@@ -50,9 +44,6 @@ class MTLineFitter {
         while i < elements.count {
             let element = elements[i]
 
-            if debugPunctuation, case .text(let t) = element.content {
-                print("\n  Processing element[\(i)]: '\(t)' breakBefore=\(element.isBreakBefore)")
-            }
 
             // Handle grouped elements (base + scripts)
             if let groupId = element.groupId {
@@ -60,10 +51,11 @@ class MTLineFitter {
 
                 // Calculate group width correctly for scripts
                 // Scripts overlap vertically, so width = max(script widths), not sum
-                let groupWidth = calculateGroupWidth(groupElements)
+                let (groupWidth, trailingSpace) = calculateGroupWidth(groupElements)
 
                 // Check if group fits on current line
-                if !lines.last!.isEmpty && currentWidth + groupWidth > maxWidth - margin {
+                // The space after the scripts may end up past the end of the line: it draws nothing
+                if !lines.last!.isEmpty && currentWidth + groupWidth - trailingSpace > maxWidth - margin {
                     // Group doesn't fit - check if first element of group can start a new line
                     if groupElements.first?.isBreakBefore ?? true {
                         // Can start new line
@@ -84,19 +76,8 @@ class MTLineFitter {
 
             // Check if element fits on current line
             if !lines.last!.isEmpty && currentWidth + element.width > maxWidth - margin {
-                if debugPunctuation, case .text(let t) = element.content {
-                    print("    Doesn't fit (width=\(currentWidth) + \(element.width) > \(maxWidth)), current line has \(lines.last!.count) elements")
-                }
                 // Element doesn't fit - find best break point in current line
                 if let breakIndex = findBestBreak(in: lines[lines.count - 1]) {
-                    if debugPunctuation {
-                        print("    Found break at index \(breakIndex) out of \(lines.last!.count) elements")
-                        if breakIndex < lines.last!.count {
-                            if case .text(let t) = lines.last![breakIndex].content {
-                                print("      Break at element: '\(t)'")
-                            }
-                        }
-                    }
                     // Found a break point - move elements from breakIndex onward to next line
                     let moveElements = Array(lines[lines.count - 1][breakIndex...])
                     let oldLine = Array(lines[lines.count - 1][..<breakIndex])
@@ -110,26 +91,17 @@ class MTLineFitter {
                         currentWidth = moveElements.reduce(0) { $0 + $1.width }
 
                         // Now check if current element should go on new line or stay with old line
-                        if debugPunctuation, case .text(let t) = element.content {
-                            print("      Checking element '\(t)' (i=\(i)): breakBefore=\(element.isBreakBefore)")
-                        }
                         if !element.isBreakBefore {
                             // CRITICAL FIX: Current element cannot start a line, so it's part of the
                             // unbreakable sequence that was just moved to the new line.
                             // Add it to the NEW line, not the old line!
                             // Example: "matrices" breaks before 'm', so 'm','a','t','r','i' move to new line.
                             // When we process 'c', it can't start a line, so it must join the new line.
-                            if debugPunctuation, case .text(let t) = element.content {
-                                print("      -> Adding '\(t)' to new line (part of unbreakable sequence)")
-                            }
                             lines[lines.count - 1].append(element)
                             currentWidth += element.width
                             i += 1
                             continue
                         } else {
-                            if debugPunctuation, case .text(let t) = element.content {
-                                print("      -> Adding '\(t)' to new line (can start line)")
-                            }
                         }
                         // Current element can start a line, will be added to new line below
                     } else {
@@ -165,31 +137,29 @@ class MTLineFitter {
 
         let finalLines = lines.filter { !$0.isEmpty }
 
-        if debugPunctuation {
-            print("\n=== Final lines: ===")
-            for (lineIdx, line) in finalLines.enumerated() {
-                print("Line \(lineIdx):")
-                for elem in line {
-                    if case .text(let t) = elem.content {
-                        print("  '\(t)'", terminator: "")
-                    }
-                }
-                print()
-            }
-        }
 
         return finalLines
     }
 
     // MARK: - Helper Methods
 
-    /// Calculate the correct width for a group of elements (e.g., base + scripts)
-    /// Scripts overlap vertically, so the group width is not the sum of all widths
-    private func calculateGroupWidth(_ groupElements: [MTBreakableElement]) -> CGFloat {
-        // For grouped elements (base + scripts), just sum all widths
-        // The display generator will handle the actual positioning and overlap
-        // This is just for line fitting purposes
-        return groupElements.reduce(0) { $0 + $1.width }
+    /// Calculate the correct width for a group of elements (e.g., base + scripts), and the space
+    /// after its scripts that this width includes. Scripts overlap vertically, so the group width is
+    /// not the sum of all widths: like the display generator, count the base, the wider script and
+    /// the space after the scripts. (Summing both scripts made x_1^2 look wider than it is, so a
+    /// formula laid out at its own width, as a label sized to fit is, broke into two lines.)
+    private func calculateGroupWidth(_ groupElements: [MTBreakableElement]) -> (width: CGFloat, trailingSpace: CGFloat) {
+        var base: CGFloat = 0
+        var script: CGFloat?
+        for element in groupElements {
+            if case .script = element.content {
+                script = max(script ?? 0, element.width)
+            } else {
+                base += element.width
+            }
+        }
+        guard let script else { return (base, 0) }
+        return (base + script + spaceAfterScript, spaceAfterScript)
     }
 
     /// Collect all elements that share the same groupId
@@ -211,8 +181,6 @@ class MTLineFitter {
         var bestIndex: Int? = nil
         var lowestPenalty = Int.max
 
-        let debugBreak = false  // Enable to debug break point selection
-        let debugFit = false
 
         // Scan from right to left to prefer breaking later in the line
         // Note: Skip the last element (idx == line.count - 1) because breaking after it
@@ -237,20 +205,12 @@ class MTLineFitter {
             if canBreakAfter && canBreakBeforeNext {
                 let totalPenalty = max(penaltyAfter, penaltyBeforeNext)
                 if totalPenalty < lowestPenalty {
-                    if debugBreak && idx < line.count - 1 {
-                        let currText = if case .text(let t) = element.content { t } else { "?" }
-                        let nextText = if case .text(let t) = line[idx + 1].content { t } else { "?" }
-                        print("  Considering break: '\(currText)' | '\(nextText)' at idx=\(idx), penalty=\(totalPenalty)")
-                    }
                     bestIndex = idx + 1
                     lowestPenalty = totalPenalty
                 }
             }
         }
 
-        if debugBreak {
-            print("  Best break: index=\(bestIndex ?? -1), penalty=\(lowestPenalty)")
-        }
 
         // Only return if we found an acceptable break point
         if let index = bestIndex, lowestPenalty <= MTBreakPenalty.bad {

@@ -66,6 +66,8 @@ public enum MTMathAtomType: Int, CustomStringConvertible, Comparable {
     case color
     case textcolor
     case colorBox
+    /// A math list with a frame around it (\boxed). Does not exist in TeX.
+    case boxed
     
     // Atoms after this point are not part of TeX and do not have the usual structure.
     
@@ -109,6 +111,7 @@ public enum MTMathAtomType: Int, CustomStringConvertible, Comparable {
             case .color:          return "Color"
             case .textcolor:      return "TextColor"
             case .colorBox:       return "Colorbox"
+            case .boxed:          return "Boxed"
             case .table:          return "Table"
         }
     }
@@ -241,6 +244,8 @@ public class MTMathAtom: NSObject {
                 return MTMathTextColor(self as? MTMathTextColor)
             case .colorBox:
                 return MTMathColorbox(self as? MTMathColorbox)
+            case .boxed:
+                return MTBoxed(self as? MTBoxed)
             case .table:
                 return MTMathTable(self as! MTMathTable)
             default:
@@ -520,10 +525,68 @@ public class MTInner: MTMathAtom {
     }
 }
 
+// MARK: - MTOverUnderDecoration
+
+/** What an `MTOverLine` or `MTUnderLine` draws over or under its list. */
+public enum MTOverUnderDecoration: Equatable {
+    /// A rule (`\overline`, `\underline`)
+    case line
+    /// A horizontal curly brace (`\overbrace`, `\underbrace`); the script on that side is a label
+    case brace
+    /// Nothing: the script on that side is set above or below the list (`\overset`, `\underset`, `\stackrel`)
+    case nothing
+    /// An extensible arrow as wide as its labels, over an empty list (`\xrightarrow[below]{above}` and the like)
+    case arrow(MTExtensibleArrow)
+
+    /// The scripts are part of the construct (labels, set above and below) rather than scripts beside it
+    public var setsOwnScripts: Bool { self != .line }
+}
+
+/** The extensible arrows, named by their command. */
+public enum MTExtensibleArrow: String, CaseIterable {
+    case right = "xrightarrow", left = "xleftarrow", leftRight = "xleftrightarrow"
+    case doubleRight = "xRightarrow", doubleLeft = "xLeftarrow", doubleLeftRight = "xLeftrightarrow"
+    case mapsTo = "xmapsto"
+
+    /// The arrow character
+    var character: UniChar {
+        switch self {
+        case .right: return 0x2192
+        case .left: return 0x2190
+        case .leftRight: return 0x2194
+        case .doubleRight: return 0x21D2
+        case .doubleLeft: return 0x21D0
+        case .doubleLeftRight: return 0x21D4
+        case .mapsTo: return 0x21A6
+        }
+    }
+
+    /// Where the arrow is a straight shaft, as fractions of its width: it is lengthened there
+    var shafts: [CGFloat] {
+        switch self {
+        case .right, .doubleRight: return [0.35]
+        case .left, .doubleLeft: return [0.65]
+        case .leftRight, .doubleLeftRight: return [0.5]
+        case .mapsTo: return [0.4]
+        }
+    }
+}
+
 // MARK: - MTOverLIne
 /** An atom with a line over the contained math list. */
 public class MTOverLine: MTMathAtom {
     public var innerList:  MTMathList?
+    /// What is drawn over the list (a line by default)
+    public var decoration = MTOverUnderDecoration.line
+    /// The TeX class of the whole construct for spacing, if not ordinary (`\stackrel` and the
+    /// extensible arrows are relations, `\overset` takes the class of a one-atom base)
+    public var atomClass: MTMathAtomType?
+    /// Draw a horizontal curly brace over the list instead of a line (`\overbrace`).
+    /// The superscript is then set above the brace as a label.
+    public var isBrace: Bool {
+        get { decoration == .brace }
+        set { decoration = newValue ? .brace : .line }
+    }
     
     override public var finalized: MTMathAtom {
         let newOverline = MTOverLine(self)
@@ -535,6 +598,8 @@ public class MTOverLine: MTMathAtom {
         super.init(over)
         self.type = .overline
         self.innerList = MTMathList(over!.innerList)
+        self.decoration = over?.decoration ?? .line
+        self.atomClass = over?.atomClass
     }
     
     override init() {
@@ -547,6 +612,17 @@ public class MTOverLine: MTMathAtom {
 /** An atom with a line under the contained math list. */
 public class MTUnderLine: MTMathAtom {
     public var innerList:  MTMathList?
+    /// What is drawn under the list (a line by default; never an arrow)
+    public var decoration = MTOverUnderDecoration.line
+    /// The TeX class of the whole construct for spacing, if not ordinary (`\underset` takes the
+    /// class of a one-atom base)
+    public var atomClass: MTMathAtomType?
+    /// Draw a horizontal curly brace under the list instead of a line (`\underbrace`).
+    /// The subscript is then set below the brace as a label.
+    public var isBrace: Bool {
+        get { decoration == .brace }
+        set { decoration = newValue ? .brace : .line }
+    }
     
     override public var finalized: MTMathAtom {
         let newUnderline = super.finalized as! MTUnderLine
@@ -558,6 +634,8 @@ public class MTUnderLine: MTMathAtom {
         super.init(under)
         self.type = .underline
         self.innerList = MTMathList(under?.innerList)
+        self.decoration = under?.decoration ?? .line
+        self.atomClass = under?.atomClass
     }
     
     override init() {
@@ -622,6 +700,28 @@ public class MTMathSpace: MTMathAtom {
         self.type = .space
         self.space = space
     }
+}
+
+/**
+ Layout conventions of the typesetter. Choose them with `MTLayoutConventions.current`.
+ */
+public enum MTLayoutConventions {
+    /// Numerators, denominators and limits in text (inline) style keep the size of the surrounding
+    /// text, and the limits of operators like `\sum` and `\lim` go above and below them. Easy to read,
+    /// but inline formulas make taller lines.
+    case readable
+    /// As in TeX and KaTeX: numerators and denominators are one style smaller (script size in text
+    /// style), limits go to the side of the operator in text style, and a fraction has the null delimiter
+    /// space (0.12em) on each side. Inline formulas stay close to the height of the text around them.
+    case tex
+
+    /// The conventions used for typesetting (labels, images). Set it once, before typesetting.
+    public static var current: MTLayoutConventions {
+        get { lock.lock(); defer { lock.unlock() }; return _current }
+        set { lock.lock(); defer { lock.unlock() }; _current = newValue }
+    }
+    private static var _current: MTLayoutConventions = .readable
+    private static let lock = NSLock()
 }
 
 /**
@@ -764,6 +864,34 @@ public class MTMathColorbox: MTMathAtom {
     }
 }
 
+// MARK: - MTBoxed
+/** An atom representing a boxed math list (`\boxed`): the list is typeset in display
+ style with a frame around it, as LaTeX does with `\fbox`. */
+public class MTBoxed: MTMathAtom {
+    public var innerList: MTMathList?
+
+    init(_ boxed: MTBoxed?) {
+        super.init(boxed)
+        self.type = .boxed
+        self.innerList = MTMathList(boxed?.innerList)
+    }
+
+    override init() {
+        super.init()
+        self.type = .boxed
+    }
+
+    public override var string: String {
+        "\\boxed{\(self.innerList?.string ?? "")}"
+    }
+
+    override public var finalized: MTMathAtom {
+        let newBoxed = super.finalized as! MTBoxed
+        newBoxed.innerList = newBoxed.innerList?.finalized
+        return newBoxed
+    }
+}
+
 /**
     Alignment for a column of MTMathTable
  */
@@ -800,9 +928,11 @@ public class MTMathTable: MTMathAtom {
     
     override public var finalized: MTMathAtom {
         let table = super.finalized as! MTMathTable
-        for var row in table.cells {
-            for i in 0..<row.count {
-                row[i] = row[i].finalized
+        // Assign through the table: `for var row in table.cells` changed a copy of each row, so cells
+        // were never finalized (a minus at the start of a cell stayed a binary operator, "− 1")
+        for row in table.cells.indices {
+            for column in table.cells[row].indices {
+                table.cells[row][column] = table.cells[row][column].finalized
             }
         }
         return table
@@ -922,7 +1052,11 @@ public class MTMathList : NSObject {
         let finalizedList = MTMathList()
         let zeroRange = NSMakeRange(0, 0)
         
+        // The previous atom for TeX's rules 5 and 6. Style changes and spaces are not atoms in TeX,
+        // so "\textstyle -1" (the start of a matrix cell) or "a\quad -" don't count them.
         var prevNode: MTMathAtom? = nil
+        // The atom added last, for index ranges and joining digits into one number
+        var lastAdded: MTMathAtom? = nil
         for atom in self.atoms {
             let newNode = atom.finalized
             
@@ -931,12 +1065,12 @@ public class MTMathList : NSObject {
                 // If location is NSNotFound, treat as if there's no prevNode
                 // This prevents negative overflow when creating NSMakeRange
                 let index: Int
-                if prevNode == nil || prevNode!.indexRange.location == NSNotFound {
+                if lastAdded == nil || lastAdded!.indexRange.location == NSNotFound {
                     index = 0
                 } else {
                     // Additional safety: check for potential overflow
-                    let location = prevNode!.indexRange.location
-                    let length = prevNode!.indexRange.length
+                    let location = lastAdded!.indexRange.location
+                    let length = lastAdded!.indexRange.length
                     // If either value is suspicious (negative or too large), reset to 0
                     if location < 0 || length < 0 || location > Int.max - length {
                         index = 0
@@ -957,14 +1091,17 @@ public class MTMathList : NSObject {
                     prevNode!.type = .unaryOperator
                 }
             case .number:
-                if prevNode != nil && prevNode!.type == .number && prevNode!.subScript == nil && prevNode!.superScript == nil {
-                    prevNode!.fuse(with: newNode)
+                if let lastAdded, lastAdded.type == .number && lastAdded.subScript == nil && lastAdded.superScript == nil {
+                    lastAdded.fuse(with: newNode)
                     continue // skip the current node, we are done here.
                 }
             default: break
             }
             finalizedList.add(newNode)
-            prevNode = newNode
+            lastAdded = newNode
+            if newNode.type != .style && newNode.type != .space {
+                prevNode = newNode
+            }
         }
         if prevNode != nil && prevNode!.type == .binaryOperator {
             prevNode!.type = .unaryOperator

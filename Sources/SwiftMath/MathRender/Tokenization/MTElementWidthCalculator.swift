@@ -39,41 +39,6 @@ class MTElementWidthCalculator {
         return CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil))
     }
 
-    // MARK: - Operator Width Measurement
-
-    /// Measure width of operator with appropriate spacing
-    func measureOperator(_ op: String, type: MTMathAtomType) -> CGFloat {
-        let baseWidth = measureText(op)
-        let spacing = getOperatorSpacing(type)
-        return baseWidth + spacing
-    }
-
-    /// Get spacing for an operator (both sides)
-    private func getOperatorSpacing(_ type: MTMathAtomType) -> CGFloat {
-        guard let mathTable = font.mathTable else { return 0 }
-        let muUnit = mathTable.muUnit
-
-        switch type {
-        case .binaryOperator:
-            // Binary operators: 4mu on each side = 8mu total
-            return 2 * muUnit * 4
-
-        case .relation:
-            // Relations: 5mu on each side = 10mu total
-            return 2 * muUnit * 5
-
-        case .largeOperator:
-            // Large operators in inline mode: 1mu on each side
-            if style == .display || style == .text {
-                return 0  // In display mode, handled by MTLargeOpLimitsDisplay
-            }
-            return 2 * muUnit * 1
-
-        default:
-            return 0
-        }
-    }
-
     // MARK: - Display Width Measurement
 
     /// Measure width of a pre-rendered display
@@ -83,26 +48,11 @@ class MTElementWidthCalculator {
 
     // MARK: - Space Width Measurement
 
-    /// Get width of explicit spacing command
-    func measureSpace(_ spaceType: MTMathAtomType) -> CGFloat {
+    /// Get width of an explicit spacing command from its amount in mu (1/18 em of the current
+    /// style's font): \, = 3mu, \: = 4mu, \; = 5mu, \! = -3mu, \quad = 18mu, \qquad = 36mu.
+    func measureSpace(_ space: CGFloat) -> CGFloat {
         guard let mathTable = font.mathTable else { return 0 }
-        let muUnit = mathTable.muUnit
-
-        // Note: These are the explicit spacing commands in LaTeX
-        // \, = thin space (3mu)
-        // \: = medium space (4mu)
-        // \; = thick space (5mu)
-        // \quad = 1em
-        // \qquad = 2em
-
-        switch spaceType {
-        case .space:
-            // Default space - context dependent
-            // For now, use thin space
-            return muUnit * 3
-        default:
-            return 0
-        }
+        return space * mathTable.muUnit
     }
 
     /// Measure explicit space value

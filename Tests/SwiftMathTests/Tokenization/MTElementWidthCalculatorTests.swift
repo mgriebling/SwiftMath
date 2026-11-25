@@ -45,34 +45,6 @@ class MTElementWidthCalculatorTests: XCTestCase {
         XCTAssertGreaterThan(width, singleWidth, "Multi-character text should be wider than single character")
     }
 
-    // MARK: - Operator Width Tests
-
-    func testMeasureBinaryOperator() {
-        let plusWidth = calculator.measureOperator("+", type: .binaryOperator)
-        let textWidth = calculator.measureText("+")
-
-        // Binary operators should have spacing (8mu total)
-        let expectedSpacing = 2 * font.mathTable!.muUnit * 4
-        XCTAssertEqual(plusWidth, textWidth + expectedSpacing, accuracy: 0.1)
-    }
-
-    func testMeasureRelationOperator() {
-        let equalsWidth = calculator.measureOperator("=", type: .relation)
-        let textWidth = calculator.measureText("=")
-
-        // Relations should have wider spacing (10mu total)
-        let expectedSpacing = 2 * font.mathTable!.muUnit * 5
-        XCTAssertEqual(equalsWidth, textWidth + expectedSpacing, accuracy: 0.1)
-    }
-
-    func testMeasureOrdinaryOperator() {
-        // Ordinary atoms don't add spacing
-        let xWidth = calculator.measureOperator("x", type: .ordinary)
-        let textWidth = calculator.measureText("x")
-
-        XCTAssertEqual(xWidth, textWidth, accuracy: 0.1)
-    }
-
     // MARK: - Display Width Tests
 
     func testMeasureDisplay() {
@@ -150,20 +122,5 @@ class MTElementWidthCalculatorTests: XCTestCase {
         let width1 = calculator.measureText("test")
         let width2 = calculator.measureText("test")
         XCTAssertEqual(width1, width2)
-    }
-
-    func testOperatorSpacingConsistency() {
-        // Same operator type should have consistent spacing
-        let width1 = calculator.measureOperator("+", type: .binaryOperator)
-        let width2 = calculator.measureOperator("-", type: .binaryOperator)
-
-        // Different operators may have different base widths, but spacing should be same
-        let textWidth1 = calculator.measureText("+")
-        let textWidth2 = calculator.measureText("-")
-
-        let spacing1 = width1 - textWidth1
-        let spacing2 = width2 - textWidth2
-
-        XCTAssertEqual(spacing1, spacing2, accuracy: 0.01)
     }
 }

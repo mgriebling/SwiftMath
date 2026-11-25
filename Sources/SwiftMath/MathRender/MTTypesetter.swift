@@ -80,8 +80,8 @@ func getInterElementSpaceArrayIndexForType(_ type:MTMathAtomType, row:Bool) -> I
         // Numbers, variables, and unary operators are treated as ordinary
         case .number, .variable, .unaryOperator:
             return 0
-        // Decorative types (accent, underline, overline) are treated as ordinary
-        case .accent, .underline, .overline:
+        // Decorative types (accent, underline, overline, boxed) are treated as ordinary
+        case .accent, .underline, .overline, .boxed:
             return 0
         // Special types that don't typically participate in spacing are treated as ordinary
         case .boundary, .space, .style:
@@ -486,6 +486,9 @@ class MTTypesetter {
     
     static var placeholderColor: MTColor { MTColor.blue }
 
+    /// Layout conventions for fractions and limits, see `MTLayoutConventions.current`
+    static var conventions: MTLayoutConventions { MTLayoutConventions.current }
+
     init(withFont font:MTFont?, style:MTLineStyle, cramped:Bool, spaced:Bool, maxWidth:CGFloat = 0) {
         self.font = font
         self.displayAtoms = [MTDisplay]()
@@ -799,11 +802,41 @@ class MTTypesetter {
     }
     
     func fractionStyle() -> MTLineStyle {
+        if Self.conventions == .tex {
+            // TeX: numerator and denominator one style smaller (display → text → script → scriptscript)
+            return style == .scriptOfScript ? .scriptOfScript : style.inc()
+        }
         // Keep fractions at the same style level instead of incrementing.
         // This ensures that fraction numerators/denominators have the same
         // font size as regular text, preventing them from appearing too small
         // in inline mode or when nested.
         return style
+    }
+
+    /// Whether the limits of an operator with limits (\sum, \lim, ...) go above and below it in the
+    /// current style; otherwise they are set to its side like scripts.
+    func limitsAboveAndBelow(_ op: MTLargeOperator) -> Bool {
+        Self.limitsAboveAndBelow(op, style: style)
+    }
+
+    static func limitsAboveAndBelow(_ op: MTLargeOperator, style: MTLineStyle) -> Bool {
+        guard op.limits else { return false }
+        return style == .display || (style == .text && conventions == .readable)
+    }
+
+    /// The font for laying out a part in `newStyle` inside a list laid out in `style` with `font`,
+    /// which already has the size of `style`.
+    static func font(_ font: MTFont, from style: MTLineStyle, to newStyle: MTLineStyle) -> MTFont {
+        guard newStyle != style, let mathTable = font.mathTable else { return font }
+        func scale(_ style: MTLineStyle) -> CGFloat {
+            switch style {
+            case .display, .text: return 1
+            case .script: return mathTable.scriptScaleDown
+            case .scriptOfScript: return mathTable.scriptScriptScaleDown
+            }
+        }
+        let ratio = scale(newStyle) / scale(style)
+        return ratio == 1 ? font : font.copy(withSize: max(font.fontSize * ratio, 6.0))
     }
     
     func makeFraction(_ frac:MTFraction?) -> MTDisplay? {
@@ -818,14 +851,14 @@ class MTTypesetter {
             numeratorStyle = .display
             denominatorStyle = .display
         } else {
-            // Regular fractions use adaptive style
+            // Regular fractions use adaptive style; \dfrac and \tfrac start both parts with the style to use
             let fractionStyle = self.fractionStyle;
-            numeratorStyle = fractionStyle()
-            denominatorStyle = fractionStyle()
+            numeratorStyle = (frac.numerator?.atoms.first as? MTMathStyle)?.style ?? fractionStyle()
+            denominatorStyle = (frac.denominator?.atoms.first as? MTMathStyle)?.style ?? fractionStyle()
         }
 
-        let numeratorDisplay = MTTypesetter.createLineForMathList(frac.numerator, font:font, style:numeratorStyle, cramped:false)
-        let denominatorDisplay = MTTypesetter.createLineForMathList(frac.denominator, font:font, style:denominatorStyle, cramped:true)
+        let numeratorDisplay = MTTypesetter.createLineForMathList(frac.numerator, font:Self.font(font, from: style, to: numeratorStyle), style:numeratorStyle, cramped:false)
+        let denominatorDisplay = MTTypesetter.createLineForMathList(frac.denominator, font:Self.font(font, from: style, to: denominatorStyle), style:denominatorStyle, cramped:true)
 
         // Handle empty numerator or denominator by creating empty displays
         let numDisplay = numeratorDisplay ?? MTMathListDisplay(withDisplays: [], range: NSMakeRange(0, 0))
@@ -878,6 +911,15 @@ class MTTypesetter {
         display.lineThickness = barThickness;
         display.linePosition = barLocation;
         if frac.leftDelimiter.isEmpty && frac.rightDelimiter.isEmpty {
+            if Self.conventions == .tex {
+                // TeX encloses a fraction in null delimiters of \nulldelimiterspace (1.2pt = 0.12em)
+                let space = styleFont.fontSize * 0.12
+                display.position = CGPoint(x: space, y: 0)
+                let padded = MTMathListDisplay(withDisplays: [display], range: frac.indexRange)
+                padded.width = display.width + 2 * space
+                padded.position = currentPosition
+                return padded
+            }
             return display
         } else {
             return self.addDelimitersToFractionDisplay(display, forFraction: frac)
@@ -1127,7 +1169,8 @@ class MTTypesetter {
     func makeLargeOp(_ op:MTLargeOperator!) -> MTDisplay?  {
         // Show limits above/below in display mode
         // For inline mode, we still center limits below for operators like \lim, but with tighter spacing
-        let limits = op.limits && (style == .display || style == .text)
+        // (unless conventions is .tex, which sets them to the side like TeX)
+        let limits = limitsAboveAndBelow(op)
         var delta = CGFloat(0)
         if op.nucleus.count == 1 {
             var glyph = self.findGlyphForCharacterAtIndex(op.nucleus.startIndex, inString:op.nucleus)
@@ -1180,7 +1223,7 @@ class MTTypesetter {
             return display;
         }
         // Show limits above/below in both display and text (inline) modes
-        if op.limits && (style == .display || style == .text) {
+        if limitsAboveAndBelow(op) {
             // make limits (above/below positioning)
             var superScript:MTMathListDisplay? = nil, subScript:MTMathListDisplay? = nil
 
@@ -1339,6 +1382,122 @@ class MTTypesetter {
         return overDisplay;
     }
     
+    // MARK: - Boxed
+
+    func makeBoxed(_ boxed: MTBoxed) -> MTDisplay? {
+        // Like \fbox{$\displaystyle ...$}: the list in display style, 0.3em from a frame as thick as a fraction rule
+        guard let mathTable = styleFont.mathTable,
+              let inner = MTTypesetter.createLineForMathList(boxed.innerList ?? MTMathList(), font: font, style: .display, cramped: cramped) else { return nil }
+        let display = MTBoxDisplay(withInner: inner, padding: styleFont.fontSize * 0.3, ruleThickness: mathTable.fractionRuleThickness, range: boxed.indexRange)
+        display.position = currentPosition
+        return display
+    }
+
+    // MARK: - Braces, stacks and extensible arrows
+
+    /// `\underbrace{...}_{label}`, `\overbrace{...}^{label}`, `\overset`, `\underset`, `\stackrel` and
+    /// `\xrightarrow[below]{above}`: the list with a brace as wide as itself, nothing, or an arrow as wide
+    /// as its labels; the scripts are set above and below it like limits, centered.
+    func makeStack(_ innerList: MTMathList?, over: Bool, decoration: MTOverUnderDecoration, atom: MTMathAtom) -> MTDisplay? {
+        guard let mathTable = styleFont.mathTable,
+              let inner = MTTypesetter.createLineForMathList(innerList ?? MTMathList(), font: font, style: style, cramped: over || cramped) else { return nil }
+        let scriptStyle = self.scriptStyle()
+        let scriptFont = font.copy(withSize: MTTypesetter.getStyleSize(scriptStyle, font: font))
+        let upper = atom.superScript.flatMap { MTTypesetter.createLineForMathList($0, font: scriptFont, style: scriptStyle, cramped: self.superScriptCramped()) }
+        let lower = atom.subScript.flatMap { MTTypesetter.createLineForMathList($0, font: scriptFont, style: scriptStyle, cramped: self.subscriptCramped()) }
+
+        let nucleus: MTDisplay
+        switch decoration {
+        case .brace:
+            nucleus = makeBraceNucleus(inner, over: over, atom: atom)
+        case .arrow(let arrow):
+            // As wide as the wider label with 0.5em on each side, at least 1.75em; on the baseline like a relation
+            let labels = max(upper?.width ?? 0, lower?.width ?? 0)
+            let width = max(labels + styleFont.fontSize, styleFont.fontSize * 1.75)
+            nucleus = makeStretchedGlyph(arrow.character, bars: arrow.shafts, width: width, inner: nil, atom: atom) ?? inner
+        case .nothing, .line:
+            nucleus = inner
+        }
+
+        guard upper != nil || lower != nil else {
+            nucleus.position = currentPosition
+            return nucleus
+        }
+        let display = MTLargeOpLimitsDisplay(withNucleus: nucleus, upperLimit: upper, lowerLimit: lower, limitShift: 0, extraPadding: 0)
+        let arrowGap = styleFont.fontSize * 0.1
+        if let upper {
+            switch decoration {
+            case .brace where over: display.upperLimitGap = mathTable.stretchStackGapAboveMin   // the label above an overbrace
+            case .arrow: display.upperLimitGap = arrowGap
+            default: display.upperLimitGap = max(mathTable.upperLimitGapMin, mathTable.upperLimitBaselineRiseMin - upper.descent)
+            }
+        }
+        if let lower {
+            switch decoration {
+            case .brace where !over: display.lowerLimitGap = mathTable.stretchStackGapBelowMin   // the label below an underbrace
+            case .arrow: display.lowerLimitGap = arrowGap
+            default: display.lowerLimitGap = max(mathTable.lowerLimitGapMin, mathTable.lowerLimitBaselineDropMin - lower.ascent)
+            }
+        }
+        display.position = currentPosition
+        display.range = atom.indexRange
+        return display
+    }
+
+    /// A glyph stretched to `width`: the narrowest variant at least that wide, or the widest one
+    /// lengthened at its bars. Nil if the font does not have the character.
+    func makeStretchedGlyph(_ character: UniChar, bars: [CGFloat], width: CGFloat, inner: MTMathListDisplay?, atom: MTMathAtom) -> MTStretchedGlyphDisplay? {
+        guard let mathTable = styleFont.mathTable else { return nil }
+        var chars: [UniChar] = [character]
+        var baseGlyph = CGGlyph(0)
+        guard CTFontGetGlyphsForCharacters(styleFont.ctFont, &chars, &baseGlyph, 1), baseGlyph != 0 else { return nil }
+        var glyphs = mathTable.getHorizontalVariantsForGlyph(baseGlyph).compactMap { $0?.uint16Value }
+        if glyphs.isEmpty { glyphs = [baseGlyph] }
+        var advances = [CGSize](repeating: .zero, count: glyphs.count)
+        CTFontGetAdvancesForGlyphs(styleFont.ctFont, .horizontal, &glyphs, &advances, glyphs.count)
+        let index = advances.firstIndex { $0.width >= width } ?? glyphs.count - 1
+        var glyph = glyphs[index]
+        let bounds = CTFontGetBoundingRectsForGlyphs(styleFont.ctFont, .horizontal, &glyph, nil, 1)
+        let display = MTStretchedGlyphDisplay(withInner: inner, glyph: glyph, glyphWidth: advances[index].width, bars: bars, font: styleFont, width: width, range: atom.indexRange)
+        display.ascent = max(0, bounds.maxY)
+        display.descent = max(0, -bounds.minY)
+        return display
+    }
+
+    /// The list with a curly brace as wide as itself under or over it (or a rule, for a font without the brace)
+    private func makeBraceNucleus(_ inner: MTMathListDisplay, over: Bool, atom: MTMathAtom) -> MTDisplay {
+        let mathTable = styleFont.mathTable!
+        // U+23DE TOP CURLY BRACKET, U+23DF BOTTOM CURLY BRACKET; straight at a quarter and three quarters
+        if let brace = makeStretchedGlyph(over ? 0x23DE : 0x23DF, bars: [0.25, 0.75], width: inner.width, inner: inner, atom: atom) {
+            let inkTop = brace.ascent, inkBottom = -brace.descent   // the ink of the glyph around its origin
+            if over {
+                // Gap between the list and the ink of the brace above it
+                brace.glyphShiftUp = inner.ascent + mathTable.stretchStackGapBelowMin - inkBottom
+                brace.ascent = inner.ascent + mathTable.stretchStackGapBelowMin + (inkTop - inkBottom)
+                brace.descent = inner.descent
+            } else {
+                brace.glyphShiftUp = -(inner.descent + mathTable.stretchStackGapAboveMin + inkTop)
+                brace.ascent = inner.ascent
+                brace.descent = inner.descent + mathTable.stretchStackGapAboveMin + (inkTop - inkBottom)
+            }
+            return brace
+        }
+        // A font without the brace: a line instead, the label is still set
+        let line = MTLineDisplay(withInner: inner, position: CGPoint.zero, range: atom.indexRange)
+        line.lineThickness = mathTable.underbarRuleThickness
+        line.width = inner.width
+        if over {
+            line.lineShiftUp = inner.ascent + mathTable.overbarVerticalGap
+            line.ascent = inner.ascent + mathTable.overbarVerticalGap + mathTable.overbarRuleThickness + mathTable.overbarExtraAscender
+            line.descent = inner.descent
+        } else {
+            line.lineShiftUp = -(inner.descent + mathTable.underbarVerticalGap)
+            line.ascent = inner.ascent
+            line.descent = inner.descent + mathTable.underbarVerticalGap + mathTable.underbarRuleThickness + mathTable.underbarExtraDescender
+        }
+        return line
+    }
+
     // MARK: - Accents
     
     func isSingleCharAccentee(_ accent:MTAccent?) -> Bool {
@@ -1523,7 +1682,7 @@ class MTTypesetter {
     func makeAccent(_ accent:MTAccent?) -> MTDisplay? {
         guard let accent = accent else { return nil }
 
-        var accentee = MTTypesetter.createLineForMathList(accent.innerList, font:font, style:style, cramped:true)
+        let accentee = MTTypesetter.createLineForMathList(accent.innerList, font:font, style:style, cramped:true)
         if accent.nucleus.isEmpty {
             // no accent!
             return accentee
