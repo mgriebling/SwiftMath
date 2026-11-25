@@ -1650,7 +1650,7 @@ class MTTypesetter {
     func makeAccent(_ accent:MTAccent?) -> MTDisplay? {
         guard let accent = accent else { return nil }
 
-        var accentee = MTTypesetter.createLineForMathList(accent.innerList, font:font, style:style, cramped:true)
+        let accentee = MTTypesetter.createLineForMathList(accent.innerList, font:font, style:style, cramped:true)
         if accent.nucleus.isEmpty {
             // no accent!
             return accentee

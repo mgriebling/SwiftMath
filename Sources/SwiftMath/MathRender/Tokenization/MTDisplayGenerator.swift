@@ -106,7 +106,7 @@ class MTDisplayGenerator {
 
                 case .display(let preRenderedDisplay):
                     // Use pre-rendered display (fraction, radical, etc.)
-                    var mutableDisplay = preRenderedDisplay
+                    let mutableDisplay = preRenderedDisplay
                     mutableDisplay.position = elementPosition
                     displays.append(colored(mutableDisplay, element))
 
@@ -164,7 +164,7 @@ class MTDisplayGenerator {
                     let display = createTextDisplay(text, at: basePosition, element: element, hasScript: hasScripts)
                     displays.append(colored(display, element))
                 case .display(let preRenderedDisplay):
-                    var mutableDisplay = preRenderedDisplay
+                    let mutableDisplay = preRenderedDisplay
                     mutableDisplay.position = basePosition
                     displays.append(colored(mutableDisplay, element))
                 case .operator(let op, _):
@@ -292,7 +292,7 @@ class MTDisplayGenerator {
                 let scriptPosition = CGPoint(x: position.x + baseWidth + deltaOffset, y: position.y + scriptShift)
 
                 // Reset the scriptDisplay's position to (0, 0) since it will be positioned by the wrapper
-                var mutableScript = scriptDisplay
+                let mutableScript = scriptDisplay
                 mutableScript.position = CGPoint.zero
 
                 let wrappedScript = MTMathListDisplay(
@@ -332,7 +332,7 @@ class MTDisplayGenerator {
 
             // Update the first base display's dimensions to reflect the full extent
             // Width should be base + script, without the spaceAfterScript (that's for cursor advancement)
-            var baseDisplay = displays[baseDisplayStartIndex]
+            let baseDisplay = displays[baseDisplayStartIndex]
             baseDisplay.ascent = maxAscent
             baseDisplay.descent = maxDescent
             baseDisplay.width = baseWidth + scriptWidth

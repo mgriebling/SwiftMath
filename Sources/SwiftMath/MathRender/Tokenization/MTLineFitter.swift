@@ -32,16 +32,7 @@ class MTLineFitter {
         guard !elements.isEmpty else { return [] }
         guard maxWidth > 0 else { return [elements] }  // No width constraint
 
-        let debugPunctuation = false  // Enable to debug line breaking issues
 
-        if debugPunctuation {
-            print("\n=== MTLineFitter: fitting \(elements.count) elements, maxWidth=\(maxWidth) ===")
-            for (idx, elem) in elements.enumerated() {
-                if case .text(let t) = elem.content {
-                    print("[\(idx)] '\(t)' breakBefore=\(elem.isBreakBefore) breakAfter=\(elem.isBreakAfter) width=\(elem.width)")
-                }
-            }
-        }
 
         var lines: [[MTBreakableElement]] = [[]]
         var currentWidth: CGFloat = 0
@@ -50,9 +41,6 @@ class MTLineFitter {
         while i < elements.count {
             let element = elements[i]
 
-            if debugPunctuation, case .text(let t) = element.content {
-                print("\n  Processing element[\(i)]: '\(t)' breakBefore=\(element.isBreakBefore)")
-            }
 
             // Handle grouped elements (base + scripts)
             if let groupId = element.groupId {
@@ -84,19 +72,8 @@ class MTLineFitter {
 
             // Check if element fits on current line
             if !lines.last!.isEmpty && currentWidth + element.width > maxWidth - margin {
-                if debugPunctuation, case .text(let t) = element.content {
-                    print("    Doesn't fit (width=\(currentWidth) + \(element.width) > \(maxWidth)), current line has \(lines.last!.count) elements")
-                }
                 // Element doesn't fit - find best break point in current line
                 if let breakIndex = findBestBreak(in: lines[lines.count - 1]) {
-                    if debugPunctuation {
-                        print("    Found break at index \(breakIndex) out of \(lines.last!.count) elements")
-                        if breakIndex < lines.last!.count {
-                            if case .text(let t) = lines.last![breakIndex].content {
-                                print("      Break at element: '\(t)'")
-                            }
-                        }
-                    }
                     // Found a break point - move elements from breakIndex onward to next line
                     let moveElements = Array(lines[lines.count - 1][breakIndex...])
                     let oldLine = Array(lines[lines.count - 1][..<breakIndex])
@@ -110,26 +87,17 @@ class MTLineFitter {
                         currentWidth = moveElements.reduce(0) { $0 + $1.width }
 
                         // Now check if current element should go on new line or stay with old line
-                        if debugPunctuation, case .text(let t) = element.content {
-                            print("      Checking element '\(t)' (i=\(i)): breakBefore=\(element.isBreakBefore)")
-                        }
                         if !element.isBreakBefore {
                             // CRITICAL FIX: Current element cannot start a line, so it's part of the
                             // unbreakable sequence that was just moved to the new line.
                             // Add it to the NEW line, not the old line!
                             // Example: "matrices" breaks before 'm', so 'm','a','t','r','i' move to new line.
                             // When we process 'c', it can't start a line, so it must join the new line.
-                            if debugPunctuation, case .text(let t) = element.content {
-                                print("      -> Adding '\(t)' to new line (part of unbreakable sequence)")
-                            }
                             lines[lines.count - 1].append(element)
                             currentWidth += element.width
                             i += 1
                             continue
                         } else {
-                            if debugPunctuation, case .text(let t) = element.content {
-                                print("      -> Adding '\(t)' to new line (can start line)")
-                            }
                         }
                         // Current element can start a line, will be added to new line below
                     } else {
@@ -165,18 +133,6 @@ class MTLineFitter {
 
         let finalLines = lines.filter { !$0.isEmpty }
 
-        if debugPunctuation {
-            print("\n=== Final lines: ===")
-            for (lineIdx, line) in finalLines.enumerated() {
-                print("Line \(lineIdx):")
-                for elem in line {
-                    if case .text(let t) = elem.content {
-                        print("  '\(t)'", terminator: "")
-                    }
-                }
-                print()
-            }
-        }
 
         return finalLines
     }
@@ -211,8 +167,6 @@ class MTLineFitter {
         var bestIndex: Int? = nil
         var lowestPenalty = Int.max
 
-        let debugBreak = false  // Enable to debug break point selection
-        let debugFit = false
 
         // Scan from right to left to prefer breaking later in the line
         // Note: Skip the last element (idx == line.count - 1) because breaking after it
@@ -237,20 +191,12 @@ class MTLineFitter {
             if canBreakAfter && canBreakBeforeNext {
                 let totalPenalty = max(penaltyAfter, penaltyBeforeNext)
                 if totalPenalty < lowestPenalty {
-                    if debugBreak && idx < line.count - 1 {
-                        let currText = if case .text(let t) = element.content { t } else { "?" }
-                        let nextText = if case .text(let t) = line[idx + 1].content { t } else { "?" }
-                        print("  Considering break: '\(currText)' | '\(nextText)' at idx=\(idx), penalty=\(totalPenalty)")
-                    }
                     bestIndex = idx + 1
                     lowestPenalty = totalPenalty
                 }
             }
         }
 
-        if debugBreak {
-            print("  Best break: index=\(bestIndex ?? -1), penalty=\(lowestPenalty)")
-        }
 
         // Only return if we found an acceptable break point
         if let index = bestIndex, lowestPenalty <= MTBreakPenalty.bad {
