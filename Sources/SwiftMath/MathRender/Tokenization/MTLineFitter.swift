@@ -17,12 +17,15 @@ class MTLineFitter {
 
     let maxWidth: CGFloat
     let margin: CGFloat
+    /// Space the display generator puts after a group with scripts
+    let spaceAfterScript: CGFloat
 
     // MARK: - Initialization
 
-    init(maxWidth: CGFloat, margin: CGFloat = 0) {
+    init(maxWidth: CGFloat, margin: CGFloat = 0, spaceAfterScript: CGFloat = 0) {
         self.maxWidth = maxWidth
         self.margin = margin
+        self.spaceAfterScript = spaceAfterScript
     }
 
     // MARK: - Line Fitting
@@ -48,10 +51,11 @@ class MTLineFitter {
 
                 // Calculate group width correctly for scripts
                 // Scripts overlap vertically, so width = max(script widths), not sum
-                let groupWidth = calculateGroupWidth(groupElements)
+                let (groupWidth, trailingSpace) = calculateGroupWidth(groupElements)
 
                 // Check if group fits on current line
-                if !lines.last!.isEmpty && currentWidth + groupWidth > maxWidth - margin {
+                // The space after the scripts may end up past the end of the line: it draws nothing
+                if !lines.last!.isEmpty && currentWidth + groupWidth - trailingSpace > maxWidth - margin {
                     // Group doesn't fit - check if first element of group can start a new line
                     if groupElements.first?.isBreakBefore ?? true {
                         // Can start new line
@@ -139,13 +143,23 @@ class MTLineFitter {
 
     // MARK: - Helper Methods
 
-    /// Calculate the correct width for a group of elements (e.g., base + scripts)
-    /// Scripts overlap vertically, so the group width is not the sum of all widths
-    private func calculateGroupWidth(_ groupElements: [MTBreakableElement]) -> CGFloat {
-        // For grouped elements (base + scripts), just sum all widths
-        // The display generator will handle the actual positioning and overlap
-        // This is just for line fitting purposes
-        return groupElements.reduce(0) { $0 + $1.width }
+    /// Calculate the correct width for a group of elements (e.g., base + scripts), and the space
+    /// after its scripts that this width includes. Scripts overlap vertically, so the group width is
+    /// not the sum of all widths: like the display generator, count the base, the wider script and
+    /// the space after the scripts. (Summing both scripts made x_1^2 look wider than it is, so a
+    /// formula laid out at its own width, as a label sized to fit is, broke into two lines.)
+    private func calculateGroupWidth(_ groupElements: [MTBreakableElement]) -> (width: CGFloat, trailingSpace: CGFloat) {
+        var base: CGFloat = 0
+        var script: CGFloat?
+        for element in groupElements {
+            if case .script = element.content {
+                script = max(script ?? 0, element.width)
+            } else {
+                base += element.width
+            }
+        }
+        guard let script else { return (base, 0) }
+        return (base + script + spaceAfterScript, spaceAfterScript)
     }
 
     /// Collect all elements that share the same groupId

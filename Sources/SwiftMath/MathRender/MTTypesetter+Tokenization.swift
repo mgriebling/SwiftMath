@@ -57,7 +57,7 @@ extension MTTypesetter {
 
         // Phase 2: Fit elements into lines
         let margin = spaced ? font.mathTable?.muUnit ?? 0 : 0
-        let fitter = MTLineFitter(maxWidth: maxWidth, margin: margin)
+        let fitter = MTLineFitter(maxWidth: maxWidth, margin: margin, spaceAfterScript: font.mathTable?.spaceAfterScript ?? 0)
         let fittedLines = fitter.fitLines(elements)
 
         // Phase 3: Generate displays from fitted lines

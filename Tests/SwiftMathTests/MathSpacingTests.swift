@@ -115,3 +115,19 @@ final class MathSpacingTests: XCTestCase {
         }
     }
 }
+
+/// A formula laid out with its own width as the maximum width stays on one line (a label sized
+/// to fit lays it out like that)
+final class NaturalWidthLineBreakTests: XCTestCase {
+    func testFormulaFitsInItsOwnWidth() throws {
+        let font = try XCTUnwrap(MTFontManager.manager.latinModernFont(withSize: 20))
+        for latex in ["x_1^2+y_1^2=z", "A_n^m=\\frac{n!}{(n-m)!}", "a_n=a_1q^{n-1}", "\\sum_{i=1}^n i^2"] {
+            let natural = try XCTUnwrap(MTTypesetter.createLineForMathList(try XCTUnwrap(MTMathListBuilder.build(fromString: latex)), font: font, style: .text))
+            let fitted = try XCTUnwrap(MTTypesetter.createLineForMathList(try XCTUnwrap(MTMathListBuilder.build(fromString: latex)), font: font, style: .text, maxWidth: natural.width))
+            // Lines are the base displays; scripts sit at other heights
+            let bases = fitted.subDisplays.filter { ($0 as? MTMathListDisplay)?.type ?? .regular == .regular }
+            XCTAssertEqual(Set(bases.map { Int($0.position.y.rounded()) }).count, 1, latex)
+            XCTAssertEqual(fitted.width, natural.width, accuracy: 0.01, latex)
+        }
+    }
+}
