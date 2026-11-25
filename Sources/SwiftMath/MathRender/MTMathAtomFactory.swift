@@ -811,7 +811,39 @@ public class MTMathAtomFactory {
                 return nil
         }
     }
-    
+
+    /** Gets an atom for a non-ASCII character that `atom(forCharacter:)` does not map, so that
+     such characters are rendered instead of being silently dropped.
+     In math mode a character that is the output of a supported command becomes that command's
+     atom, so `a×b`, `x≤3` or `α+β` lay out exactly like `a\times b`, `x\leq 3` or `\alpha+\beta`
+     (KaTeX and MathJax accept these characters the same way). Any other visible character, such
+     as CJK text, full-width punctuation or emoji, becomes an ordinary atom that is drawn with the
+     system fallback font. In text mode (`\text{...}`) every character is kept as text.
+     Returns nil for ASCII characters, for whitespace in math mode and for invisible format characters.
+     */
+    public static func atom(forUnicodeCharacter ch: Character, inTextMode: Bool) -> MTMathAtom? {
+        guard let first = ch.unicodeScalars.first, first.value > 0x7E else { return nil }
+        if ch.isWhitespace {
+            // Non-breaking and ideographic spaces are spaces in text, and ignored in math like " ".
+            return inTextMode ? atom(forLatexSymbol: " ") : nil
+        }
+        if ch.unicodeScalars.allSatisfy({ $0.properties.generalCategory == .format || $0.properties.generalCategory == .control }) {
+            // Zero-width spaces, byte order marks, soft hyphens and the like draw nothing.
+            return nil
+        }
+        let chStr = String(ch)
+        if !inTextMode {
+            if chStr == "\u{2212}" {
+                // A typed minus sign is the same binary operator as "-".
+                return atom(forCharacter: "-")
+            }
+            if let name = textToLatexSymbolName[chStr], let atom = atom(forLatexSymbol: name) {
+                return atom
+            }
+        }
+        return MTMathAtom(type: .ordinary, value: chStr)
+    }
+
     /** Returns a `MTMathList` with one atom per character in the given string. This function
      does not do any LaTeX conversion or interpretation. It simply uses `atom(forCharacter:)` to
      convert the characters to atoms. Any character that cannot be converted is ignored. */

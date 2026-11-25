@@ -473,8 +473,9 @@ public struct MTMathListBuilder {
                 
                 if let fontStyle = MTMathAtomFactory.fontStyleWithName(command) {
                     let oldSpacesAllowed = spacesAllowed
-                    // Text has special consideration where it allows spaces without escaping.
-                    spacesAllowed = command == "text"
+                    // Text commands (\text, \textrm, \textbf, \textit, \textsf, \texttt) typeset their
+                    // argument as text, which keeps spaces without escaping.
+                    spacesAllowed = command.hasPrefix("text")
                     let oldFontStyle = currentFontStyle
                     currentFontStyle = fontStyle
                     if let sublist = self.buildInternal(true) {
@@ -518,13 +519,14 @@ public struct MTMathListBuilder {
             } else {
                 atom = MTMathAtomFactory.atom(forCharacter: char)
                 if atom == nil {
-                    // Not a recognized character in standard math mode
-                    // In text mode (spacesAllowed && roman style), accept any Unicode character for fallback font support
-                    // This enables Chinese, Japanese, Korean, emoji, etc. in \text{} commands
-                    if spacesAllowed && currentFontStyle == .roman {
-                        atom = MTMathAtom(type: .ordinary, value: String(char))
-                    } else {
-                        // In math mode or non-text commands, skip unrecognized characters
+                    // Not an ASCII math character. Unicode symbols map to their commands in math mode
+                    // (× is \times, ≤ is \leq, α is \alpha) and any other visible character (Chinese,
+                    // Japanese, Korean, emoji, full-width punctuation, ...) is kept as an ordinary atom
+                    // drawn with the fallback font, in math mode as well as in text commands.
+                    // Dropping these silently changed the meaning: "36÷5" rendered as "365".
+                    atom = MTMathAtomFactory.atom(forUnicodeCharacter: char, inTextMode: spacesAllowed)
+                    if atom == nil {
+                        // ASCII control characters, whitespace in math mode, invisible format characters
                         continue
                     }
                 }

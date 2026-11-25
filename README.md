@@ -455,6 +455,7 @@ This is a list of formula types that the library currently supports:
 * Big delimiters (using `\left` and `\right`)
 * Manual delimiter sizing (`\big`, `\Big`, `\bigg`, `\Bigg` and variants)
 * Greek alphabet
+* Unicode math symbols typed directly (`×`, `÷`, `≤`, `≠`, `→`, `α`, ...) and non-Latin text such as Chinese
 * Bold Greek symbols (`\boldsymbol`)
 * Combinatorics (`\binom`, `\choose` etc.)
 * Geometry symbols (e.g. angle, congruence etc.)
@@ -651,7 +652,10 @@ This is particularly useful for:
 - Emoji: `\text{Math is fun! 🎉📐}`
 - Mixed scripts: `\text{Equation: 方程式}`
 
-**Note**: The fallback font only applies to characters within `\text{}` commands, not regular math mode.
+Characters that are not in the math font are kept in math mode as well, so `\frac{新}{原}` or `A：B`
+show the text instead of dropping it, and Unicode math symbols typed directly are read as their commands:
+`36÷5`, `x≤3`, `a≠b` and `α+β` render exactly like `36\div 5`, `x\leq 3`, `a\neq b` and `\alpha+\beta`
+(as in KaTeX and MathJax). Text commands such as `\textbf{...}` keep their spaces like `\text{...}`.
 
 ##### Custom Commands
 You can define your own commands that are not already predefined. This is
